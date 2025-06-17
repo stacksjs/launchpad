@@ -10,7 +10,7 @@
         "bumpp": "^10.1.1",
         "bun-plugin-dtsx": "0.9.5",
         "changelogen": "^0.6.1",
-        "chromium-bidi": "^5.3.1",
+        "chromium-bidi": "^6.0.0",
         "electron": "^36.4.0",
         "lint-staged": "^15.5.2",
         "simple-git-hooks": "^2.13.0",
@@ -19,7 +19,7 @@
     },
     "packages/action": {
       "name": "launchpad-installer",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "bin": {
         "launchpad-installer": "dist/index.js",
       },
@@ -36,7 +36,7 @@
     },
     "packages/launchpad": {
       "name": "@stacksjs/launchpad",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "bin": {
         "launchpad": "./dist/bin/cli.js",
       },
@@ -901,7 +901,7 @@
 
     "chownr": ["chownr@1.1.4", "", {}, "sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg=="],
 
-    "chromium-bidi": ["chromium-bidi@5.3.1", "", { "dependencies": { "mitt": "^3.0.1", "zod": "^3.24.1" }, "peerDependencies": { "devtools-protocol": "*" } }, "sha512-fbkgn0/m6RIRknVEez+QOYuvukUomBC0XnS8fgdbl9FeunjR3vUvPN6iYrbzXIuaJXYOwGU8FZgOTDzBImGvLw=="],
+    "chromium-bidi": ["chromium-bidi@6.0.0", "", { "dependencies": { "mitt": "^3.0.1", "zod": "^3.24.1" }, "peerDependencies": { "devtools-protocol": "*" } }, "sha512-K0Ob0E+wzwT1e3icJyaoRD+GaqX3iUwfAThzqahyjMZYuynMfnmFWiVJm/wdzhXy3pOi5JLseTgc49wQPL6pYQ=="],
 
     "ci-info": ["ci-info@4.1.0", "", {}, "sha512-HutrvTNsF48wnxkzERIXOe5/mlcfFcbfCmwcg6CJnizbSue78AbDt+1cgl26zwn61WFxhcPykPfZrbqjGmBb4A=="],
 
