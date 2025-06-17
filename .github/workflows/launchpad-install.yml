@@ -41,7 +41,7 @@ jobs:
       - name: Install launchpad
         run: bun install -g launchpad
 
-      - name: Install pkgx
+      - name: Launchpad Bootstrap
         run: launchpad bootstrap --verbose
 
       - name: Install dev package (if required)

@@ -116,7 +116,7 @@ Bootstrap your development environment with everything you need:
 ```
 
 The bootstrap command sets up your entire development foundation:
-- ✅ Install pkgx (package manager)
+
 - ✅ Install Bun (JavaScript runtime)
 - ✅ Configure your PATH automatically
 - ✅ Set up shell integration for project auto-activation
