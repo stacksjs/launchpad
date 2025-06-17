@@ -88,10 +88,10 @@ launchpad shim --path ~/bin node@22
 
 ```bash
 # Install pkgx itself
-launchpad pkgx
+launchpad bootstrap
 
 # Force reinstall
-launchpad pkgx --force
+launchpad bootstrap --force
 ```
 
 ### Install dev package

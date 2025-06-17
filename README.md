@@ -234,7 +234,7 @@ launchpad list
 launchpad autoupdate:enable
 
 # Install additional tools
-launchpad pkgx    # Install pkgx itself
+launchpad bootstrap  # Bootstrap essential tools
 launchpad bun     # Install Bun runtime
 ```
 
