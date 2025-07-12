@@ -17,16 +17,81 @@ describe('clean --keep-global', () => {
     // Ensure CLI is built - build it if it doesn't exist
     if (!fs.existsSync(cliPath)) {
       const { execSync } = await import('node:child_process')
+
+      // Find the real bun binary (not mock versions)
+      let bunPath = 'bun' // Default fallback
       try {
-        execSync('bun run build', {
+        // Try to find system bun in common locations
+        const possiblePaths = [
+          '/opt/homebrew/bin/bun',
+          '/usr/local/bin/bun',
+          '/home/runner/.bun/bin/bun', // GitHub Actions
+          '/usr/bin/bun',
+        ]
+
+        for (const testPath of possiblePaths) {
+          try {
+            const fs = await import('node:fs')
+            if (fs.existsSync(testPath)) {
+              bunPath = testPath
+              break
+            }
+          }
+          catch {
+            // Continue checking other paths
+          }
+        }
+
+        // If no specific path found, try to find bun in PATH (but avoid mock versions)
+        if (bunPath === 'bun') {
+          try {
+            const whichResult = execSync('which bun', { encoding: 'utf8', stdio: 'pipe' }).trim()
+            // Only use it if it's not in a launchpad directory (to avoid mocks)
+            if (whichResult && !whichResult.includes('launchpad')) {
+              bunPath = whichResult
+            }
+          }
+          catch {
+            // Fallback to 'bun'
+          }
+        }
+      }
+      catch {
+        // Use default 'bun' if all else fails
+      }
+
+      try {
+        // Run build from the packages/launchpad directory using the found bun
+        execSync(`${bunPath} run build`, {
           stdio: 'pipe',
-          cwd: process.cwd(),
+          cwd: process.cwd(), // This should be packages/launchpad
           encoding: 'utf8',
+          env: {
+            ...process.env,
+            // Clear any launchpad environment variables that might interfere
+            PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+          },
         })
       }
       catch (error) {
         console.error('Failed to build CLI binary:', error)
-        throw new Error('CLI binary build failed. Tests cannot proceed.')
+
+        // Try building from parent directory if the first attempt fails
+        try {
+          execSync(`${bunPath} run build`, {
+            stdio: 'pipe',
+            cwd: path.join(process.cwd(), '../..'), // Try from project root
+            encoding: 'utf8',
+            env: {
+              ...process.env,
+              PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+            },
+          })
+        }
+        catch (rootError) {
+          console.error('Failed to build from root directory:', rootError)
+          throw new Error('CLI binary build failed. Tests cannot proceed.')
+        }
       }
     }
 
