@@ -18,6 +18,9 @@ describe('Service Management', () => {
     originalConfig = { ...config.services }
     tempDir = fs.mkdtempSync(path.join(tmpdir(), 'launchpad-services-test-'))
 
+    // Set test environment
+    process.env.NODE_ENV = 'test'
+
     // Override service directories for testing
     config.services.dataDir = path.join(tempDir, 'services')
     config.services.logDir = path.join(tempDir, 'logs')
@@ -147,14 +150,7 @@ describe('Service Management', () => {
     })
 
     it('should handle starting unknown service', async () => {
-      try {
-        await startService('unknown-service')
-        expect(true).toBe(false) // Should not reach here
-      }
-      catch (error) {
-        expect(error).toBeInstanceOf(Error)
-        expect((error as Error).message).toContain('Unknown service')
-      }
+      await expect(startService('unknown-service')).rejects.toThrow('Unknown service: unknown-service')
     })
 
     it('should handle service status checking', async () => {
@@ -170,14 +166,7 @@ describe('Service Management', () => {
     })
 
     it('should handle enabling non-existent service', async () => {
-      try {
-        await enableService('unknown-service')
-        expect(true).toBe(false) // Should not reach here
-      }
-      catch (error) {
-        expect(error).toBeInstanceOf(Error)
-        expect((error as Error).message).toContain('Unknown service')
-      }
+      await expect(enableService('unknown-service')).rejects.toThrow('Unknown service: unknown-service')
     })
 
     it('should handle disabling non-registered service', async () => {
@@ -194,31 +183,53 @@ describe('Service Management', () => {
   })
 
   describe('Mock Service Operations', () => {
-    let mockSpawn: any
+    let originalSpawn: any
+    let mockChildProcess: any
 
     beforeEach(async () => {
-      // Mock spawn to avoid actually running system commands in tests
-      mockSpawn = mock(() => ({
-        on: mock((event: string, callback: (code: number) => void) => {
+      // Set test environment to avoid real system calls
+      process.env.NODE_ENV = 'test'
+      process.env.LAUNCHPAD_TEST_MODE = 'true'
+
+      // Create a mock child process that resolves quickly
+      mockChildProcess = {
+        on: mock((event: string, callback: (code?: number) => void) => {
           if (event === 'close') {
-            // Simulate successful command execution
-            setTimeout(() => callback(0), 10)
+            // Resolve immediately to avoid timeouts
+            setImmediate(() => callback(0))
+          }
+          else if (event === 'error') {
+            // Don't call error callback unless we want to test errors
           }
         }),
-      }))
+        pid: 12345,
+      }
 
-      // Replace spawn with mock
+      // Mock spawn function
       const childProcessModule = await import('node:child_process')
+      originalSpawn = childProcessModule.spawn
+
+      // Replace spawn with our mock
       Object.defineProperty(childProcessModule, 'spawn', {
-        value: mockSpawn,
+        value: mock(() => mockChildProcess),
         writable: true,
       })
 
       await initializeServiceManager()
     })
 
-    afterEach(() => {
-      mockSpawn.mockRestore?.()
+    afterEach(async () => {
+      // Clean up test environment
+      delete process.env.LAUNCHPAD_TEST_MODE
+
+      // Restore original spawn
+      if (originalSpawn) {
+        const childProcessModule = await import('node:child_process')
+        Object.defineProperty(childProcessModule, 'spawn', {
+          value: originalSpawn,
+          writable: true,
+        })
+      }
     })
 
     it('should handle service lifecycle with mocked commands', async () => {
@@ -227,7 +238,6 @@ describe('Service Management', () => {
         return
       }
 
-      // These tests will use mocked system commands
       const serviceName = 'redis'
 
       // Test enabling service
@@ -268,6 +278,9 @@ describe('Service Management', () => {
     it('should create configuration directories', async () => {
       await initializeServiceManager()
 
+      // Wait a bit to ensure directories are created
+      await new Promise(resolve => setTimeout(resolve, 10))
+
       expect(fs.existsSync(config.services.dataDir)).toBe(true)
       expect(fs.existsSync(config.services.logDir)).toBe(true)
       expect(fs.existsSync(config.services.configDir)).toBe(true)
@@ -289,17 +302,12 @@ describe('Service Management', () => {
       // Mock platform to unsupported
       const originalPlatform = process.platform
       Object.defineProperty(process, 'platform', {
-        value: 'unsupported',
+        value: 'win32',
         configurable: true,
       })
 
       try {
-        await startService('postgres')
-        expect(true).toBe(false) // Should not reach here
-      }
-      catch (error) {
-        expect(error).toBeInstanceOf(Error)
-        expect((error as Error).message).toContain('not supported')
+        await expect(startService('postgres')).rejects.toThrow('not supported')
       }
       finally {
         // Restore original platform
@@ -311,14 +319,7 @@ describe('Service Management', () => {
     })
 
     it('should handle service definition not found', async () => {
-      try {
-        await startService('completely-unknown-service')
-        expect(true).toBe(false) // Should not reach here
-      }
-      catch (error) {
-        expect(error).toBeInstanceOf(Error)
-        expect((error as Error).message).toContain('Unknown service')
-      }
+      await expect(startService('completely-unknown-service')).rejects.toThrow('Unknown service: completely-unknown-service')
     })
   })
 
