@@ -6,11 +6,11 @@ dependencies:
 
   # Override to global despite top-level global: false
   python@3.12:
-    version: 3.12.1
+    version: 8.50.0
     global: true
 
   git@2.42:
-    version: 2.42.0
+    version: 8.50.0
     global: true
 
   # Explicit local (same as top-level)
