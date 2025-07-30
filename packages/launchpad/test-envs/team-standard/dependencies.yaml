@@ -1,27 +1,27 @@
 dependencies:
   # Global shared tools (available system-wide for team)
   node@22:
-    version: 22.1.0
+    version: 29.7.0
     global: true
   python@3.12:
-    version: 3.12.1
+    version: 29.7.0
     global: true
   docker@24:
-    version: 24.0.0
+    version: 29.7.0
     global: true
   git@2.42:
-    version: 2.42.0
+    version: 29.7.0
     global: true
 
   # Project-specific tools (isolated per project)
   typescript@5.0:
-    version: 5.0.4
+    version: 29.7.0
     global: false
   jest@29.0:
     version: 29.7.0
     global: false
   eslint@8.50:
-    version: 8.50.0
+    version: 29.7.0
     global: false
 
   # String format defaults to local
