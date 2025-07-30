@@ -5,11 +5,11 @@ dependencies:
     global: true # Install globally
 
   python@3.12:
-    version: 3.12.1
+    version: 22.1.0
     global: true # Install globally
 
   typescript@5.0:
-    version: 5.0.4
+    version: 22.1.0
     global: false # Install locally
 
   # String format defaults to local
