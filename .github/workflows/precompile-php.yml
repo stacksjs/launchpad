@@ -943,7 +943,7 @@ jobs:
           cat manifest.json
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: binaries-${{ github.run_number }}
           name: PHP Precompiled Binaries - Build ${{ github.run_number }}
