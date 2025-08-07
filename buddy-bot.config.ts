@@ -27,11 +27,16 @@ const config: BuddyBotConfig = {
     ignore: [
       // Add packages to ignore here
       // Example: '@types/node', 'eslint'
+      'python.org', // Keep as 'latest' instead of pinning to specific versions
     ],
     ignorePaths: [
       // Add file/directory paths to ignore using glob patterns
       // Example: 'packages/test-*/**', '**/*test-envs/**', 'apps/legacy/**'
+      'packages/launchpad/test/fixtures/pkgx.yml', // Ignore test fixtures that use 'latest'
     ],
+    // Configuration for respecting 'latest' versions
+    respectLatest: true, // Don't create PRs for packages set to 'latest'
+    ignoreLatestUpdates: true, // Ignore updates for packages that are intentionally set to 'latest'
   },
   verbose: false,
 }
