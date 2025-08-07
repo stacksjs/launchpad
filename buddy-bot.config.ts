@@ -36,6 +36,7 @@ const config: BuddyBotConfig = {
     ],
     // Configuration for respecting 'latest' versions
     respectLatest: true, // Don't create PRs for packages set to 'latest'
+    ignoreLatestUpdates: true, // Ignore updates for packages that are intentionally set to 'latest'
   },
   verbose: false,
 }
