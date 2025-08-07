@@ -51,12 +51,6 @@ export const defaultConfig: LaunchpadConfig = {
   useRegistry: true,
   installMethod: 'curl',
   installPath: getDefaultInstallPath(),
-  // Buddy Bot configuration
-  buddyBot: {
-    respectLatest: process.env.BUDDY_BOT_RESPECT_LATEST === 'false' ? false :
-                   process.env.BUDDY_BOT_RESPECT_LATEST === 'true' ? true :
-                   null, // null means use default behavior (true)
-  },
   services: {
     enabled: process.env.LAUNCHPAD_SERVICES_ENABLED !== 'false',
     dataDir: process.env.LAUNCHPAD_SERVICES_DATA_DIR || path.join(homedir(), '.local', 'share', 'launchpad', 'services'),

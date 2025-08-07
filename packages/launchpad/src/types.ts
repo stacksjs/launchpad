@@ -66,10 +66,6 @@ export interface LaunchpadConfig {
   shellDeactivationMessage?: string
   useRegistry?: boolean
   installMethod?: string
-  // Buddy Bot configuration
-  buddyBot?: {
-    respectLatest?: boolean | null // Nullable, defaults to true - don't create PRs for packages set to 'latest'
-  }
   services?: {
     enabled?: boolean
     autoStart?: boolean
