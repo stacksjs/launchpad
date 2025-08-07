@@ -1,16 +1,6 @@
 import type { BuddyBotConfig } from 'buddy-bot'
 
-// Extended configuration with nullable respectLatest
-interface ExtendedBuddyBotConfig extends BuddyBotConfig {
-  packages?: {
-    strategy?: string
-    ignore?: string[]
-    ignorePaths?: string[]
-    respectLatest?: boolean | null // Nullable, defaults to true
-  }
-}
-
-const config: ExtendedBuddyBotConfig = {
+const config: BuddyBotConfig = {
   repository: {
     owner: 'stacksjs',
     name: 'launchpad',
@@ -44,10 +34,8 @@ const config: ExtendedBuddyBotConfig = {
       // Example: 'packages/test-*/**', '**/*test-envs/**', 'apps/legacy/**'
       'packages/launchpad/test/fixtures/pkgx.yml', // Ignore test fixtures that use 'latest'
     ],
-    // Configuration for respecting 'latest' versions (nullable, defaults to true)
-    respectLatest: process.env.BUDDY_BOT_RESPECT_LATEST === 'false' ? false : 
-                   process.env.BUDDY_BOT_RESPECT_LATEST === 'true' ? true : 
-                   null, // null means use default behavior (true)
+    // Configuration for respecting 'latest' versions
+    respectLatest: true, // Don't create PRs for packages set to 'latest'
   },
   verbose: false,
 }
