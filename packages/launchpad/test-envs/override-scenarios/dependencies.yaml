@@ -6,12 +6,12 @@ dependencies:
 
   # Explicit global: true (same as top-level)
   git@2.42:
-    version: 2.42.0
+    version: 8.50.0
     global: true
 
   # Override to local despite top-level global: true
   typescript@5.0:
-    version: 5.0.4
+    version: 8.50.0
     global: false
 
   eslint@8.50:
@@ -20,8 +20,7 @@ dependencies:
 
   # Mixed object and string formats
   bun@1.2.3:
-    version: 1.2.3
-    # No global specified, uses top-level global: true
+    version: 8.50.0
 
   # String format with top-level global: true
   jest@29.0: 29.7.0

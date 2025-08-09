@@ -9,4 +9,4 @@ dependencies:
   gnu.org/wget: ^1.25.0
 
   # Build tools
-  cmake.org: ^3.28.0
+  cmake.org: ^3.31.8
