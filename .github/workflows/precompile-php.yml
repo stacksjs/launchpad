@@ -36,7 +36,7 @@ jobs:
       new_versions: ${{ steps.check-updates.outputs.new_versions }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -73,7 +73,7 @@ jobs:
       php_versions: ${{ steps.get-versions.outputs.php_versions }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -95,7 +95,7 @@ jobs:
     if: needs.check-for-updates.outputs.rebuild_needed == 'false' && github.event.inputs.force_rebuild != 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: No rebuild needed
         run: |
@@ -139,7 +139,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up build environment
         run: |
@@ -1019,7 +1019,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
