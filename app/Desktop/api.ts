@@ -7,16 +7,18 @@ import LaunchRecord from '../Models/LaunchRecord'
 import ClipboardEntry from '../Models/ClipboardEntry'
 import AppPreference from '../Models/AppPreference'
 import LauncherActivity from '../Models/LauncherActivity'
+import LauncherUsageDay from '../Models/LauncherUsageDay'
 import CatalogPackage from '../Models/CatalogPackage'
 import { pantryApi } from './pantry'
 import { clearClipboardHistory, pruneClipboardHistory } from './history'
-import { createActivityApi } from './activity'
+import { createActivityApi, startActivityRuntime } from './activity'
 
-const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, CatalogPackage }
+const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, CatalogPackage }
 // Craft/stx owns the authenticated loopback session and backend process.
 openNativeDatabase({ path: join(homedir(), 'Library/Application Support/Launchpad/launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const activityApi = createActivityApi(modelApi)
+export const shutdown = startActivityRuntime(activityApi)
 
 export async function installedApplications() {
   const roots = ['/Applications', '/System/Applications', '/System/Applications/Utilities', join(homedir(), 'Applications')]

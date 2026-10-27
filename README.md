@@ -19,7 +19,7 @@ Clipboard History is opt-in. It records new text locally, skips protected pasteb
 
 GitHub includes repositories, issues, pull requests, assigned issues, review requests and notifications. Public search works without signing in. An optional personal access token is stored in macOS Keychain. Use repository scope to narrow results. GitHub searches go directly to GitHub; local launcher searches stay on your Mac.
 
-Local activity supports a future year review: command counts, tool categories, application names, sessions, timestamps, timezone offsets and command latency. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Settings lets you pause recording and clear activity. No hosted usage API or cloud sync is enabled.
+Local activity supports a future year review: process sessions, palette opens, successful app and link opens, tool categories, application names and command latency. The bundled backend checkpoints running time and palette-open time through Stacks models every 15 seconds, using compact daily totals. Running time includes the background launcher; gaps over one minute from sleep or suspension are excluded. An unexpected quit can lose time since the last checkpoint. Timing starts with this version; older activity remains available without inventing historical durations. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Settings lets you inspect, pause and clear both events and time totals. No hosted usage API or cloud sync is enabled.
 
 ## Install with Pantry
 

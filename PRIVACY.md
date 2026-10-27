@@ -1,6 +1,6 @@
 # Launchpad privacy policy
 
-Effective October 26, 2026.
+Effective October 27, 2026.
 
 Launchpad stores your quicklinks, snippets, favorites, clipboard history and launcher activity in a local SQLite database in its macOS application container. No Stacks account or hosted API is required. Launchpad does not upload this database to Stacks, run advertising or include an external analytics SDK.
 
@@ -16,7 +16,7 @@ History keeps at most 200 entries and removes entries older than the selected 1,
 
 ## Local activity and year review
 
-Local activity records action types, command categories, application names for app launches, timestamps, timezone offsets, sessions, app version and command latency. It supports counts, active days, streaks and a future year review. It excludes search queries, URLs, file paths, clipboard text and snippet contents. These activity records stay on this Mac and are separate from clipboard history. Turn off Record local usage to stop new activity, or choose Clear usage history to remove retained activity. Command ranking also maintains local favorites and execution counts.
+Local activity records process sessions, palette opens, time the app runs in the background, time the palette is open, successful app and link opens, action types, command categories, application names, timestamps, timezone offsets, app version and command latency. Running and visible time are checkpointed in cumulative daily records, with long sleep or suspension gaps excluded. These records support counts, active days, streaks and a future year review. They exclude search queries, URLs, file paths, clipboard text and snippet contents. They stay on this Mac and are separate from clipboard history. Turn off Record local usage to stop new records, or choose Clear usage history to remove retained events and time totals. Command ranking also maintains local favorites and execution counts.
 
 ## GitHub and external websites
 
