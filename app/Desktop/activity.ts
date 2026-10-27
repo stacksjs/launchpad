@@ -2,7 +2,11 @@ import { toAttrs } from '@stacksjs/orm/define-model'
 import LauncherActivity from '../Models/LauncherActivity'
 import AppPreference from '../Models/AppPreference'
 import LauncherUsageDay from '../Models/LauncherUsageDay'
-import { ActivityAccumulator } from '../../resources/functions/activity'
+import UsageRecordingPeriod from '../Models/UsageRecordingPeriod'
+import PantryInstallation from '../Models/PantryInstallation'
+import type { DesktopInstallJob } from 'ts-pantry/desktop'
+import { ActivityAccumulator, pantryPackageKinds } from '../../resources/functions/activity'
+import type { PantryPackageKind, PantryReceiptSample } from '../../resources/functions/activity'
 import pkg from '../../package.json'
 
 type ModelApi = (request: Request) => Promise<Response | null>
@@ -39,6 +43,16 @@ async function summary(year: number) {
     }
     if (rows.length < 1000) break
   }
+  cursor = 0
+  while (true) {
+    const rows = await PantryInstallation.where('finished_at', '>=', start).where('finished_at', '<', end).where('id', '>', cursor).orderBy('id').limit(1000).get()
+    for (const model of rows) {
+      const row = toAttrs<Record<string, unknown>>(model)
+      accumulator.addInstallation({ domain: String(row.domain), packageKind: String(row.packageKind ?? row.package_kind) as PantryPackageKind, status: row.status as 'succeeded' | 'failed', requestedAt: Number(row.requestedAt ?? row.requested_at), startedAt: Number(row.startedAt ?? row.started_at), finishedAt: Number(row.finishedAt ?? row.finished_at), timezoneOffset: Number(row.timezoneOffset ?? row.timezone_offset) })
+      cursor = Number(row.id)
+    }
+    if (rows.length < 1000) break
+  }
   return { ...accumulator.finish(), enabled: await trackingEnabled() }
 }
 
@@ -57,6 +71,8 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
   let finished = false
   const days = new Map<string, { bucketKey: string, sessionId: string, day: string, timezoneOffset: number, runningMs: number, visibleMs: number, lastSeenAt: number, appVersion: string }>()
   const dirtyDays = new Set<string>()
+  type Receipt = PantryReceiptSample & { jobId: string, recordedAt: number, appVersion: string }
+  const pendingInstalls = new Map<string, Receipt>()
   let pending: Promise<unknown> = Promise.resolve()
   function serial<T>(work: () => Promise<T>): Promise<T> {
     const result = pending.then(work, work)
@@ -89,6 +105,47 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
     if (!response?.ok) throw new Error('The local usage model could not save an event.')
     if (action === 'session_started') sessionRecorded = true
   }
+  async function syncRecordingPeriod(recording: boolean) {
+    const open = await UsageRecordingPeriod.where('ended_at', 0).get()
+    if (recording && !open.length) await UsageRecordingPeriod.create({ startedAt: now(), endedAt: 0 })
+    if (!recording) for (const period of open) {
+      const row = toAttrs<Record<string, unknown>>(period)
+      await UsageRecordingPeriod.update(Number(row.id), { endedAt: Math.max(now(), Number(row.startedAt ?? row.started_at)) })
+    }
+  }
+  function receiptFrom(job: DesktopInstallJob): Receipt | null {
+    if (!job || !['succeeded', 'failed'].includes(job.status) || !pantryPackageKinds.includes(job.kind as PantryPackageKind)) return null
+    if (typeof job.id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(job.id)) return null
+    if (typeof job.domain !== 'string' || !job.domain || job.domain.length > 255 || /\s|:\/\/|[?#]/.test(job.domain)) return null
+    const requestedAt = Date.parse(job.createdAt)
+    const finishedAt = Date.parse(job.finishedAt ?? '')
+    if (!Number.isFinite(requestedAt) || !Number.isFinite(finishedAt) || requestedAt < 0 || finishedAt < requestedAt) return null
+    const started = Date.parse(job.startedAt ?? '')
+    const startedAt = Number.isFinite(started) && started >= requestedAt && started <= finishedAt ? started : 0
+    const timezoneOffset = Number.isInteger(job.timezoneOffset) && Math.abs(job.timezoneOffset!) <= 840 ? job.timezoneOffset! : new Date(finishedAt).getTimezoneOffset()
+    return { jobId: job.id, domain: job.domain, packageKind: job.kind as PantryPackageKind, status: job.status as 'succeeded' | 'failed', requestedAt, startedAt, finishedAt, timezoneOffset, recordedAt: now(), appVersion: pkg.version }
+  }
+  async function flushInstallations(recording: boolean) {
+    if (!recording) {
+      pendingInstalls.clear()
+      return
+    }
+    for (const [id, receipt] of pendingInstalls) {
+      if (await PantryInstallation.where('job_id', id).first()) {
+        pendingInstalls.delete(id)
+        continue
+      }
+      const period = await UsageRecordingPeriod.where('started_at', '<=', receipt.requestedAt).orderBy('started_at', 'desc').first()
+      const row = period ? toAttrs<Record<string, unknown>>(period) : null
+      const endedAt = Number(row?.endedAt ?? row?.ended_at ?? 0)
+      if (!row || (endedAt > 0 && receipt.finishedAt >= endedAt)) {
+        pendingInstalls.delete(id)
+        continue
+      }
+      await PantryInstallation.updateOrCreate({ jobId: id }, receipt)
+      pendingInstalls.delete(id)
+    }
+  }
   async function checkpoint() {
     if (finished) return
     const flushTime = async () => {
@@ -101,6 +158,7 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
     await flushTime()
     const current = monotonic()
     const recording = await trackingEnabled()
+    await syncRecordingPeriod(recording)
     const elapsed = Math.max(0, Math.round(current - lastTick))
     if (recording) {
       if (!sessionRecorded) {
@@ -134,6 +192,7 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
     enabled = recording
     lastTick = current
     await flushTime()
+    await flushInstallations(recording)
   }
   const handle = async (request: Request): Promise<Response | null> => {
     const url = new URL(request.url)
@@ -153,8 +212,11 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
     if (url.pathname === '/api/activity-events' && request.method === 'DELETE') {
       await LauncherActivity.where('id', '>', 0).delete()
       await LauncherUsageDay.where('id', '>', 0).delete()
+      await PantryInstallation.where('id', '>', 0).delete()
+      await UsageRecordingPeriod.where('id', '>', 0).delete()
       days.clear()
       dirtyDays.clear()
+      pendingInstalls.clear()
       sessionRecorded = false
       startedAt = now()
       startedOffset = offset()
@@ -195,6 +257,14 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
   }
   return Object.assign((request: Request) => serial(() => handle(request)), {
     checkpoint: () => serial(checkpoint),
+    recordPantryJobs: (jobs: readonly DesktopInstallJob[]) => serial(async () => {
+      if (finished) return
+      for (const job of jobs) {
+        const receipt = receiptFrom(job)
+        if (receipt) pendingInstalls.set(receipt.jobId, receipt)
+      }
+      await checkpoint()
+    }),
     finish: () => serial(async () => {
       if (finished) return
       await checkpoint()

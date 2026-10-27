@@ -8,12 +8,14 @@ import ClipboardEntry from '../Models/ClipboardEntry'
 import AppPreference from '../Models/AppPreference'
 import LauncherActivity from '../Models/LauncherActivity'
 import LauncherUsageDay from '../Models/LauncherUsageDay'
+import UsageRecordingPeriod from '../Models/UsageRecordingPeriod'
+import PantryInstallation from '../Models/PantryInstallation'
 import CatalogPackage from '../Models/CatalogPackage'
 import { pantryApi } from './pantry'
 import { clearClipboardHistory, pruneClipboardHistory } from './history'
 import { createActivityApi, startActivityRuntime } from './activity'
 
-const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, CatalogPackage }
+const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage }
 // Craft/stx owns the authenticated loopback session and backend process.
 openNativeDatabase({ path: join(homedir(), 'Library/Application Support/Launchpad/launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
@@ -41,7 +43,7 @@ export async function installedApplications() {
 
 export default async function handle(request: Request): Promise<Response | null> {
   const pathname = new URL(request.url).pathname
-  const pantry = await pantryApi(request)
+  const pantry = await pantryApi(request, { onJobs: activityApi.recordPantryJobs })
   if (pantry) return pantry
   if (pathname === '/api/applications' && request.method === 'GET')
     return Response.json({ data: await installedApplications() }, { headers: { 'cache-control': 'private, no-store' } })

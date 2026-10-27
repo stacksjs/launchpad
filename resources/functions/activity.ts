@@ -2,6 +2,10 @@ export const activityActions = ['session_started', 'session_ended', 'palette_ope
 export const activityKinds = ['launcher', 'application', 'quicklink', 'snippet', 'clipboard', 'calculator', 'github', 'pantry'] as const
 export type ActivityAction = typeof activityActions[number]
 export type ActivityKind = typeof activityKinds[number]
+export const pantryPackageKinds = ['app', 'cli', 'library', 'font'] as const
+export type PantryPackageKind = typeof pantryPackageKinds[number]
+export interface PantryReceiptSample { domain: string, packageKind: PantryPackageKind, status: 'succeeded' | 'failed', requestedAt: number, startedAt: number, finishedAt: number, timezoneOffset: number }
+export interface PantryUsageSummary { installed: number, failed: number, byKind: Record<PantryPackageKind, number>, installMs: number, timedInstalls: number, daily: Record<string, number>, topPackages: { domain: string, kind: PantryPackageKind, count: number }[] }
 
 /** Record confirmed side effects, independently of later window or ranking writes. */
 export async function recordSuccessfulOperation(operation: () => Promise<void>, record: (durationMs: number) => void | Promise<void>, clock = () => performance.now()): Promise<void> {
@@ -22,7 +26,7 @@ export function activityPayload(action: ActivityAction, target: { kind: string, 
 }
 
 export interface ActivitySample { action: string, kind: string, applicationName: string, occurredAt: number, timezoneOffset: number }
-export interface ActivitySummary { year: number, commands: number, paletteOpens: number, sessions: number, runningMs: number, visibleMs: number, applicationsOpened: number, linksOpened: number, activeDays: number, longestStreak: number, daily: Record<string, number>, tools: Record<string, number>, topApplications: { name: string, count: number }[] }
+export interface ActivitySummary { year: number, commands: number, paletteOpens: number, sessions: number, runningMs: number, visibleMs: number, applicationsOpened: number, linksOpened: number, activeDays: number, longestStreak: number, daily: Record<string, number>, tools: Record<string, number>, topApplications: { name: string, count: number }[], pantry: PantryUsageSummary }
 
 export function formatUsageTime(milliseconds: number): string {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000)
@@ -44,12 +48,18 @@ export class ActivityAccumulator {
   private daily: Record<string, number> = {}
   private tools: Record<string, number> = {}
   private applications = new Map<string, number>()
+  private pantry = { installed: 0, failed: 0, byKind: { app: 0, cli: 0, library: 0, font: 0 }, installMs: 0, timedInstalls: 0, daily: {} as Record<string, number> }
+  private packages = new Map<string, { domain: string, kind: PantryPackageKind, count: number }>()
   constructor(private year: number) {}
-  add(event: ActivitySample) {
-    const local = new Date(event.occurredAt - event.timezoneOffset * 60000)
-    if (!Number.isFinite(local.getTime())) return
+  private localDay(timestamp: number, offset: number): string | null {
+    const local = new Date(timestamp - offset * 60000)
+    if (!Number.isFinite(local.getTime())) return null
     const day = local.toISOString().slice(0, 10)
-    if (Number(day.slice(0, 4)) !== this.year) return
+    return Number(day.slice(0, 4)) === this.year ? day : null
+  }
+  add(event: ActivitySample) {
+    const day = this.localDay(event.occurredAt, event.timezoneOffset)
+    if (!day) return
     if (event.action === 'session_started') this.sessions++
     if (event.action === 'palette_opened') this.paletteOpens++
     if (['palette_opened', 'command_executed', 'link_opened'].includes(event.action)) this.activeDates.add(day)
@@ -61,6 +71,26 @@ export class ActivityAccumulator {
     this.daily[day] = (this.daily[day] || 0) + 1
     this.tools[event.kind] = (this.tools[event.kind] || 0) + 1
     if (event.kind === 'application' && event.applicationName) this.applications.set(event.applicationName, (this.applications.get(event.applicationName) || 0) + 1)
+  }
+  addInstallation(receipt: PantryReceiptSample) {
+    const day = this.localDay(receipt.finishedAt, receipt.timezoneOffset)
+    if (!day) return
+    if (receipt.status === 'failed') {
+      this.pantry.failed++
+      return
+    }
+    this.pantry.installed++
+    this.pantry.byKind[receipt.packageKind]++
+    this.pantry.daily[day] = (this.pantry.daily[day] || 0) + 1
+    this.activeDates.add(day)
+    if (receipt.startedAt > 0) {
+      this.pantry.installMs += Math.max(0, receipt.finishedAt - receipt.startedAt)
+      this.pantry.timedInstalls++
+    }
+    const key = `${receipt.domain}:${receipt.packageKind}`
+    const entry = this.packages.get(key) ?? { domain: receipt.domain, kind: receipt.packageKind, count: 0 }
+    entry.count++
+    this.packages.set(key, entry)
   }
   addTime(day: string, runningMs: number, visibleMs: number) {
     if (Number(day.slice(0, 4)) !== this.year) return
@@ -77,6 +107,6 @@ export class ActivityAccumulator {
       previous = timestamp
       longestStreak = Math.max(longestStreak, streak)
     }
-    return { year: this.year, commands: this.commands, paletteOpens: this.paletteOpens, sessions: this.sessions, runningMs: this.runningMs, visibleMs: this.visibleMs, applicationsOpened: this.applicationsOpened, linksOpened: this.linksOpened, activeDays: this.activeDates.size, longestStreak, daily: this.daily, tools: this.tools, topApplications: [...this.applications].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 10) }
+    return { pantry: { ...this.pantry, byKind: { ...this.pantry.byKind }, daily: { ...this.pantry.daily }, topPackages: [...this.packages.values()].sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain)).slice(0, 10) }, year: this.year, commands: this.commands, paletteOpens: this.paletteOpens, sessions: this.sessions, runningMs: this.runningMs, visibleMs: this.visibleMs, applicationsOpened: this.applicationsOpened, linksOpened: this.linksOpened, activeDays: this.activeDates.size, longestStreak, daily: this.daily, tools: this.tools, topApplications: [...this.applications].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 10) }
   }
 }

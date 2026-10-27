@@ -1,5 +1,6 @@
 import { bundledPackageCatalog, bundledPackageCatalogRevision, fetchPackageCatalog } from 'ts-pantry/catalog'
 import type { PackageCatalogEntry } from 'ts-pantry/catalog'
+import type { DesktopFetch, DesktopInstallJob } from 'ts-pantry/desktop'
 import CatalogPackage from '../Models/CatalogPackage'
 import AppPreference from '../Models/AppPreference'
 
@@ -36,7 +37,7 @@ async function catalog() {
 }
 
 /** Public catalog refreshes never send a search term. The installer stays in Pantry's own process. */
-export async function pantryApi(request: Request): Promise<Response | null> {
+export async function pantryApi(request: Request, options: { fetch?: DesktopFetch, onJobs?: (jobs: readonly DesktopInstallJob[]) => Promise<void> } = {}): Promise<Response | null> {
   const url = new URL(request.url)
   const json = (data: unknown, status = 200) => Response.json({ data }, { status, headers: { 'cache-control': 'private, no-store' } })
   if (url.pathname === '/api/pantry/catalog' && request.method === 'GET') return json(await catalog())
@@ -64,8 +65,28 @@ export async function pantryApi(request: Request): Promise<Response | null> {
     if (request.method === 'POST') headers.set('content-type', 'application/json')
     const body = request.method === 'POST' ? await request.text() : undefined
     if (body && body.length > 4096) return Response.json({ error: 'Pantry request is too large.' }, { status: 413 })
-    const response = await fetch(`http://127.0.0.1:46473${path}`, { method: request.method, headers, body, signal: AbortSignal.timeout(15000), redirect: 'error' })
-    return new Response(await response.text(), { status: response.status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
+    const response = await (options.fetch ?? fetch)(`http://127.0.0.1:46473${path}`, { method: request.method, headers, body, signal: AbortSignal.timeout(15000), redirect: 'error' })
+    const text = await response.text()
+    if (response.ok && options.onJobs && (path === '/v1/install' || path.startsWith('/v1/jobs'))) {
+      try {
+        const payload = JSON.parse(text)
+        const candidates = Array.isArray(payload.jobs) ? payload.jobs : [payload.job]
+        const jobs: DesktopInstallJob[] = []
+        for (const candidate of candidates) {
+          if (!candidate || typeof candidate !== 'object' || typeof candidate.domain !== 'string') continue
+          const job = { ...candidate } as DesktopInstallJob
+          // Older v1 services omit kind; the package catalog owns that classification.
+          if (!job.kind) {
+            const bundled = bundledPackageCatalog().find(entry => entry.domain === job.domain)
+            job.kind = bundled?.kind ?? (await CatalogPackage.where('domain', job.domain).first())?.kind
+          }
+          jobs.push(job)
+        }
+        await options.onJobs(jobs)
+      }
+      catch { console.warn('Local Pantry usage is waiting for a checkpoint retry.') }
+    }
+    return new Response(text, { status: response.status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
   }
   catch { return Response.json({ error: 'Pantry Desktop is unavailable. Run pantry desktop setup --yes in your terminal, then connect in Settings.' }, { status: 503 }) }
 }

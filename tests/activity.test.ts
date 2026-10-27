@@ -3,6 +3,8 @@ import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
 import LauncherActivity from '../app/Models/LauncherActivity'
 import AppPreference from '../app/Models/AppPreference'
 import LauncherUsageDay from '../app/Models/LauncherUsageDay'
+import UsageRecordingPeriod from '../app/Models/UsageRecordingPeriod'
+import PantryInstallation from '../app/Models/PantryInstallation'
 import { createActivityApi } from '../app/Desktop/activity'
 import { ActivityAccumulator, activityPayload, recordSuccessfulOperation } from '../resources/functions/activity'
 import { defineModel, MODEL_DEFINITION } from '@stacksjs/orm/define-model'
@@ -39,7 +41,7 @@ test('year boundaries, travel offsets and streaks use the calendar day at each e
 })
 
 test('local activity API validates, deduplicates concurrent retries, owns session metadata and honors opt-out', async () => {
-  const models = { LauncherActivity, AppPreference, LauncherUsageDay }
+  const models = { LauncherActivity, AppPreference, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation }
   const db = openNativeDatabase({ path: ':memory:', models })
   try {
     const api = createActivityApi(createNativeModelApi({ models, authorize: () => true }))
@@ -66,7 +68,7 @@ test('local activity API validates, deduplicates concurrent retries, owns sessio
 })
 
 test('the model API counts one process launch and measures running and visible time independently', async () => {
-  const models = { LauncherActivity, AppPreference, LauncherUsageDay }
+  const models = { LauncherActivity, AppPreference, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation }
   const db = openNativeDatabase({ path: ':memory:', models })
   let now = Date.parse('2026-10-27T12:00:00Z')
   let elapsed = 0
@@ -104,7 +106,7 @@ test('the model API counts one process launch and measures running and visible t
 })
 
 test('usage pauses, sleep gaps and process restarts never inflate recorded time', async () => {
-  const models = { LauncherActivity, AppPreference, LauncherUsageDay }
+  const models = { LauncherActivity, AppPreference, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation }
   const db = openNativeDatabase({ path: ':memory:', models })
   let now = Date.parse('2026-10-27T12:00:00Z')
   let elapsed = 0
@@ -150,7 +152,7 @@ test('time intervals split across calendar years without treating command latenc
 })
 
 test('native model checkpoints split midnight, remain compact, and cannot be forged by a client', async () => {
-  const models = { LauncherActivity, AppPreference, LauncherUsageDay }
+  const models = { LauncherActivity, AppPreference, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation }
   const db = openNativeDatabase({ path: ':memory:', models })
   let now = Date.parse('2026-12-31T23:59:55Z')
   let elapsed = 0
@@ -197,11 +199,11 @@ test('native model upgrades preserve existing activity while adding compact usag
     const payload = { ...activityPayload('command_executed', { kind: 'quicklink' }, 42), action: 'command_executed' as const, recordedAt: Date.now(), sessionId: crypto.randomUUID(), appVersion: '1.0.1' }
     await oldActivity.create(payload)
     previous.close()
-    const upgraded = openNativeDatabase({ path, models: { LauncherActivity, AppPreference, LauncherUsageDay } })
+    const upgraded = openNativeDatabase({ path, models: { LauncherActivity, AppPreference, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation } })
     try {
       expect(await LauncherActivity.count()).toBe(1)
       expect((await LauncherActivity.first())?.durationMs).toBe(42)
-      const api = createActivityApi(createNativeModelApi({ models: { LauncherActivity, AppPreference, LauncherUsageDay }, authorize: () => true }))
+      const api = createActivityApi(createNativeModelApi({ models: { LauncherActivity, AppPreference, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation }, authorize: () => true }))
       await api.checkpoint()
       expect(await LauncherActivity.count()).toBe(2)
     }

@@ -179,7 +179,6 @@ async function pollInstall() {
     if (completed.length) {
       pantryInstalled.set(await installedPantry())
       pantryStatus.set('Installed with Pantry')
-      completed.forEach(() => track('package_installed', { kind: 'pantry' }))
       await reload()
     }
   }
@@ -635,6 +634,12 @@ onDestroy(() => cleanup())
     <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>
     <p class="help">Records app sessions, time running, time the palette is open, app and link launches, action types, application names and command latency through the local API. Search text, file paths, snippet and clipboard contents stay out of usage records. Nothing is sent to Stacks.</p>
     <div :if="usageSummary()" class="usage-stats"><div><strong>{{ usageSummary().sessions }}</strong><span>app sessions</span></div><div><strong>{{ usageSummary().paletteOpens }}</strong><span>palette opens</span></div><div><strong>{{ formatUsageTime(usageSummary().runningMs) }}</strong><span>app running</span></div><div><strong>{{ formatUsageTime(usageSummary().visibleMs) }}</strong><span>palette open</span></div><div><strong>{{ usageSummary().applicationsOpened }}</strong><span>apps opened</span></div><div><strong>{{ usageSummary().linksOpened }}</strong><span>links opened</span></div><div><strong>{{ usageSummary().commands }}</strong><span>commands</span></div><div><strong>{{ usageSummary().activeDays }}</strong><span>active days</span></div><div><strong>{{ usageSummary().longestStreak }}</strong><span>day streak</span></div></div>
+    <div :if="usageSummary()?.pantry">
+      <h2>Pantry installs</h2>
+      <p class="help">Confirmed jobs requested through Launchpad. Retries count once. Failed installs are separate.</p>
+      <div class="usage-stats"><div><strong>{{ usageSummary().pantry.installed }}</strong><span>successful installs</span></div><div><strong>{{ usageSummary().pantry.byKind.app }}</strong><span>apps installed</span></div><div><strong>{{ usageSummary().pantry.byKind.cli }}</strong><span>CLI tools installed</span></div><div><strong>{{ usageSummary().pantry.byKind.library }}</strong><span>libraries installed</span></div><div><strong>{{ usageSummary().pantry.byKind.font }}</strong><span>fonts installed</span></div><div><strong>{{ usageSummary().pantry.failed }}</strong><span>failed installs</span></div></div>
+      <p class="help">Successful install time: {{ formatUsageTime(usageSummary().pantry.installMs) }} across {{ usageSummary().pantry.timedInstalls }} timed installs.</p>
+    </div>
     <div class="setting-actions"><span class="help">{{ usageEnabled() ? 'Recording locally' : 'Usage recording paused' }}</span><button type="button" class="danger-button" @click="clearUsage()">Clear usage history</button></div>
     <p :if="usageIssue()" class="help" role="status">{{ usageIssue() }}</p>
       </section>
