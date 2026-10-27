@@ -12,6 +12,10 @@ const preview = state('light')
   <meta property="og:title" content="Launchpad | A shorter path to what you do">
   <meta property="og:description" content="Your apps, links and tools. One keyboard shortcut. A free native launcher for Apple Silicon Macs.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://launchpad.stacksjs.com/">
+  <meta property="og:image" content="https://launchpad.stacksjs.com/images/applications-light.jpg">
+  <meta property="og:image:alt" content="Launchpad application search in Light mode">
+  <link rel="canonical" href="https://launchpad.stacksjs.com/">
   <link rel="icon" href="/images/launchpad.png" type="image/png">
   <title>Launchpad | A shorter path to what you do</title>
 </head>

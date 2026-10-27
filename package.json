@@ -21,6 +21,7 @@
   "scripts": {
     "dev": "./buddy dev",
     "build": "./buddy build",
+    "build:site": "./buddy build --site",
     "package": "./buddy package",
     "release:patch": "./buddy release --bump patch",
     "release:minor": "./buddy release --bump minor",

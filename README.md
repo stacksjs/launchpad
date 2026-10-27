@@ -54,6 +54,13 @@ the local website with hot reload, or `./buddy build --site` to generate
 `dist/site`. Website output is separate from the native app bundle. Plain
 `./buddy dev` continues to launch the desktop app.
 
+The production website is `https://launchpad.stacksjs.com`. The Stacks server's
+[site catalog](https://github.com/stacksjs/stacks/blob/main/config/cloud.ts)
+owns its `launchpad` static site. Stacks' deployment workflow checks out this
+repository, installs its locked dependencies, and runs `bun run build:site`.
+An operator with the Stacks deployment credentials can publish just this site
+from the Stacks checkout with `./buddy deploy --prod --site launchpad --yes`.
+
 `./buddy build` builds the app; `./buddy package` creates a disk image. `bun run release:patch` qualifies a clean main checkout before creating and pushing a version tag. Pantry's reusable workflow provisions the pinned runtime and handles signing, notarization, packaging and delivery. Release inputs are encrypted in `.env.production`; `.env.keys` stays private.
 
 See [the v1 plan](docs/planning/v1.md), [primary-source research](docs/planning/research.md), [privacy policy](PRIVACY.md) and [feature issues](https://github.com/stacksjs/launchpad/issues). Store publication is confirmed only after Apple approval and availability.

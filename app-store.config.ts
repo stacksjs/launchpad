@@ -27,7 +27,7 @@ Free and open source. Built with Stacks, stx, ts-css and Craft. Requires an Appl
 If another app owns Command + Space, release that shortcut before using Launchpad.`,
   keywords: 'launcher,keyboard,search,shortcuts,quicklinks,snippets,clipboard,calculator,productivity,offline',
   supportUrl: 'https://github.com/stacksjs/launchpad/issues',
-  marketingUrl: 'https://github.com/stacksjs/launchpad',
+  marketingUrl: 'https://launchpad.stacksjs.com',
   copyright: '2026 Chris Breuer',
   primaryCategory: 'PRODUCTIVITY',
   contentRightsDeclaration: 'USES_THIRD_PARTY_CONTENT',
