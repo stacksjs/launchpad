@@ -1,6 +1,6 @@
 {
   "name": "launchpad",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A keyboard-first native macOS launcher",
   "stacks": {
     "type": "native"
