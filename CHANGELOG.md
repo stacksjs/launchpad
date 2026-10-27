@@ -1,5 +1,23 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.0...v1.0.1)
+
+## ✨ Features
+
+- publish Launchpad through the Pantry registry ([3643d77](https://github.com/stacksjs/launchpad/commit/3643d77)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- use readable Store profiles for the next v1 build ([7bab3f0](https://github.com/stacksjs/launchpad/commit/7bab3f0)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.1 ([8f024ef](https://github.com/stacksjs/launchpad/commit/8f024ef)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v0.1.2...v1.0.0)
 
 ## 🐛 Bug Fixes
