@@ -6,16 +6,17 @@
     "type": "native"
   },
   "devDependencies": {
+    "@buddysh/buddy": "^0.11.13",
     "@stacksjs/buddy": "0.75.323",
-    "better-dx": "^0.2.38",
-    "ts-pantry": "0.11.135"
+    "better-dx": "^0.2.38"
   },
   "dependencies": {
-    "@stacksjs/desktop": "0.2.716",
-    "@stacksjs/orm": "0.75.323",
-    "@stacksjs/stx": "0.2.716",
+    "@stacksjs/desktop": "0.2.717",
+    "@stacksjs/github": "0.75.323",
+    "@stacksjs/orm": "0.75.324",
+    "@stacksjs/stx": "0.2.717",
     "@stacksjs/validation": "0.75.323",
-    "@stacksjs/github": "0.75.323"
+    "ts-pantry": "0.11.138"
   },
   "scripts": {
     "dev": "./buddy dev",

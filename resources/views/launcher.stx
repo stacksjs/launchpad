@@ -10,17 +10,33 @@
 import type { Result } from '../functions/search'
 import { rankResults, quicklinkUrl } from '../functions/search'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell } from '../functions/native'
+import { registerLauncher, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
+import { pantryResults, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
+import type { PackageCatalogEntry, DesktopInstalledPackage, DesktopInstallJob } from '../functions/pantry'
 import { activityPayload } from '../functions/activity'
 import type { ActivityAction, ActivitySummary } from '../functions/activity'
 
+const catalog = state<PackageCatalogEntry[]>([])
+const pantryInstalled = state<DesktopInstalledPackage[]>([])
+const pantryReady = state(false)
+const pantryStatus = state('Connect the Pantry CLI in Settings to install packages.')
+const pantryCode = state('')
+const pantryFilter = state('all')
+const packageDetail = state<Result | null>(null)
+const installJobs = state<DesktopInstallJob[]>([])
+const installJob = derived(() => installJobs().find(job => job.domain === packageDetail()?.content) || null)
+const packageAppPath = derived(() => pantryInstalled().find(item => item.name === packageDetail()?.package?.domain && item.applicationPath)?.applicationPath || '')
+const packageBusy = state(false)
+const installRequests: Record<string, string> = {}
+let pollingJob = false
 const query = state('')
 const category = state('all')
 const items = state<Result[]>([])
 const records = state<Record<string, any>>({})
 const selected = state(0)
+const visibleLimit = state(100)
 const loading = state(true)
 const error = state('')
 const status = state('Ready when you are')
@@ -62,15 +78,18 @@ const commandTitle = useRef('commandTitle')
 const list = useRef('results')
 let cleanup = () => {}
 
-const results = derived(() => {
-  const source = (category() === 'github' ? githubItems() : items()).map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id, icon: icons()[item.content] }))
+const allResults = derived(() => {
+  const packages = pantryResults(catalog(), items(), pantryInstalled(), category() === 'pantry' ? pantryFilter() : 'all', category() === 'pantry', query())
+  const combined = category() === 'github' ? githubItems() : category() === 'pantry' ? packages : [...items(), ...packages.filter(item => item.installedVersion)]
+  const source = combined.map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id, icon: item.icon || icons()[item.content] }))
   if (category() === 'github') return source
   const answer = category() === 'all' ? calculate(query()) : null
   const found = rankResults(source, query(), category())
   return answer === null ? found : [{ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer }, ...found]
 })
+const results = derived(() => allResults().slice(0, visibleLimit()))
 const active = derived(() => results()[selected()])
-const actionLabel = derived(() => ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
+const actionLabel = derived(() => active()?.kind === 'pantry' ? 'Details' : ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
 
 async function api(path, method = 'GET', body?) {
   const response = await fetch('/api/' + path, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) })
@@ -89,6 +108,72 @@ async function all(path) {
     if (part.length < 100) return rows
   }
 }
+
+async function refreshCatalog() {
+  packageBusy.set(true)
+  try { catalog.set(await api('pantry/catalog/refresh', 'POST')); pantryStatus.set(catalog().length + ' packages · Catalog updated') }
+  catch (reason) { pantryStatus.set(reason.message) }
+  finally { packageBusy.set(false) }
+}
+async function connectPackages() {
+  packageBusy.set(true)
+  try { pantryInstalled.set(await connectPantry(pantryCode())); installJobs.set(await pantryJobs()); pantryCode.set(''); pantryReady.set(true); pantryStatus.set('Connected to Pantry · ' + pantryInstalled().length + ' installed packages') }
+  catch (reason) { pantryReady.set(pantryConnected()); pantryStatus.set(reason.message) }
+  finally { packageBusy.set(false) }
+}
+async function refreshPackages() {
+  packageBusy.set(true)
+  try { pantryInstalled.set(await restorePantry()); pantryReady.set(pantryConnected()); if (pantryConnected()) installJobs.set(await pantryJobs()); pantryStatus.set('Connected to Pantry · ' + pantryInstalled().length + ' installed packages') }
+  catch (reason) { pantryReady.set(pantryConnected()); pantryStatus.set(reason.message) }
+  finally { packageBusy.set(false) }
+}
+async function disconnectPackages() {
+  try { await disconnectPantry(); pantryReady.set(false); pantryInstalled.set([]); pantryStatus.set('Pantry disconnected. Catalog search remains available.') }
+  catch (reason) { pantryStatus.set(reason.message) }
+}
+async function openPackageApplication() {
+  const item = packageDetail()
+  if (!item || !packageAppPath()) return
+  try {
+    await execute({ ...item, kind: 'application', content: packageAppPath() }, '')
+    track('command_executed', { kind: 'application', title: item.title })
+  }
+  catch (reason) { fail(reason) }
+}
+function closePackage() { packageDetail.set(null); void nextTick(() => search.current?.focus()) }
+async function startInstall() {
+  const item = packageDetail()
+  if (!item || packageBusy()) return
+  if (!pantryReady()) { settingsSection.set('pantry'); packageDetail.set(null); openSettings(); return }
+  packageBusy.set(true)
+  try {
+    if (!installRequests[item.content] || installJob()?.status === 'failed') installRequests[item.content] = crypto.randomUUID()
+    const job = await installPantry(item.content, installRequests[item.content])
+    installJobs.set([job, ...installJobs().filter(previous => previous.id !== job.id)])
+    pantryStatus.set('Installation requested from Pantry')
+  }
+  catch (reason) { pantryStatus.set(reason.message) }
+  finally { packageBusy.set(false) }
+}
+async function pollInstall() {
+  if (!installJobs().some(job => ['queued', 'running'].includes(job.status)) || pollingJob) return
+  pollingJob = true
+  try {
+    const previous = installJobs()
+    const current = await pantryJobs()
+    installJobs.set(current)
+    const completed = current.filter(job => job.status === 'succeeded' && previous.some(old => old.id === job.id && ['queued', 'running'].includes(old.status)))
+    if (completed.length) {
+      pantryInstalled.set(await installedPantry())
+      pantryStatus.set('Installed with Pantry')
+      completed.forEach(() => track('package_installed', { kind: 'pantry' }))
+      await reload()
+    }
+  }
+  catch (reason) { pantryStatus.set(reason.message) }
+  finally { pollingJob = false }
+}
+useInterval(pollInstall, 1000)
 
 async function reload() {
   loading.set(true)
@@ -110,10 +195,10 @@ async function reload() {
 function focusSearch() { query.set(''); category.set('all'); selected.set(0); void nextTick(() => search.current?.focus()) }
 function chooseCategory(value) { query.set(''); category.set(value); selected.set(0); void nextTick(() => search.current?.focus()) }
 function fail(reason) { error.set(reason.message || String(reason)) }
-function openSettings() { settings.set(true); error.set(''); void nextTick(() => settingsTitle.current?.focus()) }
+function openSettings() { settings.set(true); error.set(''); void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus())) }
 function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
 function closeEditor() { editor.set(false); void nextTick(() => search.current?.focus()) }
-function activate() { focusSearch(); track('palette_opened') }
+function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); track('palette_opened') }
 
 function track(action: ActivityAction, target = { kind: 'launcher' }, durationMs = 0) {
   if (!preferencesReady() || !usageEnabled()) return
@@ -262,6 +347,10 @@ useInterval(pollClipboard, 800, { enabled: () => preferencesReady() && historyEn
 
 async function run(item = active()) {
   if (!item || saving()) return
+  if (item.kind === 'pantry') {
+    packageDetail.set(item)
+    return
+  }
   error.set('')
   saving.set(true)
   try {
@@ -342,20 +431,18 @@ async function remove() {
 function key(event) {
   if (event.key === 'Escape') {
     event.preventDefault()
-    if (settings()) closeSettings()
-    else if (editor()) closeEditor()
-    else if (query()) query.set('')
-    else void nativeWindow.hide()
+    void nativeWindow.hide()
+    return
   }
   if (event.metaKey && event.key === ',') { event.preventDefault(); if (settings()) closeSettings(); else openSettings(); return }
-  if (settings()) return
+  if (settings() || packageDetail()) return
   if (event.metaKey && event.key.toLowerCase() === 'g') { event.preventDefault(); chooseCategory('github'); return }
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
   if (event.metaKey && event.key.toLowerCase() === 'n') { event.preventDefault(); newCommand(); return }
   if (editor()) return
   if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
   if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
-  if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); void remove(); return }
+  if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
     selected.set(Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1))))
@@ -364,11 +451,18 @@ function key(event) {
   if (event.key === 'Enter') { event.preventDefault(); void run() }
 }
 
-effect(() => { query(); category(); items(); selected.set(0) })
-useEventListener('keydown', key)
+effect(() => { query(); category(); items(); selected.set(0); visibleLimit.set(100) })
+useEventListener('keydown', key, { capture: true })
+onMount(() => {
+  const stopBlur = windowEvents.onBlur(() => { track('palette_dismissed'); void nativeWindow.hide() })
+  const stopFocus = windowEvents.onFocus(() => { if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
+  onDestroy(() => { stopBlur(); stopFocus() })
+})
 onMount(async () => {
-  try { await loadPreferences() } catch (reason) { fail(reason) }
+  try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
   await reload()
+  try { catalog.set(await api('pantry/catalog')) } catch (reason) { pantryStatus.set(reason.message) }
+  try { pantryInstalled.set(await restorePantry()); pantryReady.set(pantryConnected()); if (pantryConnected()) { installJobs.set(await pantryJobs()); pantryStatus.set('Connected to Pantry · ' + pantryInstalled().length + ' installed packages') } } catch (reason) { pantryReady.set(pantryConnected()); pantryStatus.set(reason.message) }
   try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) }
   track('session_started')
   try { cleanup = await registerLauncher(activate) }
@@ -379,7 +473,7 @@ onDestroy(() => cleanup())
 </script>
 
 <main class="flex flex-col w-full" aria-label="Launchpad">
-  <div class="palette-content" x-show="!settings() && !editor()">
+  <div class="palette-content" x-show="!settings() && !editor() && !packageDetail()">
   <header class="flex gap-4 items-center px-6" @mousedown="nativeWindow.startDrag()">
     <span class="i-f7-search search-icon" aria-hidden="true"></span>
     <input ref="search" x-model="query" type="search" placeholder="Search anything, do something." autocomplete="off" spellcheck="false" role="combobox" aria-label="Search applications and commands" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="'result-' + selected()" @mousedown.stop="">
@@ -392,6 +486,7 @@ onDestroy(() => cleanup())
     <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" @click="chooseCategory('snippet')">Snippets</button>
     <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" @click="chooseCategory('clipboard')">Clipboard</button>
     <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" @click="chooseCategory('github')">GitHub</button>
+    <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" @click="chooseCategory('pantry')">Pantry</button>
     <button type="button" class="ml-auto new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
@@ -401,23 +496,28 @@ onDestroy(() => cleanup())
     <input x-model="githubScope" @change="saveScope()" placeholder="owner/repository" aria-label="GitHub repository scope">
     <button type="button" class="text-action" @click="refreshGitHub()">Refresh</button>
   </div>
+  <div :if="category() === 'pantry'" class="flex gap-2 items-center px-5 github-tools">
+    <select x-model="pantryFilter" aria-label="Package type"><option value="all">All packages</option><option value="app">Applications</option><option value="cli">Command line tools</option><option value="library">Libraries</option><option value="font">Fonts</option></select>
+    <span class="help">{{ catalog().length }} packages</span><button type="button" class="ml-auto text-action" @click="refreshCatalog()" :disabled="packageBusy()">Refresh catalog</button>
+  </div>
   <section class="flex flex-1 flex-col min-h-0" aria-label="Search results">
     <div class="flex items-center justify-between px-6 section-label">
-      <span>{{ category() === 'clipboard' ? 'Clipboard History' : category() === 'github' ? 'GitHub' : query() ? 'Results' : 'Your launchpad' }}</span>
+      <span>{{ category() === 'clipboard' ? 'Clipboard History' : category() === 'github' ? 'GitHub' : category() === 'pantry' ? 'Pantry catalog' : query() ? 'Results' : 'Your launchpad' }}</span>
       <button :if="category() === 'clipboard'" type="button" class="text-action" @click="saveClipboard()">Save current clipboard</button>
-      <span :if="category() !== 'clipboard'">{{ results().length }} available</span>
+      <span :if="category() !== 'clipboard'">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
     </div>
     <div class="result-region">
     <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands">
       <p :if="loading() || (category() === 'github' && githubLoading())" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : 'Finding your applications...' }}</p>
       <div :if="!loading() && !githubLoading() && results().length === 0" class="empty">
         <p>{{ category() === 'clipboard' ? 'Keep useful text close.' : 'Nothing here yet.' }}</p>
-        <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
+        <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
       </div>
       <button :for="(item, index) in results()" :key="item.key" :id="'result-' + index" type="button" role="option" :aria-selected="index === selected()" :class="index === selected() ? 'result selected' : 'result'" @click="selected.set(index); run(item)" @mousemove="selected.set(index)">
         <span class="item-icon" aria-hidden="true">
-          <img :if="item.kind === 'application' && item.icon" :src="item.icon" alt="" width="34" height="34">
+          <img :if="['application', 'pantry'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
+          <span :if="item.kind === 'pantry' && !item.icon" class="i-f7-cube-box"></span>
           <span :if="item.kind === 'quicklink'" class="i-f7-link"></span>
           <span :if="item.kind === 'snippet'" class="i-f7-text-alignleft"></span>
           <span :if="item.kind === 'clipboard'" class="i-f7-doc-on-clipboard"></span>
@@ -425,6 +525,7 @@ onDestroy(() => cleanup())
           <span :if="item.kind === 'github'" class="i-f7-chevron-left-slash-chevron-right"></span>
         </span>
         <span class="result-copy"><span class="result-title">{{ item.title }}</span><span class="result-subtitle">{{ item.subtitle }}</span></span>
+        <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
         <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
         <span :if="index === selected()" class="return-key" aria-hidden="true">↵</span>
       </button>
@@ -438,10 +539,13 @@ onDestroy(() => cleanup())
     <button type="button" class="text-action" @click="clearHistory()">Clear history</button>
   </div>
   <p :if="category() === 'github'" class="px-5 github-status" role="status">{{ githubLoading() ? 'Searching GitHub...' : githubStatus() }}</p>
+  <p :if="category() === 'pantry'" class="px-5 github-status" role="status">{{ pantryStatus() }}</p>
+  <div :if="allResults().length > results().length" class="flex items-center justify-center history-tools"><button type="button" class="text-action" @click="visibleLimit.set(visibleLimit() + 100)">Show {{ Math.min(100, allResults().length - results().length) }} more</button></div>
   <footer class="flex gap-3 items-center px-5">
     <span class="wordmark">Launchpad</span>
     <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
+    <button :if="active()?.id && ['quicklink', 'snippet', 'clipboard'].includes(active()?.kind)" type="button" class="footer-action" @click="remove()" aria-label="Delete selected saved item">Delete</button>
     <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active()" title="Favorite (Command D)">☆ <kbd>⌘ D</kbd></button>
     <button type="button" class="footer-action primary" @click="run()" :disabled="!active() || saving()">{{ actionLabel() }} <kbd>↵</kbd></button>
   </footer>
@@ -453,6 +557,7 @@ onDestroy(() => cleanup())
       <button type="button" :class="settingsSection() === 'appearance' ? 'tab active' : 'tab'" @click="settingsSection.set('appearance')">Appearance</button>
       <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" @click="settingsSection.set('clipboard')">Clipboard History</button>
       <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" @click="settingsSection.set('github')">GitHub</button>
+      <button type="button" :class="settingsSection() === 'pantry' ? 'tab active' : 'tab'" @click="settingsSection.set('pantry')">Pantry</button>
       <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" @click="settingsSection.set('usage')">Usage</button>
     </nav>
     <div class="dialog-body">
@@ -483,6 +588,16 @@ onDestroy(() => cleanup())
     </form>
     <button :if="githubViewer()" type="button" class="secondary-button" @click="disconnectAccount()">Disconnect GitHub</button>
       </section>
+      <section :if="settingsSection() === 'pantry'">
+        <h2>Your tools, through Pantry.</h2>
+        <p class="help">Search applications, command line tools, libraries and fonts locally. Installation uses the Pantry CLI you install separately, with your user account and its package permissions.</p>
+        <p class="help">Run this once in your terminal, then enter the five minute pairing code below.</p>
+        <div class="setup-command"><code>pantry desktop setup --yes</code><button type="button" class="text-action" @click="clipboard.writeText('pantry desktop setup --yes')">Copy</button></div>
+        <form :if="!pantryReady()" @submit.prevent="connectPackages()"><label for="pantry-code">Pantry pairing code</label><input id="pantry-code" x-model="pantryCode" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="8 digit code"><button type="submit" class="save-button" :disabled="packageBusy() || pantryCode().length !== 8">Connect Pantry</button></form>
+        <div :if="pantryReady()" class="flex gap-3 items-center"><button type="button" class="secondary-button" @click="refreshPackages()" :disabled="packageBusy()">Refresh connection</button><button type="button" class="text-action" @click="disconnectPackages()">Disconnect Pantry</button></div>
+        <p class="help" role="status">{{ pantryStatus() }}</p>
+        <p class="help">The connection token stays in macOS Keychain. Catalog refreshes and original logos load from Pantry's GitHub repository. Package searches stay on this Mac.</p>
+      </section>
       <section :if="settingsSection() === 'usage'">
     <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>
     <p class="help">Records action types, application names, timestamps and command latency through the local API. Search text, file paths, snippet and clipboard contents stay out of usage records. Nothing is sent to Stacks.</p>
@@ -493,6 +608,19 @@ onDestroy(() => cleanup())
       <p :if="error()" class="error" role="alert">{{ error() }}</p>
     </div>
     <div class="dialog-footer"><span class="help">Saved on this Mac</span><button type="button" class="secondary-button" @click="closeSettings()">Done</button></div>
+  </div>
+
+  <div :if="packageDetail()" class="editor" role="dialog" aria-modal="true" aria-label="Pantry package details">
+    <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ packageDetail().title }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closePackage()">esc</button></div>
+    <div class="dialog-body">
+      <div class="package-heading"><img :if="packageDetail().icon" :src="packageDetail().icon" class="package-logo" width="48" height="48" alt=""><div><h2>{{ packageDetail().title }}</h2><p class="help">{{ packageDetail().package?.kind }} · {{ packageDetail().content }}</p></div></div>
+      <p class="package-description">{{ packageDetail().package?.description }}</p>
+      <div class="flex gap-3 items-center"><span class="package-badge">{{ pantryInstalled().find(item => item.name === packageDetail().content)?.version || packageDetail().package?.latestVersion || 'Latest available' }}</span><button :if="packageDetail().package?.homepageUrl" type="button" class="text-action" @click="shell.openExternal(packageDetail().package.homepageUrl)">Project website ↗</button><button :if="packageDetail().package?.githubUrl" type="button" class="text-action" @click="shell.openExternal(packageDetail().package.githubUrl)">GitHub ↗</button></div>
+      <p class="help">Pantry selects the compatible artifact and installs dependencies. A listed package may be unavailable for this Mac. Installation runs in the separately installed Pantry service.</p>
+      <p class="help" role="status">{{ installJob() ? installJob().status === 'succeeded' ? 'Installed successfully' : installJob().status === 'failed' ? installJob().error : 'Pantry is ' + installJob().status : pantryStatus() }}</p>
+      <pre :if="installJob()?.output" class="package-output" aria-label="Pantry installation output">{{ installJob().output }}</pre>
+    </div>
+    <div class="dialog-footer"><button type="button" class="secondary-button" @click="closePackage()">Back</button><button :if="packageAppPath()" type="button" class="secondary-button" @click="openPackageApplication()">Open application</button><button type="button" class="save-button" @click="startInstall()" :disabled="packageBusy() || (installJob() && ['queued', 'running', 'succeeded'].includes(installJob().status))">{{ !pantryReady() ? 'Connect Pantry' : installJob()?.status === 'succeeded' ? 'Installed' : installJob()?.status === 'failed' ? 'Retry installation' : installJob() ? 'Installing...' : 'Install with Pantry' }}</button></div>
   </div>
 
   <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="editId() === null ? 'New command' : 'Edit command'">
@@ -610,4 +738,11 @@ header input:focus-visible { outline: none; }
 .usage-stats strong { font-size: 22px; font-weight: 600; }
 .usage-stats span { color: var(--muted); font-size: 11px; }
 .results, .dialog-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.package-logo { background: #f5f6f8; border-radius: 8px; padding: 3px; }
+.package-badge { flex: 0 0 auto; color: var(--muted); font-size: 10px; border: 1px solid var(--line); padding: 3px 7px; border-radius: 5px; }
+.package-heading { display: flex; align-items: center; gap: 14px; }
+.package-heading img, .item-icon img { object-fit: contain; }
+.package-description { font-size: 14px; line-height: 1.6; }
+.package-output { max-height: 140px; overflow: auto; padding: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 8px; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.setup-command { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
 </style>

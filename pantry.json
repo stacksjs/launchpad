@@ -2,8 +2,8 @@
   "native": {
     "environment": "production",
     "runtime": {
-      "version": "0.0.363",
-      "revision": "01813262c291782d78e6ba10ff75f7d73013c5e4"
+      "version": "0.0.365",
+      "revision": "25e6d186b8974af26422ce38c62b469e42f2b56f"
     },
     "macos": {
       "notarize": true,

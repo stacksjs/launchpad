@@ -1,5 +1,5 @@
-export const activityActions = ['session_started', 'palette_opened', 'command_executed', 'command_created', 'clipboard_saved', 'github_search'] as const
-export const activityKinds = ['launcher', 'application', 'quicklink', 'snippet', 'clipboard', 'calculator', 'github'] as const
+export const activityActions = ['session_started', 'palette_opened', 'palette_dismissed', 'command_executed', 'command_created', 'clipboard_saved', 'package_installed', 'github_search'] as const
+export const activityKinds = ['launcher', 'application', 'quicklink', 'snippet', 'clipboard', 'calculator', 'github', 'pantry'] as const
 export type ActivityAction = typeof activityActions[number]
 export type ActivityKind = typeof activityKinds[number]
 

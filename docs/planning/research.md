@@ -70,7 +70,7 @@ The user-mentioned Tools location is absent. The active Pantry checkout is `/Use
 
 `provisionMacApp` explicitly reports initial App Store Connect app-record creation as a manual Apple step, because its supported public API has no app-creation endpoint. Complete that through the existing Dia session. Do not invent private Apple endpoints. After creation, Pantry can manage subsequent supported metadata and release operations. [Provisioning implementation](/Users/chris/Code/pantry/packages/ts-pantry/src/app-store-connect.ts:790)
 
-The current pipeline is designed for direct distribution plus an optional Store build. It requires Developer ID inputs before the Store branch, so a Store-only project may expose a real reusable pipeline gap. Only change this if the app chooses Store-only delivery and verification demonstrates the unnecessary prerequisite. [Native release pipeline](/Users/chris/Code/pantry/packages/ts-pantry/src/native/pipeline.ts:49)
+The native pipeline qualifies a Developer ID build of the same application before preparing its Store-signed package. A Store distribution profile is validated structurally and through Apple tooling, because it is not a locally runnable signing profile. Buddy's native Apple commands now use the shared Pantry publisher for packaging, upload, build processing and review preparation. [Native release pipeline](https://github.com/pantry-pm/pantry/blob/v0.11.138/packages/ts-pantry/src/native/pipeline.ts)
 
 ## Implementation order and release evidence
 
@@ -91,3 +91,13 @@ Clipboard History, themes, native app icons and GitHub views are included in v1.
 Usage for the future year review remains in the local model API. It stores UUID events, sessions, action categories, timestamps and timezone offsets. It excludes queries, URLs, paths and text contents. [Issue 8](https://github.com/stacksjs/launchpad/issues/8) tracks image export. This is separate from future paid AI allowance accounting.
 
 Apple excludes on-device-only processing from its collection label. GitHub queries and optional authentication leave the device, so the Store setup declares Search History and User ID for functionality, linked to the account and unused for tracking. The policy explains this distinction. [Apple privacy definitions](https://developer.apple.com/app-store/app-privacy-details/)
+
+## Pantry and launcher follow-ups
+
+The catalog combines package metadata, recipes, desktop applications and fonts. Original artwork is retained byte for byte in Pantry's repository, with source URLs and SHA-256 records. Launchpad stores public metadata through CatalogPackage and uses the browser-safe catalog and transport entrypoints; installer and service implementation stay in the external Pantry process. [Pantry catalog](https://github.com/pantry-pm/pantry/tree/main/catalog), [integration issue](https://github.com/stacksjs/launchpad/issues/12).
+
+All contains installed Pantry packages. Pantry contains the whole library, with filters and pagination. The service accepts exact catalog identifiers, serializes jobs, deduplicates UUID retries and keeps client-owned status. The application retains its connection in Keychain. Apps installed in the real user Applications directory are discovered by the external service so the sandboxed launcher can offer them. [Desktop bridge](https://github.com/pantry-pm/pantry/blob/main/docs/features/desktop-bridge.md).
+
+Externalizing an installer is an implementation boundary, not evidence of an App Store exemption. Review notes describe the actual installation behavior and retain Apple's approval gate. [Apple hardware compatibility rules](https://developer.apple.com/app-store/review/guidelines/#hardware-compatibility).
+
+Craft now activates accessory applications before focusing their WebViews. Native rounded clipping uses public AppKit and layer APIs, avoiding private WebKit background transparency. The user physically confirmed focus and both dismissal paths; the populated search clearing check passed in the actual native window. [Qualification issue](https://github.com/stacksjs/launchpad/issues/13).

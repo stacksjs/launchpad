@@ -40,3 +40,7 @@ Models under `app/Models` declare schema, validation and `useApi` routes for the
 `./buddy build` builds the app; `./buddy package` creates a disk image. `bun run release:patch` qualifies a clean main checkout before creating and pushing a version tag. Pantry's reusable workflow provisions the pinned runtime and handles signing, notarization, packaging and delivery. Release inputs are encrypted in `.env.production`; `.env.keys` stays private.
 
 See [the v1 plan](docs/planning/v1.md), [primary-source research](docs/planning/research.md), [privacy policy](PRIVACY.md) and [feature issues](https://github.com/stacksjs/launchpad/issues). Store publication is confirmed only after Apple approval and availability.
+
+Pantry includes applications, command line tools, libraries and fonts. All shows installed Pantry packages alongside your installed Mac apps and commands; the Pantry tab shows the full catalog. Open a package to see its original logo, upstream links, installed version and installation status. Connect the separately installed Pantry CLI in Settings using `pantry desktop setup --yes` and its single-use pairing code. Launchpad stores the token in macOS Keychain and sends installation requests to Pantry's local service.
+
+Escape dismisses the palette immediately. Command + Delete clears the search; saved items have a separate Delete control. Clicking another app dismisses it through the native focus event. Command + Space opens the main search and focuses its input.

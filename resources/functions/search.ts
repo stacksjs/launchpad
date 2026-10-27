@@ -9,6 +9,8 @@ export interface Result {
   favorite?: boolean
   launches?: number
   lastUsed?: number
+  package?: import('ts-pantry/catalog').PackageCatalogEntry
+  installedVersion?: string
   icon?: string
 }
 
@@ -20,7 +22,7 @@ export function rankResults(items: Result[], input: string, category = 'all'): R
     const argument = quicklinkArgument(item, input)
     const term = argument === null ? query : (item.alias || item.title).toLocaleLowerCase()
     const haystack = `${title} ${item.alias ?? ''}`.toLocaleLowerCase()
-    let score = item.favorite ? 100 : 0
+    let score = (item.favorite ? 100 : 0) + (item.kind === 'application' ? 10 : 0)
     if (query) {
       if (title === term || item.alias?.toLowerCase() === term) score += 1000
       else if (title.startsWith(term)) score += 500

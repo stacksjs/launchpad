@@ -7,6 +7,6 @@ export default {
   category: 'public.app-category.productivity', minimumSystemVersion: '13.0',
   systemTray: true, menubarOnly: false, runtimeProfile: 'webview',
   backend: { entry: 'app/Desktop/api.ts', maxRequestBodySize: 131072 },
-  window: { title: 'Launchpad', width: 720, height: 450, frameless: true, transparent: true, resizable: false, alwaysOnTop: true },
+  window: { title: 'Launchpad', width: 720, height: 450, frameless: true, transparent: false, cornerRadius: 12, resizable: false, alwaysOnTop: true },
   infoPlist: { LSUIElement: true, NSHumanReadableCopyright: 'Copyright © 2026 Chris Breuer' },
 } satisfies NativeBuildConfig

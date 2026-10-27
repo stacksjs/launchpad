@@ -29,3 +29,9 @@ Opening a GitHub result or quicklink uses your default browser. Quicklink search
 Launchpad provides no cloud synchronization. Local data remains until its retention period expires or you delete it. Uninstalling an app may leave its container and Keychain items behind. Disconnect GitHub and clear clipboard and usage history before removing the app if you want to remove those records. Saved commands and preferences can also be removed with the app's Application Support data.
 
 Contact Chris Breuer at chris@stacksjs.com for privacy questions. [Support and issue reporting](https://github.com/stacksjs/launchpad/issues) are available on GitHub. Do not include personal clipboard contents, tokens or other sensitive text in public issues.
+
+## Pantry
+
+Package metadata is cached in the local model API. Catalog refreshes and original package logos are fetched from Pantry's GitHub repository, which receives normal network request information such as your IP address and the requested asset path. Package search text stays on your Mac.
+
+Connecting Pantry creates a credential stored in macOS Keychain. The separately installed Pantry desktop service holds its hash and handles installations under your user account. Launchpad sends only the selected package identifier and a retry ID to the service on loopback. Pantry contacts its package registry and upstream sources to perform installations. Installation status and a bounded output log remain local. Disconnect in Settings to revoke Launchpad's connection.

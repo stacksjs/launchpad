@@ -5,7 +5,7 @@ export default defineModel({
   name: 'AppPreference', table: 'app_preferences',
   traits: { useTimestamps: true, useApi: { uri: 'preferences', middleware: [], routes: ['index', 'store', 'update'] } },
   attributes: {
-    key: { fillable: true, required: true, unique: true, validation: { rule: schema.enum(['appearance', 'history', 'githubScope', 'usage']).required() } },
+    key: { fillable: true, required: true, unique: true, validation: { rule: schema.enum(['appearance', 'history', 'githubScope', 'usage', 'pantryCatalog']).required() } },
     value: { fillable: true, required: true, validation: { rule: schema.string().max(1000).required() } },
   },
 } as const)

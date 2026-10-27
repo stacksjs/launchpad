@@ -1,8 +1,8 @@
-import { app, clipboard, globalShortcuts, nativeWindow, shell } from '@stacksjs/desktop/browser'
+import { app, clipboard, globalShortcuts, nativeWindow, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import type { Result } from './search'
 import { quicklinkArgument, quicklinkUrl } from './search'
 
-export { nativeWindow, clipboard, shell }
+export { nativeWindow, clipboard, shell, windowEvents, menu, standardMenus }
 
 export async function applicationIcons(paths: string[]): Promise<Record<string, string>> {
   const icons: Record<string, string> = {}
@@ -42,6 +42,7 @@ export async function registerLauncher(show: () => void): Promise<() => void> {
 }
 
 export async function execute(result: Result, query: string): Promise<void> {
+  if (result.kind === 'pantry') throw new Error('Open the package details to install with Pantry.')
   if (result.kind === 'application') await shell.openPath(result.content)
   else if (result.kind === 'github') await shell.openExternal(result.content)
   else if (result.kind === 'quicklink') await shell.openExternal(quicklinkUrl(result.content, quicklinkArgument(result, query) ?? ''))

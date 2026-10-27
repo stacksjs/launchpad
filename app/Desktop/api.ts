@@ -7,10 +7,12 @@ import LaunchRecord from '../Models/LaunchRecord'
 import ClipboardEntry from '../Models/ClipboardEntry'
 import AppPreference from '../Models/AppPreference'
 import LauncherActivity from '../Models/LauncherActivity'
+import CatalogPackage from '../Models/CatalogPackage'
+import { pantryApi } from './pantry'
 import { clearClipboardHistory, pruneClipboardHistory } from './history'
 import { createActivityApi } from './activity'
 
-const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity }
+const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, CatalogPackage }
 // Craft/stx owns the authenticated loopback session and backend process.
 openNativeDatabase({ path: join(homedir(), 'Library/Application Support/Launchpad/launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
@@ -37,6 +39,8 @@ export async function installedApplications() {
 
 export default async function handle(request: Request): Promise<Response | null> {
   const pathname = new URL(request.url).pathname
+  const pantry = await pantryApi(request)
+  if (pantry) return pantry
   if (pathname === '/api/applications' && request.method === 'GET')
     return Response.json({ data: await installedApplications() }, { headers: { 'cache-control': 'private, no-store' } })
   if (pathname === '/api/clipboard-history' && request.method === 'DELETE') {
