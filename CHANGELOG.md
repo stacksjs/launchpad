@@ -1,5 +1,16 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.4...v1.0.5)
+
+## 🔧 Chores
+
+- release v1.0.5 ([a76c03c](https://github.com/stacksjs/launchpad/commit/a76c03c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use published framework and Pantry patches ([b01f8ab](https://github.com/stacksjs/launchpad/commit/b01f8ab)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.3...v1.0.4)
 
 ## ✨ Features
