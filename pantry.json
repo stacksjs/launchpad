@@ -2,8 +2,8 @@
   "native": {
     "environment": "production",
     "runtime": {
-      "version": "0.0.365",
-      "revision": "25e6d186b8974af26422ce38c62b469e42f2b56f"
+      "version": "0.0.367",
+      "revision": "e1d6e40100ae2c35c96f9d96ed826f08ddf1f48b"
     },
     "macos": {
       "notarize": true,
@@ -20,7 +20,8 @@
           "com.apple.security.network.server": true,
           "com.apple.security.network.client": true
         }
-      }
+      },
+      "appStore": true
     },
     "checks": {
       "before": [

@@ -35,6 +35,6 @@ If another app owns Command + Space, release that shortcut before using Launchpa
   ageRating: { userGeneratedContent: true },
   releaseType: 'AFTER_APPROVAL',
   usesNonExemptEncryption: false,
-  screenshots: [{ platform: 'MAC_APP_STORE', files: ['assets/screenshots/applications.jpg', 'assets/screenshots/applications-light.jpg', 'assets/screenshots/calculator.jpg', 'assets/screenshots/github.jpg'] }],
+  screenshots: [{ platform: 'MAC_APP_STORE', files: ['assets/screenshots/applications.jpg', 'assets/screenshots/applications-light.jpg', 'assets/screenshots/calculator.jpg', 'assets/screenshots/github.jpg', 'assets/screenshots/pantry.jpg'] }],
   submitForReview: false,
 } satisfies NativeAppStoreMetadata

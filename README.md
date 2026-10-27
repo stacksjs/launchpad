@@ -9,11 +9,11 @@ Press Command + Space to find apps, calculate, open quicklinks, copy snippets, s
 | Command + Space | Show and focus Launchpad |
 | Command N | Create a quicklink or snippet |
 | Command D | Favorite the selected result |
-| Command Delete | Delete a saved command or clipboard entry |
+| Command Delete | Clear the search |
 | Command G | Open GitHub search |
 | Command Shift V | Open Clipboard History |
 | Command comma | Open Settings |
-| Escape | Close an editor, clear search or hide the palette |
+| Escape | Hide the palette |
 
 Clipboard History is opt-in. It records new text locally, skips protected pasteboard types, keeps at most 200 entries and supports 1, 7 or 30 day retention. Unmarked sensitive text can still be saved. Pause recording before copying private material. Saved items have a text preview and can be removed individually or cleared in Settings.
 

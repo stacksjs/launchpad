@@ -21,6 +21,7 @@ import type { ActivityAction, ActivitySummary } from '../functions/activity'
 const catalog = state<PackageCatalogEntry[]>([])
 const pantryInstalled = state<DesktopInstalledPackage[]>([])
 const pantryReady = state(false)
+const pantryRestoring = state(false)
 const pantryStatus = state('Connect the Pantry CLI in Settings to install packages.')
 const pantryCode = state('')
 const pantryFilter = state('all')
@@ -116,16 +117,27 @@ async function refreshCatalog() {
   finally { packageBusy.set(false) }
 }
 async function connectPackages() {
+  if (pantryRestoring()) return
   packageBusy.set(true)
   try { pantryInstalled.set(await connectPantry(pantryCode())); installJobs.set(await pantryJobs()); pantryCode.set(''); pantryReady.set(true); pantryStatus.set('Connected to Pantry · ' + pantryInstalled().length + ' installed packages') }
   catch (reason) { pantryReady.set(pantryConnected()); pantryStatus.set(reason.message) }
   finally { packageBusy.set(false) }
 }
 async function refreshPackages() {
-  packageBusy.set(true)
-  try { pantryInstalled.set(await restorePantry()); pantryReady.set(pantryConnected()); if (pantryConnected()) installJobs.set(await pantryJobs()); pantryStatus.set('Connected to Pantry · ' + pantryInstalled().length + ' installed packages') }
-  catch (reason) { pantryReady.set(pantryConnected()); pantryStatus.set(reason.message) }
-  finally { packageBusy.set(false) }
+  if (pantryRestoring()) return
+  pantryRestoring.set(true)
+  pantryStatus.set('Checking saved Pantry connection...')
+  try {
+    pantryInstalled.set(await restorePantry())
+    pantryReady.set(pantryConnected())
+    if (pantryConnected()) installJobs.set(await pantryJobs())
+    pantryStatus.set(pantryConnected() ? 'Connected to Pantry · ' + pantryInstalled().length + ' installed packages' : 'Connect the Pantry CLI in Settings to install packages.')
+  }
+  catch (reason) {
+    pantryReady.set(pantryConnected())
+    pantryStatus.set(['PERMISSION_DENIED', 'CANCELLED'].includes(reason.code) ? 'macOS could not unlock your saved connection. Check the saved connection to try again.' : reason.message)
+  }
+  finally { pantryRestoring.set(false) }
 }
 async function disconnectPackages() {
   try { await disconnectPantry(); pantryReady.set(false); pantryInstalled.set([]); pantryStatus.set('Pantry disconnected. Catalog search remains available.') }
@@ -440,6 +452,8 @@ function key(event) {
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
   if (event.metaKey && event.key.toLowerCase() === 'n') { event.preventDefault(); newCommand(); return }
   if (editor()) return
+  const target = event.target
+  if (target !== search.current && target?.closest?.('button, select, input, textarea, a, [contenteditable="true"]')) return
   if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
   if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
   if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
@@ -461,13 +475,15 @@ onMount(() => {
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
   await reload()
-  try { catalog.set(await api('pantry/catalog')) } catch (reason) { pantryStatus.set(reason.message) }
-  try { pantryInstalled.set(await restorePantry()); pantryReady.set(pantryConnected()); if (pantryConnected()) { installJobs.set(await pantryJobs()); pantryStatus.set('Connected to Pantry · ' + pantryInstalled().length + ' installed packages') } } catch (reason) { pantryReady.set(pantryConnected()); pantryStatus.set(reason.message) }
-  try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) }
   track('session_started')
   try { cleanup = await registerLauncher(activate) }
   catch (reason) { fail(reason) }
   activate()
+  await Promise.allSettled([
+    (async () => { try { catalog.set(await api('pantry/catalog')) } catch (reason) { pantryStatus.set(reason.message) } })(),
+    refreshPackages(),
+    (async () => { try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) } })(),
+  ])
 })
 onDestroy(() => cleanup())
 </script>
@@ -593,9 +609,10 @@ onDestroy(() => cleanup())
         <p class="help">Search applications, command line tools, libraries and fonts locally. Installation uses the Pantry CLI you install separately, with your user account and its package permissions.</p>
         <p class="help">Run this once in your terminal, then enter the five minute pairing code below.</p>
         <div class="setup-command"><code>pantry desktop setup --yes</code><button type="button" class="text-action" @click="clipboard.writeText('pantry desktop setup --yes')">Copy</button></div>
-        <form :if="!pantryReady()" @submit.prevent="connectPackages()"><label for="pantry-code">Pantry pairing code</label><input id="pantry-code" x-model="pantryCode" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="8 digit code"><button type="submit" class="save-button" :disabled="packageBusy() || pantryCode().length !== 8">Connect Pantry</button></form>
-        <div :if="pantryReady()" class="flex gap-3 items-center"><button type="button" class="secondary-button" @click="refreshPackages()" :disabled="packageBusy()">Refresh connection</button><button type="button" class="text-action" @click="disconnectPackages()">Disconnect Pantry</button></div>
-        <p class="help" role="status">{{ pantryStatus() }}</p>
+        <form :if="!pantryReady()" @submit.prevent="connectPackages()"><label for="pantry-code">Pantry pairing code</label><input id="pantry-code" x-model="pantryCode" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="8 digit code"><button type="submit" class="save-button" :disabled="packageBusy() || pantryRestoring() || pantryCode().length !== 8">Connect Pantry</button></form>
+        <button :if="!pantryReady()" type="button" class="text-action" @click="refreshPackages()" :disabled="packageBusy() || pantryRestoring()">Check saved connection</button>
+        <div :if="pantryReady()" class="flex gap-3 items-center"><button type="button" class="secondary-button" @click="refreshPackages()" :disabled="packageBusy() || pantryRestoring()">Refresh connection</button><button type="button" class="text-action" @click="disconnectPackages()" :disabled="pantryRestoring()">Disconnect Pantry</button></div>
+        <p class="help" role="status">{{ pantryRestoring() ? 'Waiting for macOS to check the saved connection...' : pantryStatus() }}</p>
         <p class="help">The connection token stays in macOS Keychain. Catalog refreshes and original logos load from Pantry's GitHub repository. Package searches stay on this Mac.</p>
       </section>
       <section :if="settingsSection() === 'usage'">
