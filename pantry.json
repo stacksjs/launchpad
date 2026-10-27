@@ -43,7 +43,10 @@
       ]
     },
     "release": {
-      "draft": true
+      "draft": false
+    },
+    "registry": {
+      "domain": "github.com/stacksjs/launchpad"
     }
   },
   "version": "1.0.0"

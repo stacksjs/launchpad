@@ -21,6 +21,14 @@ GitHub includes repositories, issues, pull requests, assigned issues, review req
 
 Local activity supports a future year review: command counts, tool categories, application names, sessions, timestamps, timezone offsets and command latency. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Settings lets you pause recording and clear activity. No hosted usage API or cloud sync is enabled.
 
+## Install with Pantry
+
+```sh
+pantry install --user --kind app launchpad
+```
+
+Pantry installs the signed, notarized application into your Applications folder. The release action publishes each version through Pantry’s scanned registry using a token restricted to Launchpad.
+
 ## Development
 
 Requires an Apple Silicon Mac, macOS 13 or later, Bun 1.3 or later and the Pantry runtime declared in `pantry.json`.
