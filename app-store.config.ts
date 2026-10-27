@@ -2,7 +2,7 @@ import type { AppStoreMetadata } from 'ts-pantry'
 
 export default {
   locale: 'en-US',
-  subtitle: 'Your keyboard. A little faster.',
+  subtitle: 'Your keyboard. More useful.',
   privacyPolicyUrl: 'https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md',
   description: `Bring everyday actions to your keyboard.
 
@@ -33,6 +33,6 @@ If another app owns Command + Space, release that shortcut before using Launchpa
   ageRating: { userGeneratedContent: true },
   releaseType: 'AFTER_APPROVAL',
   usesNonExemptEncryption: false,
-  screenshots: [{ platform: 'MAC_APP_STORE', files: ['assets/screenshots/applications.jpg', 'assets/screenshots/calculator.jpg', 'assets/screenshots/github.jpg'] }],
+  screenshots: [{ platform: 'MAC_APP_STORE', files: ['assets/screenshots/applications.jpg', 'assets/screenshots/applications-light.jpg', 'assets/screenshots/calculator.jpg', 'assets/screenshots/github.jpg'] }],
   submitForReview: false,
 } satisfies Omit<AppStoreMetadata, 'reviewContact'>
