@@ -1,0 +1,39 @@
+{
+  "name": "launchpad",
+  "version": "0.1.0",
+  "description": "A keyboard-first native macOS launcher",
+  "stacks": {
+    "type": "native"
+  },
+  "devDependencies": {
+    "@stacksjs/buddy": "0.75.323",
+    "better-dx": "^0.2.38",
+    "ts-pantry": "0.11.135"
+  },
+  "dependencies": {
+    "@stacksjs/desktop": "0.2.716",
+    "@stacksjs/orm": "0.75.323",
+    "@stacksjs/stx": "0.2.716",
+    "@stacksjs/validation": "0.75.323",
+    "@stacksjs/github": "0.75.323"
+  },
+  "scripts": {
+    "dev": "./buddy dev",
+    "build": "./buddy build",
+    "package": "./buddy package",
+    "release:patch": "./buddy release --bump patch",
+    "release:minor": "./buddy release --bump minor",
+    "release:major": "./buddy release --bump major",
+    "lint": "./buddy lint",
+    "lint:fix": "./buddy lint:fix",
+    "typecheck": "./buddy typecheck",
+    "test": "./buddy test"
+  },
+  "type": "module",
+  "author": "Chris Breuer <chris@stacksjs.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stacksjs/launchpad.git"
+  }
+}

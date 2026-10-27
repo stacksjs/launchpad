@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.stx/
+.pantry/
+.env.keys
+.env.local
+.env.*.local
+!.env.production
+storage/framework/stx/
+*.log

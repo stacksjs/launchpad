@@ -1,0 +1,48 @@
+{
+  "native": {
+    "environment": "production",
+    "runtime": {
+      "version": "0.0.363",
+      "revision": "01813262c291782d78e6ba10ff75f7d73013c5e4"
+    },
+    "macos": {
+      "notarize": true,
+      "entitlements": {
+        "direct": {
+          "com.apple.security.app-sandbox": true,
+          "com.apple.security.cs.allow-jit": true,
+          "com.apple.security.network.server": true,
+          "com.apple.security.network.client": true
+        },
+        "appStore": {
+          "com.apple.security.app-sandbox": true,
+          "com.apple.security.cs.allow-jit": true,
+          "com.apple.security.network.server": true,
+          "com.apple.security.network.client": true
+        }
+      }
+    },
+    "checks": {
+      "before": [
+        [
+          "bun",
+          "run",
+          "lint"
+        ],
+        [
+          "bun",
+          "run",
+          "typecheck"
+        ],
+        [
+          "bun",
+          "run",
+          "test"
+        ]
+      ]
+    },
+    "release": {
+      "draft": true
+    }
+  }
+}

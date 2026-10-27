@@ -1,0 +1,5 @@
+Generated with the built-in imagegen tool on October 26, 2026.
+
+A polished native macOS app icon for Launchpad: a sculpted satin graphite keyboard key, with a dimensional pale icy-blue arrow pointing toward upper right. Restrained industrial design, tactile beveled edges, a clear silhouette at small sizes and soft studio highlights. Straight-on square composition with transparent corners. No text, wordmark, rocket, stars, screenshot, Apple logo or Raycast logo.
+
+The PNG is the generated source. Launchpad.icns contains standard macOS icon resolutions converted with sips and iconutil.

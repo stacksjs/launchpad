@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Launchpad</title>
+</head>
+<body>
+<script client>
+import type { Result } from '../functions/search'
+import { rankResults, quicklinkUrl } from '../functions/search'
+import { calculate } from '../functions/calculator'
+import { registerLauncher, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell } from '../functions/native'
+import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
+import type { GitHubView } from '../functions/github'
+import { activityPayload } from '../functions/activity'
+import type { ActivityAction, ActivitySummary } from '../functions/activity'
+
+const query = state('')
+const category = state('all')
+const items = state<Result[]>([])
+const records = state<Record<string, any>>({})
+const selected = state(0)
+const loading = state(true)
+const error = state('')
+const status = state('Ready when you are')
+const editor = state(false)
+const editId = state<number | null>(null)
+const title = state('')
+const kind = state('quicklink')
+const content = state('')
+const alias = state('')
+const saving = state(false)
+const settings = state(false)
+const settingsSection = state('appearance')
+const settingsTitle = useRef('settingsTitle')
+const usageEnabled = state(true)
+const usageSummary = state<ActivitySummary | null>(null)
+const usageIssue = state('')
+const usageQueue: ReturnType<typeof activityPayload>[] = []
+let usageBusy = false
+const icons = state<Record<string, string>>({})
+const preferences = state<Record<string, any>>({})
+const preferencesReady = state(false)
+const themePreference = state('system')
+const colorMode = useColorMode({ initialMode: 'system', storageKey: 'launchpad.appearance' })
+const historyEnabled = state(false)
+const historyDays = state(7)
+const historyStatus = state('History is paused')
+const githubView = state<GitHubView>('issues')
+const githubScope = state('stacksjs/launchpad')
+const githubViewer = state<{ login: string } | null>(null)
+const githubItems = state<Result[]>([])
+const githubLoading = state(false)
+const githubStatus = state('Public repositories work without connecting an account.')
+const tokenInput = state('')
+let historyCursor = -1
+let historyBusy = false
+let githubEpoch = 0
+const search = useRef('search')
+const commandTitle = useRef('commandTitle')
+const list = useRef('results')
+let cleanup = () => {}
+
+const results = derived(() => {
+  const source = (category() === 'github' ? githubItems() : items()).map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id, icon: icons()[item.content] }))
+  if (category() === 'github') return source
+  const answer = category() === 'all' ? calculate(query()) : null
+  const found = rankResults(source, query(), category())
+  return answer === null ? found : [{ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer }, ...found]
+})
+const active = derived(() => results()[selected()])
+const actionLabel = derived(() => ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
+
+async function api(path, method = 'GET', body?) {
+  const response = await fetch('/api/' + path, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.error || 'Could not save your changes. Try again.')
+  }
+  return response.status === 204 ? null : (await response.json()).data
+}
+
+async function all(path) {
+  const rows = []
+  for (let page = 1; ; page++) {
+    const part = await api(path + '?per_page=100&page=' + page)
+    rows.push(...part)
+    if (part.length < 100) return rows
+  }
+}
+
+async function reload() {
+  loading.set(true)
+  try {
+    const [apps, commands, history, launches] = await Promise.all([api('applications'), all('commands'), all('clipboard-entries'), all('launch-records')])
+    items.set([...apps,
+      ...commands.map(row => ({ key: 'command:' + row.id, id: row.id, title: row.title, subtitle: row.kind === 'snippet' ? 'Snippet · Copy text' : row.content, kind: row.kind, content: row.content, alias: row.alias })),
+      ...history.reverse().map(historyResult),
+    ])
+    records.set(Object.fromEntries(launches.map(row => [row.key, { ...row, lastUsed: row.lastUsed ?? row.last_used }])))
+    status.set(apps.length + ' applications · Local commands')
+    const missing = apps.map(item => item.content).filter(path => !icons()[path])
+    if (missing.length) void applicationIcons(missing).then(value => icons.set({ ...icons(), ...value })).catch(fail)
+  }
+  catch (reason) { error.set(reason.message) }
+  finally { loading.set(false) }
+}
+
+function focusSearch() { query.set(''); category.set('all'); selected.set(0); void nextTick(() => search.current?.focus()) }
+function chooseCategory(value) { query.set(''); category.set(value); selected.set(0); void nextTick(() => search.current?.focus()) }
+function fail(reason) { error.set(reason.message || String(reason)) }
+function openSettings() { settings.set(true); error.set(''); void nextTick(() => settingsTitle.current?.focus()) }
+function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
+function closeEditor() { editor.set(false); void nextTick(() => search.current?.focus()) }
+function activate() { focusSearch(); track('palette_opened') }
+
+function track(action: ActivityAction, target = { kind: 'launcher' }, durationMs = 0) {
+  if (!preferencesReady() || !usageEnabled()) return
+  if (usageQueue.length >= 500) { usageIssue.set('Usage recording paused because the local API is unavailable.'); usageEnabled.set(false); return }
+  usageQueue.push(activityPayload(action, target, durationMs))
+  void flushUsage()
+}
+async function flushUsage() {
+  if (usageBusy || !usageEnabled()) return
+  usageBusy = true
+  try {
+    while (usageQueue.length && usageEnabled()) { await api('activity-events', 'POST', usageQueue[0]); usageQueue.shift() }
+    usageIssue.set('')
+  }
+  catch { usageIssue.set('Usage is waiting for the local API and will retry while Launchpad is running.') }
+  finally { usageBusy = false }
+}
+async function refreshUsage() {
+  try { usageSummary.set(await api('activity-summary')); usageIssue.set('') }
+  catch (reason) { usageIssue.set(reason.message) }
+}
+async function usagePreference(enabled) {
+  try {
+    await preference('usage', JSON.stringify({ enabled }))
+    usageEnabled.set(enabled)
+    if (!enabled) usageQueue.splice(0)
+    else track('session_started')
+    await refreshUsage()
+  }
+  catch (reason) { fail(reason) }
+}
+async function clearUsage() {
+  if (!await stxConfirm('Delete all locally stored usage history? Your future year review will start again.')) return
+  try { usageQueue.splice(0); await api('activity-events', 'DELETE'); await refreshUsage() }
+  catch (reason) { fail(reason) }
+}
+useInterval(flushUsage, 3000, { enabled: () => preferencesReady() && usageEnabled() })
+effect(() => { if (settings() && settingsSection() === 'usage') void refreshUsage() })
+
+function historyResult(row) {
+  const source = row.sourceApp || row.source_app || ''
+  return { key: 'clipboard:' + row.id, id: row.id, title: row.content.slice(0, 100), subtitle: source ? 'Clipboard · ' + source.split('.').pop() : 'Saved clipboard text', kind: 'clipboard', content: row.content }
+}
+async function reloadHistory() {
+  const rows = await all('clipboard-entries')
+  items.set([...items().filter(item => item.kind !== 'clipboard'), ...rows.reverse().map(historyResult)])
+}
+async function preference(key, value) {
+  const previous = preferences()[key]
+  const row = await api('preferences' + (previous ? '/' + previous.id : ''), previous ? 'PATCH' : 'POST', { key, value })
+  preferences.set({ ...preferences(), [key]: row })
+}
+async function appearance(value) {
+  try {
+    await preference('appearance', value)
+    themePreference.set(value)
+    colorMode.set(value)
+    await nativeWindow.setAppearance(value)
+  }
+  catch (reason) { fail(reason) }
+}
+async function historyPreference(enabled, days = historyDays()) {
+  try {
+    await preference('history', JSON.stringify({ enabled, days: Number(days) }))
+    historyCursor = -1
+    historyEnabled.set(enabled)
+    historyDays.set(Number(days))
+    historyStatus.set(enabled ? 'Recording new text locally' : 'History is paused')
+  }
+  catch (reason) { fail(reason) }
+}
+async function pollClipboard() {
+  if (historyBusy || !historyEnabled()) return
+  historyBusy = true
+  try {
+    const snapshot = await clipboard.historySnapshot(historyCursor)
+    if (snapshot.text && snapshot.text !== items().find(item => item.kind === 'clipboard')?.content) {
+      await api('clipboard-entries', 'POST', { content: snapshot.text, capturedAt: Date.now(), sourceApp: snapshot.sourceBundleId }); track('clipboard_saved', { kind: 'clipboard' })
+      await reloadHistory()
+    }
+    historyCursor = snapshot.changeCount
+    historyStatus.set(snapshot.blocked ? 'Protected clipboard content skipped' : 'Recording new text locally')
+  }
+  catch (reason) { historyEnabled.set(false); historyStatus.set('History stopped'); fail(reason) }
+  finally { historyBusy = false }
+}
+async function clearHistory() {
+  if (!await stxConfirm('Delete all saved clipboard history from this Mac?')) return
+  try { await api('clipboard-history', 'DELETE'); await reloadHistory() }
+  catch (reason) { fail(reason) }
+}
+async function loadPreferences() {
+  const rows = await all('preferences')
+  const values = Object.fromEntries(rows.map(row => [row.key, row]))
+  preferences.set(values)
+  const theme = values.appearance?.value || 'system'
+  themePreference.set(theme)
+  colorMode.set(theme)
+  await nativeWindow.setAppearance(theme)
+  if (values.githubScope) githubScope.set(values.githubScope.value)
+  if (values.history) {
+    const saved = JSON.parse(values.history.value)
+    historyEnabled.set(saved.enabled === true)
+    historyDays.set([1, 7, 30].includes(saved.days) ? saved.days : 7)
+  }
+  if (values.usage) usageEnabled.set(JSON.parse(values.usage.value).enabled === true)
+  preferencesReady.set(true)
+}
+async function refreshGitHub() {
+  const epoch = ++githubEpoch
+  if (category() !== 'github') return
+  githubLoading.set(true)
+  githubItems.set([])
+  try {
+    const found = await githubResults(githubView(), query(), githubScope(), githubViewer()?.login || '')
+    if (epoch !== githubEpoch) return
+    githubItems.set(found)
+    track('github_search', { kind: 'github' })
+    githubStatus.set(found.length + ' results · Search sent only to GitHub')
+  }
+  catch (reason) { if (epoch === githubEpoch) githubStatus.set(reason.message) }
+  finally { if (epoch === githubEpoch) githubLoading.set(false) }
+}
+const searchGitHub = useDebounce(refreshGitHub, 400)
+effect(() => { category(); githubView(); query(); githubScope(); githubViewer(); ++githubEpoch; searchGitHub() })
+async function connectAccount() {
+  saving.set(true)
+  try { githubViewer.set(await connectGitHub(tokenInput())); tokenInput.set(''); error.set(''); void refreshGitHub() }
+  catch (reason) { fail(reason) }
+  finally { saving.set(false) }
+}
+async function disconnectAccount() {
+  try { await disconnectGitHub(); githubViewer.set(null); githubItems.set([]) }
+  catch (reason) { fail(reason) }
+}
+async function saveScope() {
+  try {
+    const scope = githubScope().trim()
+    if (scope && !/^[\w.-]+\/[\w.-]+$/.test(scope)) throw new Error('Use owner/repository, or leave the scope empty.')
+    await preference('githubScope', scope)
+    void refreshGitHub()
+  }
+  catch (reason) { fail(reason) }
+}
+useInterval(pollClipboard, 800, { enabled: () => preferencesReady() && historyEnabled() })
+
+async function run(item = active()) {
+  if (!item || saving()) return
+  error.set('')
+  saving.set(true)
+  try {
+    const started = performance.now()
+    await execute(item, query())
+    track('command_executed', item, performance.now() - started)
+    if (item.kind !== 'calculator') {
+      const record = records()[item.key]
+      const data = { key: item.key, favorite: Boolean(record?.favorite), launches: (record?.launches || 0) + 1, lastUsed: Date.now() }
+      const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', data)
+      records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
+    }
+  }
+  catch (reason) { fail(reason) }
+  finally { saving.set(false) }
+}
+
+async function favorite() {
+  const item = active()
+  if (!item || item.kind === 'calculator') return
+  try {
+    const record = records()[item.key]
+    const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', { key: item.key, favorite: !record?.favorite })
+    records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
+  }
+  catch (reason) { fail(reason) }
+}
+
+function newCommand() {
+  editId.set(null)
+  title.set('')
+  content.set('')
+  alias.set('')
+  editor.set(true)
+  error.set('')
+  void nextTick(() => commandTitle.current?.focus())
+}
+function editCommand() {
+  const item = active()
+  if (!item?.id || !['quicklink', 'snippet'].includes(item.kind)) return
+  editId.set(item.id)
+  title.set(item.title)
+  kind.set(item.kind)
+  content.set(item.content)
+  alias.set(item.alias || '')
+  editor.set(true)
+  error.set('')
+  void nextTick(() => commandTitle.current?.focus())
+}
+async function saveCommand() {
+  saving.set(true)
+  try {
+    if (kind() === 'quicklink') quicklinkUrl(content(), '')
+    await api('commands' + (editId() === null ? '' : '/' + editId()), editId() === null ? 'POST' : 'PATCH', { title: title().trim(), kind: kind(), content: content(), alias: alias().trim() })
+    if (editId() === null) track('command_created', { kind: kind() })
+    editor.set(false)
+    await reload()
+  }
+  catch (reason) { fail(reason) }
+  finally { saving.set(false) }
+}
+
+async function saveClipboard() {
+  try { await api('clipboard-entries', 'POST', { content: await captureClipboard(), capturedAt: Date.now() }); track('clipboard_saved', { kind: 'clipboard' }); category.set('clipboard'); query.set(''); await reloadHistory() }
+  catch (reason) { fail(reason) }
+}
+
+async function remove() {
+  const item = active()
+  if (!item?.id || !['snippet', 'quicklink', 'clipboard'].includes(item.kind)) return
+  try {
+    await api((item.kind === 'clipboard' ? 'clipboard-entries/' : 'commands/') + item.id, 'DELETE')
+    await reload()
+  }
+  catch (reason) { fail(reason) }
+}
+
+function key(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    if (settings()) closeSettings()
+    else if (editor()) closeEditor()
+    else if (query()) query.set('')
+    else void nativeWindow.hide()
+  }
+  if (event.metaKey && event.key === ',') { event.preventDefault(); if (settings()) closeSettings(); else openSettings(); return }
+  if (settings()) return
+  if (event.metaKey && event.key.toLowerCase() === 'g') { event.preventDefault(); chooseCategory('github'); return }
+  if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
+  if (event.metaKey && event.key.toLowerCase() === 'n') { event.preventDefault(); newCommand(); return }
+  if (editor()) return
+  if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
+  if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
+  if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); void remove(); return }
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    selected.set(Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1))))
+    void nextTick(() => list.current?.scrollTo({ top: Math.max(0, selected() * 54 - 108) }))
+  }
+  if (event.key === 'Enter') { event.preventDefault(); void run() }
+}
+
+effect(() => { query(); category(); items(); selected.set(0) })
+useEventListener('keydown', key)
+onMount(async () => {
+  try { await loadPreferences() } catch (reason) { fail(reason) }
+  await reload()
+  try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) }
+  track('session_started')
+  try { cleanup = await registerLauncher(activate) }
+  catch (reason) { fail(reason) }
+  activate()
+})
+onDestroy(() => cleanup())
+</script>
+
+<main class="flex flex-col w-full" aria-label="Launchpad">
+  <div class="palette-content" x-show="!settings() && !editor()">
+  <header class="flex gap-4 items-center px-6" @mousedown="nativeWindow.startDrag()">
+    <span class="i-f7-search search-icon" aria-hidden="true"></span>
+    <input ref="search" x-model="query" type="search" placeholder="Search anything, do something." autocomplete="off" spellcheck="false" role="combobox" aria-label="Search applications and commands" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="'result-' + selected()" @mousedown.stop="">
+    <button type="button" class="escape" @click="nativeWindow.hide()" aria-label="Hide Launchpad">esc</button>
+  </header>
+  <nav class="flex gap-1 items-center px-5" aria-label="Search categories">
+    <button type="button" :class="category() === 'all' ? 'tab active' : 'tab'" @click="chooseCategory('all')">All</button>
+    <button type="button" :class="category() === 'application' ? 'tab active' : 'tab'" @click="chooseCategory('application')" aria-label="Applications">Apps</button>
+    <button type="button" :class="category() === 'quicklink' ? 'tab active' : 'tab'" @click="chooseCategory('quicklink')" aria-label="Quicklinks">Links</button>
+    <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" @click="chooseCategory('snippet')">Snippets</button>
+    <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" @click="chooseCategory('clipboard')">Clipboard</button>
+    <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" @click="chooseCategory('github')">GitHub</button>
+    <button type="button" class="ml-auto new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
+    <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
+  </nav>
+  <div :if="error()" class="error" role="alert">{{ error() }}</div>
+  <div :if="category() === 'github'" class="flex gap-2 items-center px-5 github-tools">
+    <select x-model="githubView" aria-label="GitHub view"><option value="repositories">Repositories</option><option value="issues">Issues</option><option value="pulls">Pull requests</option><option value="assigned">Assigned to me</option><option value="reviews">Review requests</option><option value="notifications">Notifications</option></select>
+    <input x-model="githubScope" @change="saveScope()" placeholder="owner/repository" aria-label="GitHub repository scope">
+    <button type="button" class="text-action" @click="refreshGitHub()">Refresh</button>
+  </div>
+  <section class="flex flex-1 flex-col min-h-0" aria-label="Search results">
+    <div class="flex items-center justify-between px-6 section-label">
+      <span>{{ category() === 'clipboard' ? 'Clipboard History' : category() === 'github' ? 'GitHub' : query() ? 'Results' : 'Your launchpad' }}</span>
+      <button :if="category() === 'clipboard'" type="button" class="text-action" @click="saveClipboard()">Save current clipboard</button>
+      <span :if="category() !== 'clipboard'">{{ results().length }} available</span>
+    </div>
+    <div class="result-region">
+    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands">
+      <p :if="loading() || (category() === 'github' && githubLoading())" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : 'Finding your applications...' }}</p>
+      <div :if="!loading() && !githubLoading() && results().length === 0" class="empty">
+        <p>{{ category() === 'clipboard' ? 'Keep useful text close.' : 'Nothing here yet.' }}</p>
+        <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
+      </div>
+      <button :for="(item, index) in results()" :key="item.key" :id="'result-' + index" type="button" role="option" :aria-selected="index === selected()" :class="index === selected() ? 'result selected' : 'result'" @click="selected.set(index); run(item)" @mousemove="selected.set(index)">
+        <span class="item-icon" aria-hidden="true">
+          <img :if="item.kind === 'application' && item.icon" :src="item.icon" alt="" width="34" height="34">
+          <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
+          <span :if="item.kind === 'quicklink'" class="i-f7-link"></span>
+          <span :if="item.kind === 'snippet'" class="i-f7-text-alignleft"></span>
+          <span :if="item.kind === 'clipboard'" class="i-f7-doc-on-clipboard"></span>
+          <span :if="item.kind === 'calculator'" class="i-f7-number"></span>
+          <span :if="item.kind === 'github'" class="i-f7-chevron-left-slash-chevron-right"></span>
+        </span>
+        <span class="result-copy"><span class="result-title">{{ item.title }}</span><span class="result-subtitle">{{ item.subtitle }}</span></span>
+        <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
+        <span :if="index === selected()" class="return-key" aria-hidden="true">↵</span>
+      </button>
+    </div>
+    <pre :if="category() === 'clipboard' && active()" class="clipboard-preview" aria-label="Selected clipboard text">{{ active().content }}</pre>
+    </div>
+  </section>
+  <div :if="category() === 'clipboard'" class="flex gap-3 items-center px-5 history-tools">
+    <span>{{ historyEnabled() ? historyStatus() : 'History paused · ' + historyDays() + ' day retention' }}</span>
+    <button type="button" class="ml-auto text-action" @click="historyPreference(!historyEnabled())">{{ historyEnabled() ? 'Pause' : 'Enable history' }}</button>
+    <button type="button" class="text-action" @click="clearHistory()">Clear history</button>
+  </div>
+  <p :if="category() === 'github'" class="px-5 github-status" role="status">{{ githubLoading() ? 'Searching GitHub...' : githubStatus() }}</p>
+  <footer class="flex gap-3 items-center px-5">
+    <span class="wordmark">Launchpad</span>
+    <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
+    <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
+    <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active()" title="Favorite (Command D)">☆ <kbd>⌘ D</kbd></button>
+    <button type="button" class="footer-action primary" @click="run()" :disabled="!active() || saving()">{{ actionLabel() }} <kbd>↵</kbd></button>
+  </footer>
+  </div>
+
+  <div :if="settings()" class="editor settings" role="dialog" aria-modal="true" aria-label="Launchpad Settings">
+    <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1 ref="settingsTitle" tabindex="-1">Settings</h1><button type="button" class="escape" @mousedown.stop="" @click="closeSettings()" aria-label="Close settings">esc</button></div>
+    <nav class="settings-nav" aria-label="Settings sections">
+      <button type="button" :class="settingsSection() === 'appearance' ? 'tab active' : 'tab'" @click="settingsSection.set('appearance')">Appearance</button>
+      <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" @click="settingsSection.set('clipboard')">Clipboard History</button>
+      <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" @click="settingsSection.set('github')">GitHub</button>
+      <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" @click="settingsSection.set('usage')">Usage</button>
+    </nav>
+    <div class="dialog-body">
+      <section :if="settingsSection() === 'appearance'">
+    <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>
+    <div class="theme-options" role="group" aria-label="Appearance">
+      <button type="button" :class="themePreference() === 'system' ? 'theme-option active' : 'theme-option'" @click="appearance('system')" :aria-pressed="themePreference() === 'system'"><span class="system-preview theme-preview"></span>System</button>
+      <button type="button" :class="themePreference() === 'light' ? 'theme-option active' : 'theme-option'" @click="appearance('light')" :aria-pressed="themePreference() === 'light'"><span class="light-preview theme-preview"></span>Light</button>
+      <button type="button" :class="themePreference() === 'dark' ? 'theme-option active' : 'theme-option'" @click="appearance('dark')" :aria-pressed="themePreference() === 'dark'"><span class="dark-preview theme-preview"></span>Dark</button>
+    </div>
+      </section>
+      <section :if="settingsSection() === 'clipboard'">
+    <h2>Clipboard History</h2>
+    <label class="toggle-row"><input type="checkbox" :checked="historyEnabled()" @change="historyPreference(!historyEnabled())"> Record new clipboard text</label>
+    <p class="help">Stored only on this Mac, up to 200 entries. Protected and transient pasteboard types are skipped, with additional checks for known password managers. Unmarked sensitive text can still be captured. Pause before copying anything you want to keep out of history.</p>
+    <label for="history-days">Keep history for</label>
+    <select id="history-days" :value="historyDays()" @change="historyPreference(historyEnabled(), $event.target.value)"><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select>
+    <div class="setting-actions"><span class="help">{{ historyEnabled() ? historyStatus() : 'History is paused' }}</span><button type="button" class="danger-button" @click="clearHistory()">Clear history</button></div>
+      </section>
+      <section :if="settingsSection() === 'github'">
+    <h2>GitHub {{ githubViewer() ? '· @' + githubViewer().login : '' }}</h2>
+    <p class="help">Repository, issue and pull request search works publicly. Connect for private repositories, assigned issues, review requests and notifications. Searches run only in the GitHub tab.</p>
+    <form :if="!githubViewer()" @submit.prevent="connectAccount()">
+      <label for="github-token">Personal access token</label>
+      <input id="github-token" type="password" x-model="tokenInput" autocomplete="off" spellcheck="false" placeholder="Stored in macOS Keychain">
+      <p class="help">Use read-only access to selected repositories. Notifications require a classic token with notifications permission. Launchpad never saves the token in its database.</p>
+      <div class="flex gap-3 items-center"><button type="submit" class="save-button" :disabled="saving()">Connect GitHub</button><button type="button" class="text-action" @click="shell.openExternal('https://github.com/settings/tokens')">Manage tokens</button></div>
+    </form>
+    <button :if="githubViewer()" type="button" class="secondary-button" @click="disconnectAccount()">Disconnect GitHub</button>
+      </section>
+      <section :if="settingsSection() === 'usage'">
+    <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>
+    <p class="help">Records action types, application names, timestamps and command latency through the local API. Search text, file paths, snippet and clipboard contents stay out of usage records. Nothing is sent to Stacks.</p>
+    <div :if="usageSummary()" class="usage-stats"><div><strong>{{ usageSummary().commands }}</strong><span>commands</span></div><div><strong>{{ usageSummary().activeDays }}</strong><span>active days</span></div><div><strong>{{ usageSummary().longestStreak }}</strong><span>day streak</span></div></div>
+    <div class="setting-actions"><span class="help">{{ usageEnabled() ? 'Recording locally' : 'Usage recording paused' }}</span><button type="button" class="danger-button" @click="clearUsage()">Clear usage history</button></div>
+    <p :if="usageIssue()" class="help" role="status">{{ usageIssue() }}</p>
+      </section>
+      <p :if="error()" class="error" role="alert">{{ error() }}</p>
+    </div>
+    <div class="dialog-footer"><span class="help">Saved on this Mac</span><button type="button" class="secondary-button" @click="closeSettings()">Done</button></div>
+  </div>
+
+  <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="editId() === null ? 'New command' : 'Edit command'">
+    <form class="dialog-form" @submit.prevent="saveCommand()">
+      <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ editId() === null ? 'New command' : 'Edit command' }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closeEditor()">esc</button></div>
+      <div class="dialog-body">
+      <label for="command-kind">Type</label>
+      <select id="command-kind" x-model="kind"><option value="quicklink">Quicklink</option><option value="snippet">Snippet</option></select>
+      <label for="command-title">Name</label>
+      <input ref="commandTitle" id="command-title" x-model="title" required maxlength="120" placeholder="Something you use every day">
+      <label for="command-content">{{ kind() === 'quicklink' ? 'URL' : 'Text to copy' }}</label>
+      <textarea id="command-content" x-model="content" required maxlength="20000" rows="3" :placeholder="kind() === 'quicklink' ? 'https://example.com/search?q={query}' : 'Your reusable text'"></textarea>
+      <p class="help">{{ kind() === 'quicklink' ? 'Use {query} in the URL to include your search text.' : 'Snippets copy to your clipboard. Paste them wherever you need.' }}</p>
+      <label for="command-alias">Search alias <span class="muted">(optional)</span></label>
+      <input id="command-alias" x-model="alias" maxlength="40" placeholder="A short name to find this faster">
+      <p :if="error()" class="error" role="alert">{{ error() }}</p>
+      </div>
+<div class="dialog-footer"><button type="button" class="secondary-button" @click="closeEditor()">Cancel</button><button class="save-button" type="submit" :disabled="saving()">{{ saving() ? 'Saving...' : editId() === null ? 'Create command' : 'Save changes' }}</button></div>
+    </form>
+  </div>
+</main>
+</body>
+<style>
+:root { color-scheme: light; --surface: #ffffff; --ink: #202735; --muted: #566173; --line: #d9e0e9; --accent: #245eb7; --selected: #e7edf6; --icon-surface: #e8eef7; --footer: #f3f5f8; --key: #e0e6ee; --field: #ffffff; --border: #8391a5; --outline: #b8c3d3; --selected-border: #b6c9e4; --error-bg: #fde9e9; --error-ink: #922634; }
+:root.dark { color-scheme: dark; --surface: #202226; --ink: #f2f3f5; --muted: #b2b8c4; --line: #35383f; --accent: #a9cbff; --selected: #343943; --icon-surface: #2d323c; --footer: #1c1e22; --key: #32363e; --field: #272a31; --border: #657185; --outline: #525a68; --selected-border: #53627a; --error-bg: #432b2e; --error-ink: #ffccd1; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color: var(--ink); font: 13px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: transparent; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { height: 100dvh; position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--outline); border-radius: 12px; }
+.palette-content { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+header { height: 72px; flex-shrink: 0; }
+.search-icon { width: 22px; height: 22px; color: var(--muted); flex-shrink: 0; }
+header input { width: 100%; min-width: 0; font-size: 21px; letter-spacing: -.5px; background: transparent; border: none; padding: 8px 0; outline: none; }
+header input::placeholder { color: var(--muted); }
+input::-webkit-search-cancel-button { display: none; }
+.escape { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
+nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.tab { padding: 5px 11px; border-radius: 6px; color: var(--muted); font-size: 12px; }
+.tab:hover { color: var(--ink); background: var(--selected); }
+.tab.active { background: var(--selected); color: var(--ink); }
+.new { color: var(--muted); font-size: 24px; line-height: 24px; width: 28px; }
+.section-label { height: 30px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.section-label > span:last-child { color: var(--muted); font-size: 10px; }
+.results { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+.result { display: flex; align-items: center; gap: 13px; width: 100%; height: 52px; padding: 7px 12px; border: 1px solid transparent; text-align: left; border-radius: 7px; margin: 0; }
+.result.selected { background: var(--selected); border-color: var(--selected-border); }
+.item-icon { width: 33px; height: 33px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--icon-surface); color: var(--accent); flex-shrink: 0; }
+.item-icon > span { width: 19px; height: 19px; }
+.result-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
+.result-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-subtitle { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.star { color: var(--accent); font-size: 11px; }
+.return-key { color: var(--muted); font-size: 17px; }
+footer { height: 44px; flex-shrink: 0; border-top: 1px solid var(--line); background: var(--footer); }
+.wordmark { font-size: 12px; font-weight: 650; letter-spacing: -.3px; }
+.footer-status { color: var(--muted); font-size: 10px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.footer-action { color: var(--muted); font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+.footer-action.primary { color: var(--ink); }
+kbd { font: 10px -apple-system, system-ui; color: var(--muted); padding: 2px 4px; border-radius: 4px; background: var(--key); }
+.empty { margin: 35px auto; max-width: 340px; text-align: center; font-size: 16px; color: var(--ink); }
+.empty-detail { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.text-action { color: var(--accent); font-size: 11px; }
+.error { margin: 6px 20px; padding: 8px 10px; background: var(--error-bg); color: var(--error-ink); border-radius: 5px; font-size: 12px; }
+.editor { position: absolute; inset: 0; background: var(--surface); z-index: 10; display: flex; flex-direction: column; min-height: 0; }
+.editor h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.5px; }
+.editor label { display: block; font-size: 12px; margin: 8px 0 4px; color: var(--ink); }
+.editor input, .editor textarea, .editor select { width: 100%; border: 1px solid var(--border); border-radius: 6px; background: var(--field); padding: 8px 10px; }
+.editor input::placeholder, .editor textarea::placeholder { color: var(--muted); }
+.editor textarea { height: 64px; min-height: 64px; max-height: 160px; resize: vertical; }
+.help, .muted { color: var(--muted); font-size: 11px; }
+.help { margin: 6px 0; }
+.secondary-button, .save-button { padding: 7px 13px; border-radius: 6px; }
+.secondary-button { background: var(--selected); }
+.save-button { background: #aecfff; color: #172538; font-weight: 600; }
+@media (max-width: 600px) { header { padding-inline: 16px; } header input { font-size: 18px; } .footer-status { display: none; } .tab { padding-inline: 7px; } }
+@media (prefers-reduced-motion: no-preference) { .tab, .result { transition: background-color 90ms ease; } }
+header input:focus-visible { outline: none; }
+.item-icon > img { width: 34px; height: 34px; object-fit: contain; }
+.github-tools { height: 40px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
+.github-tools select, .github-tools input { min-width: 0; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--field); font-size: 11px; }
+.github-tools input { flex: 1; }
+.github-status { margin: 0; height: 28px; flex-shrink: 0; color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-tools { min-height: 34px; flex-shrink: 0; font-size: 10px; color: var(--muted); border-top: 1px solid var(--line); }
+.settings h2 { font-size: 14px; margin: 0 0 6px; }
+.settings .toggle-row { display: flex; align-items: center; gap: 9px; }
+.settings .toggle-row input { width: auto; }
+.tab > span { display: block; width: 17px; height: 17px; }
+.dialog-form { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 20px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
+.dialog-header h1:focus { outline: none; }
+.dialog-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 20px; }
+.dialog-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-shrink: 0; min-height: 52px; padding: 9px 20px; border-top: 1px solid var(--line); background: var(--footer); }
+.dialog-footer > .help { margin-right: auto; }
+.dialog-body .error { margin: 10px 0 0; }
+.settings-nav { display: flex; align-items: center; gap: 5px; padding: 0 15px; }
+.setting-row, .setting-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.setting-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+.setting-actions { margin-top: 14px; }
+.theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+.theme-option { display: flex; flex-direction: column; gap: 9px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; }
+.theme-option.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.theme-preview { display: block; width: 100%; height: 48px; border: 1px solid #788396; border-radius: 5px; }
+.light-preview { background: #f7f9fc; box-shadow: inset 0 -12px #e3e9f2; }
+.dark-preview { background: #25282e; box-shadow: inset 0 -12px #3b424f; }
+.system-preview { background: #f7f9fc; border-right: 70px solid #25282e; }
+.danger-button { font-size: 11px; color: var(--error-ink); border: 1px solid var(--border); border-radius: 5px; padding: 6px 10px; }
+.result-region { display: flex; flex: 1; min-height: 0; }
+.result-region .results { min-width: 0; }
+.clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
+.usage-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.usage-stats > div { border: 1px solid var(--line); border-radius: 7px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.usage-stats strong { font-size: 22px; font-weight: 600; }
+.usage-stats span { color: var(--muted); font-size: 11px; }
+.results, .dialog-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+</style>
