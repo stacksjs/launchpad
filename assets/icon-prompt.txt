@@ -1,5 +1,8 @@
-Generated with the built-in imagegen tool on October 26, 2026.
+Launchpad uses a white Command glyph on a blue key. Its vector source is
+assets/brand/launchpad.svg, with glyph attribution in assets/brand/NOTICE.md.
 
-A polished native macOS app icon for Launchpad: a sculpted satin graphite keyboard key, with a dimensional pale icy-blue arrow pointing toward upper right. Restrained industrial design, tactile beveled edges, a clear silhouette at small sizes and soft studio highlights. Straight-on square composition with transparent corners. No text, wordmark, rocket, stars, screenshot, Apple logo or Raycast logo.
+bun run generate:brand renders the native SVG through ts-images, produces the
+app and website PNGs, and packages the macOS icon sizes with Apple iconutil.
 
-The PNG is the generated source. Launchpad.icns contains standard macOS icon resolutions converted with sips and iconutil.
+The menu bar uses the matching native Command symbol. Social cards declared in
+config/images.ts are generated through buddy generate:images --social.

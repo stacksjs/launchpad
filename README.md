@@ -25,14 +25,26 @@ Local activity supports a future year review: process sessions, palette opens, s
 
 ## Install with Pantry
 
-Requires Pantry 0.11.141 or later.
+Requires [Pantry](https://pantry.dev) 0.11.142 or later for automatic app detection.
 
 ```sh
 pantry upgrade
-pantry install --user --kind app launchpad
+pantry install launchpad
 ```
 
 Pantry installs the signed, notarized application into your Applications folder. The release action publishes each version through Pantry’s scanned registry using a token restricted to Launchpad.
+
+## Branding and share images
+
+The website, app icon and tray share the Command symbol. `assets/brand/launchpad.svg`
+is the source mark. `bun run generate:brand` renders its PNG and macOS icon set
+with ts-images and the native SVG renderer. Builds regenerate these assets.
+
+`config/images.ts` declares one 1200 by 630 share card per website page. Buddy
+generates it with ts-images during `bun run build:site`, using the real app capture,
+the shared mark and bundled, licensed Geist fonts. Add a page entry there when
+the website gains another route. Run `./buddy generate:images --social` to preview
+the cards on their own.
 
 ## Development
 

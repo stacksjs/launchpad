@@ -21,7 +21,7 @@ jobs:
           packages: bun.sh@1.4.3
           install: 'false'
       - run: bun install --frozen-lockfile
-      - run: ./buddy build --site
+      - run: bun run build:site
       - uses: actions/upload-artifact@v6
         with:
           name: marketing-site

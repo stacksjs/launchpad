@@ -11,18 +11,22 @@
     "better-dx": "^0.2.38"
   },
   "dependencies": {
-    "@stacksjs/desktop": "0.2.721",
+    "@stacksjs/desktop": "0.2.727",
     "@stacksjs/github": "0.75.323",
+    "@stacksjs/image": "0.75.330",
     "@stacksjs/orm": "0.75.324",
-    "@stacksjs/stx": "0.2.721",
+    "@stacksjs/stx": "0.2.727",
+    "@stacksjs/ts-svg": "0.1.7",
     "@stacksjs/validation": "0.75.323",
+    "ts-images": "0.2.32",
     "ts-pantry": "0.11.141"
   },
   "scripts": {
     "dev": "./buddy dev",
-    "build": "./buddy build",
-    "build:site": "./buddy build --site",
-    "package": "./buddy package",
+    "build": "bun run generate:brand && ./buddy build",
+    "build:site": "bun run generate:brand && ./buddy generate:images --social && ./buddy build --site",
+    "generate:brand": "bun scripts/generate-brand.ts",
+    "package": "bun run generate:brand && ./buddy package",
     "release:patch": "./buddy release --bump patch",
     "release:minor": "./buddy release --bump minor",
     "release:major": "./buddy release --bump major",

@@ -13,17 +13,26 @@ const preview = state('light')
   <meta property="og:description" content="Your apps, links and tools. One keyboard shortcut. A free native launcher for Apple Silicon Macs.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://launchpad.stacksjs.com/">
-  <meta property="og:image" content="https://launchpad.stacksjs.com/images/applications-light.jpg">
-  <meta property="og:image:alt" content="Launchpad application search in Light mode">
+  <meta property="og:image" content="https://launchpad.stacksjs.com/social/og.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Launchpad. Less looking. More doing. A native Mac launcher with one keyboard shortcut.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Launchpad | A shorter path to what you do">
+  <meta name="twitter:description" content="Your apps, links and tools. One keyboard shortcut.">
+  <meta name="twitter:image" content="https://launchpad.stacksjs.com/social/og.jpg">
+  <meta name="twitter:image:alt" content="Launchpad. Less looking. More doing. A native Mac launcher with one keyboard shortcut.">
   <link rel="canonical" href="https://launchpad.stacksjs.com/">
   <link rel="icon" href="/images/launchpad.png" type="image/png">
+  <link rel="icon" href="/images/launchpad.svg" type="image/svg+xml" sizes="any">
   <title>Launchpad | A shorter path to what you do</title>
 </head>
 <body class="m-0 antialiased text-slate-900 bg-[#f5f7fa]">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="flex gap-5 items-center justify-between mx-auto px-5 md:px-10 h-[72px] max-w-[1280px]">
     <a class="flex gap-2 items-center font-semibold text-lg tracking-tight" href="/" aria-label="Launchpad home">
-      <StxImage src="/images/launchpad.png" width="40" height="40" sizes="40px" alt="" class="h-10 w-10" loading="eager" />
+      <img src="/images/launchpad.svg" width="40" height="40" alt="" class="h-10 w-10" loading="eager">
       Launchpad
     </a>
     <nav aria-label="Main navigation" class="flex gap-5 items-center md:gap-8 font-medium text-sm">
@@ -86,7 +95,7 @@ const preview = state('light')
     <section id="pantry" class="bg-[#edf1f6] border-slate-200 border-y" aria-labelledby="pantry-title">
       <div class="grid gap-10 grid-cols-1 items-center lg:gap-16 lg:grid-cols-[1.3fr_0.8fr] mx-auto px-5 py-16 md:px-10 md:py-20 max-w-[1280px]">
         <StxImage sizes="(max-width: 1023px) calc(100vw - 40px), (max-width: 1279px) 55vw, 680px" src="/images/pantry.jpg" width="1440" height="900" alt="The Pantry catalog inside Launchpad with original package logos and package types" class="block h-auto w-full product-frame" loading="lazy" />
-        <div><h2 id="pantry-title" class="m-0 font-semibold leading-tight text-3xl tracking-[-0.035em] md:text-4xl">Your next tool<br>is a search away.</h2><p class="mb-0 mt-5 leading-relaxed text-base text-slate-600">Browse Pantry's catalog of apps, command line tools, libraries and fonts. Install through Launchpad and follow the job as it runs.</p><p class="mb-0 mt-4 leading-relaxed text-base text-slate-600">All keeps your installed tools close. Pantry shows the full catalog when you want something new.</p><a href="#setup" class="inline-flex gap-2 items-center mt-6 font-semibold text-blue-700 text-sm hover:text-blue-900">Set up Pantry <span aria-hidden="true">→</span></a></div>
+        <div><h2 id="pantry-title" class="m-0 font-semibold leading-tight text-3xl tracking-[-0.035em] md:text-4xl">Your next tool<br>is a search away.</h2><p class="mb-0 mt-5 leading-relaxed text-base text-slate-600">Browse <a href="https://pantry.dev" class="font-medium underline underline-offset-4">Pantry</a>'s catalog of apps, command line tools, libraries and fonts. Install through Launchpad and follow the job as it runs.</p><p class="mb-0 mt-4 leading-relaxed text-base text-slate-600">All keeps your installed tools close. Pantry shows the full catalog when you want something new.</p><div class="flex flex-wrap gap-x-6 gap-y-3 mt-6"><a href="#setup" class="font-semibold text-blue-700 text-sm hover:text-blue-900">Set up Pantry <span aria-hidden="true">→</span></a><a href="https://pantry.dev" class="font-semibold text-blue-700 text-sm hover:text-blue-900">Explore Pantry <span aria-hidden="true">↗</span></a></div></div>
       </div>
     </section>
 
@@ -103,8 +112,8 @@ const preview = state('light')
       <div class="grid gap-10 grid-cols-1 md:gap-16 md:grid-cols-[0.8fr_1.2fr] mx-auto px-5 py-16 md:px-10 md:py-20 max-w-[1280px]">
         <div><h2 id="setup-title" class="m-0 font-semibold text-3xl tracking-[-0.035em]">Make yourself at home.</h2><p class="mb-0 mt-4 max-w-[34ch] leading-relaxed text-base text-slate-600">A few details before your first Command + Space.</p></div>
         <div class="min-w-0">
-          <details class="faq" open><summary>How do I install Launchpad?</summary><div class="faq-content"><p>Download the latest signed, notarized release for Apple Silicon. Open the disk image and move Launchpad to Applications. If you use Pantry 0.11.141 or later, install it with:</p><pre><code>pantry install --user --kind app launchpad</code></pre><p>Launch it once. If another app uses Command + Space, release that shortcut in its settings first.</p></div></details>
-          <details class="faq"><summary>How does Pantry installation work?</summary><div class="faq-content"><p>Install <a href="https://github.com/pantry-pm/pantry">Pantry</a> separately, then run:</p><pre><code>pantry desktop setup --yes</code></pre><p>Connect in Launchpad Settings with the single-use pairing code. The connection is stored in macOS Keychain. Pantry's local service handles installations.</p></div></details>
+          <details class="faq" open><summary>How do I install Launchpad?</summary><div class="faq-content"><p>Download the latest signed, notarized release for Apple Silicon. Open the disk image and move Launchpad to Applications. With the current release of <a href="https://pantry.dev">Pantry</a>, one command installs the app:</p><pre><code>pantry install launchpad</code></pre><p>Launch it once and choose Launch at login in General settings to keep it ready in your menu bar. If another app uses Command + Space, release that shortcut in its settings first.</p></div></details>
+          <details class="faq"><summary>How does Pantry installation work?</summary><div class="faq-content"><p>Install <a href="https://pantry.dev">Pantry</a> separately, then run:</p><pre><code>pantry desktop setup --yes</code></pre><p>Connect in Launchpad Settings with the single-use pairing code. The connection is stored in macOS Keychain. Pantry's local service handles installations.</p></div></details>
           <details class="faq"><summary>Do I need a GitHub account?</summary><div class="faq-content"><p>Public GitHub search works without signing in. Add your own access token for private repositories and personal work. Launchpad saves it in macOS Keychain. GitHub searches are sent to GitHub.</p></div></details>
           <details class="faq"><summary>What appearance and shortcuts are available?</summary><div class="faq-content"><p>Choose System, Light or Dark in Settings. Command + Space opens and focuses search, Command + Delete clears it, and Escape dismisses the palette. Clicking another app dismisses it too.</p></div></details>
           <details class="faq"><summary>Is Launchpad free?</summary><div class="faq-content"><p>Yes. Launchpad is free and open source under the MIT license. The current Mac download is available on GitHub.</p></div></details>
@@ -115,7 +124,7 @@ const preview = state('light')
 
   <footer class="flex flex-col gap-5 justify-between sm:flex-row mx-auto px-5 py-8 md:px-10 max-w-[1280px] text-slate-600 text-sm">
     <span>Launchpad. Built with <a href="https://stacksjs.com" class="font-medium text-slate-900">Stacks</a>.</span>
-    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Roadmap</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
+    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="https://pantry.dev">Pantry</a><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Roadmap</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
   </footer>
 </body>
 </html>
