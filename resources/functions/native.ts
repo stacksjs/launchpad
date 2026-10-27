@@ -1,7 +1,33 @@
-import { app, clipboard, globalShortcuts, nativeWindow, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
+import { app, clipboard, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
 
-export { nativeWindow, clipboard, shell, windowEvents, menu, standardMenus }
+export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
+
+export async function configureTray(show: () => void, settings: () => void): Promise<() => void> {
+  const stopClick = nativeTray.onClick(() => { void nativeWindow.show().then(() => nativeWindow.focus()).then(show) })
+  const stopMenu = nativeTray.onMenuAction(event => { if (event.action === 'launchpad.settings') settings() })
+  try {
+    await nativeWindow.center()
+    await nativeTray.setIcon('command')
+    await nativeTray.setTitle('')
+    await nativeTray.setTooltip('Launchpad · Command + Space')
+    await nativeTray.setMenu([
+      { label: 'Open Launchpad', action: 'show' },
+      { label: 'Settings...', action: 'launchpad.settings' },
+      { type: 'separator' },
+      { label: 'Quit Launchpad', action: 'quit' },
+    ])
+    return () => {
+      stopClick()
+      stopMenu()
+    }
+  }
+  catch (reason) {
+    stopClick()
+    stopMenu()
+    throw reason
+  }
+}
 
 export async function applicationIcons(paths: string[]): Promise<Record<string, string>> {
   const icons: Record<string, string> = {}

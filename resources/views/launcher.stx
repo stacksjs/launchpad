@@ -10,7 +10,8 @@
 import type { Result } from '../functions/search'
 import { rankResults, quicklinkUrl } from '../functions/search'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
+import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -49,7 +50,10 @@ const content = state('')
 const alias = state('')
 const saving = state(false)
 const settings = state(false)
-const settingsSection = state('appearance')
+const settingsSection = state('general')
+const loginEnabled = state(false)
+const loginBusy = state(false)
+const loginStatus = state('Checking macOS Login Items...')
 const settingsTitle = useRef('settingsTitle')
 const usageEnabled = state(true)
 const usageSummary = state<ActivitySummary | null>(null)
@@ -57,7 +61,7 @@ const usageIssue = state('')
 const usageQueue: ReturnType<typeof activityPayload>[] = []
 let usageTask: Promise<void> | null = null
 let usageClearing = false
-let paletteVisible = true
+let paletteVisible = false
 const icons = state<Record<string, string>>({})
 const preferences = state<Record<string, any>>({})
 const preferencesReady = state(false)
@@ -80,6 +84,7 @@ const search = useRef('search')
 const commandTitle = useRef('commandTitle')
 const list = useRef('results')
 let cleanup = () => {}
+let cleanupTray = () => {}
 
 const allResults = derived(() => {
   const packages = pantryResults(catalog(), items(), pantryInstalled(), category() === 'pantry' ? pantryFilter() : 'all', category() === 'pantry', query())
@@ -209,6 +214,30 @@ function chooseCategory(value) { query.set(''); category.set(value); selected.se
 function fail(reason) { error.set(reason.message || String(reason)) }
 function openSettings() { settings.set(true); error.set(''); void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus())) }
 function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
+async function refreshLogin(initialize = false) {
+  if (loginBusy()) return
+  loginBusy.set(true)
+  try {
+    const enabled = initialize
+      ? await initializeLogin(nativeAutoLaunch, Boolean(preferences().loginInitialized), () => preference('loginInitialized', 'true'))
+      : await nativeAutoLaunch.isEnabled()
+    loginEnabled.set(enabled)
+    loginStatus.set(enabled ? 'Launchpad starts quietly in the menu bar when you sign in.' : 'Launch at login is off. If macOS needs approval, check System Settings > General > Login Items.')
+  }
+  catch (reason) { loginStatus.set(reason.message) }
+  finally { loginBusy.set(false) }
+}
+async function changeLogin(enabled) {
+  if (loginBusy()) return
+  loginBusy.set(true)
+  try {
+    loginEnabled.set(await setLoginEnabled(nativeAutoLaunch, enabled))
+    await preference('loginInitialized', 'true')
+    loginStatus.set(loginEnabled() ? 'Launchpad starts quietly in the menu bar when you sign in.' : enabled ? 'Approve Launchpad in System Settings > General > Login Items.' : 'Launch at login is off.')
+  }
+  catch (reason) { loginStatus.set(reason.message) }
+  finally { loginBusy.set(false) }
+}
 function closeEditor() { editor.set(false); void nextTick(() => search.current?.focus()) }
 function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); paletteVisibility(true) }
 function paletteVisibility(visible) { paletteVisible = visible; track(visible ? 'palette_opened' : 'palette_dismissed') }
@@ -483,13 +512,15 @@ effect(() => { query(); category(); items(); selected.set(0); visibleLimit.set(1
 useEventListener('keydown', key, { capture: true })
 onMount(() => {
   const stopBlur = windowEvents.onBlur(() => { void dismissLauncher() })
-  const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
+  const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
   const stopClose = windowEvents.onClose(() => paletteVisibility(false))
   const stopMinimize = windowEvents.onMinimize(() => paletteVisibility(false))
   onDestroy(() => { paletteVisibility(false); void flushUsage(); stopBlur(); stopFocus(); stopClose(); stopMinimize() })
 })
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
+  try { cleanupTray = await configureTray(activate, openSettings) } catch (reason) { fail(reason) }
+  await refreshLogin(true)
   await reload()
   try { cleanup = await registerLauncher(activate) }
   catch (reason) { fail(reason) }
@@ -500,7 +531,7 @@ onMount(async () => {
     (async () => { try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) } })(),
   ])
 })
-onDestroy(() => cleanup())
+onDestroy(() => { cleanup(); cleanupTray() })
 </script>
 
 <main class="flex flex-col w-full" aria-label="Launchpad">
@@ -585,6 +616,7 @@ onDestroy(() => cleanup())
   <div :if="settings()" class="editor settings" role="dialog" aria-modal="true" aria-label="Launchpad Settings">
     <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1 ref="settingsTitle" tabindex="-1">Settings</h1><button type="button" class="escape" @mousedown.stop="" @click="closeSettings()" aria-label="Close settings">esc</button></div>
     <nav class="settings-nav" aria-label="Settings sections">
+      <button type="button" :class="settingsSection() === 'general' ? 'tab active' : 'tab'" @click="settingsSection.set('general')">General</button>
       <button type="button" :class="settingsSection() === 'appearance' ? 'tab active' : 'tab'" @click="settingsSection.set('appearance')">Appearance</button>
       <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" @click="settingsSection.set('clipboard')">Clipboard History</button>
       <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" @click="settingsSection.set('github')">GitHub</button>
@@ -592,6 +624,13 @@ onDestroy(() => cleanup())
       <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" @click="settingsSection.set('usage')">Usage</button>
     </nav>
     <div class="dialog-body">
+      <section :if="settingsSection() === 'general'">
+        <h2>Ready in the background.</h2>
+        <p class="help">Launchpad lives in your menu bar, without a Dock icon. Press Command + Space or click its menu bar icon to search. Escape and clicking outside hide the palette while Launchpad keeps running.</p>
+        <label class="toggle-row"><input type="checkbox" :checked="loginEnabled()" :disabled="loginBusy()" @change="changeLogin($event.target.checked)"> Launch at login</label>
+        <p class="help" role="status">{{ loginStatus() }}</p>
+        <button type="button" class="text-action" :disabled="loginBusy()" @click="refreshLogin()">Refresh login status</button>
+      </section>
       <section :if="settingsSection() === 'appearance'">
     <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>
     <div class="theme-options" role="group" aria-label="Appearance">
