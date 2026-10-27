@@ -23,7 +23,10 @@ Local activity supports a future year review: command counts, tool categories, a
 
 ## Install with Pantry
 
+Requires Pantry 0.11.140 or later.
+
 ```sh
+pantry upgrade
 pantry install --user --kind app launchpad
 ```
 
