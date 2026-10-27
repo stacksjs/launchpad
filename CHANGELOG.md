@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v0.1.1...v0.1.2)
+
+## ✨ Features
+
+- integrate Pantry and refine native palette behavior ([c7cbb45](https://github.com/stacksjs/launchpad/commit/c7cbb45)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.1.2 ([12a4d34](https://github.com/stacksjs/launchpad/commit/12a4d34)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 ## 0.1.1
 
 Initial development release with a native Command + Space palette, application search, calculator, quicklinks, snippets, Clipboard History, GitHub search, appearance settings, and local usage recording.
