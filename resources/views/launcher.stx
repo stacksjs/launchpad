@@ -226,7 +226,7 @@ async function openLink(url, kind) {
 
 function track(action: ActivityAction, target = { kind: 'launcher' }, durationMs = 0) {
   if (!preferencesReady() || usageClearing || (!usageEnabled() && !['palette_opened', 'palette_dismissed'].includes(action))) return
-  if (usageQueue.length >= 500) { usageIssue.set('Usage recording paused because the local API is unavailable.'); usageEnabled.set(false); return }
+  if (usageQueue.length >= 500) { usageIssue.set('The local API is unavailable. New activity could not be queued.'); return }
   usageQueue.push(activityPayload(action, target, durationMs))
   void flushUsage()
 }
@@ -242,7 +242,7 @@ function flushUsage(): Promise<void> {
   return usageTask
 }
 async function refreshUsage() {
-  try { await flushUsage(); usageSummary.set(await api('activity-summary')); usageIssue.set('') }
+  try { await flushUsage(); usageSummary.set(await api('activity-summary')); if (!usageQueue.length) usageIssue.set('') }
   catch (reason) { usageIssue.set(reason.message) }
 }
 async function usagePreference(enabled) {

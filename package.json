@@ -11,10 +11,10 @@
     "better-dx": "^0.2.38"
   },
   "dependencies": {
-    "@stacksjs/desktop": "0.2.718",
+    "@stacksjs/desktop": "0.2.721",
     "@stacksjs/github": "0.75.323",
     "@stacksjs/orm": "0.75.324",
-    "@stacksjs/stx": "0.2.718",
+    "@stacksjs/stx": "0.2.721",
     "@stacksjs/validation": "0.75.323",
     "ts-pantry": "0.11.139"
   },
@@ -28,7 +28,8 @@
     "lint": "./buddy lint",
     "lint:fix": "./buddy lint:fix",
     "typecheck": "./buddy typecheck",
-    "test": "./buddy test"
+    "test": "./buddy test",
+    "test:usage-native": "bun scripts/verify-native-usage.ts"
   },
   "type": "module",
   "author": "Chris Breuer <chris@stacksjs.com>",
