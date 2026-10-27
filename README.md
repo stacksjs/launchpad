@@ -23,7 +23,7 @@ Local activity supports a future year review: process sessions, palette opens, s
 
 ## Install with Pantry
 
-Requires Pantry 0.11.140 or later.
+Requires Pantry 0.11.141 or later.
 
 ```sh
 pantry upgrade
