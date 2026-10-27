@@ -4,7 +4,7 @@ A native macOS launcher built with Stacks, stx, ts-css and Craft.
 
 Press Command + Space to find apps, calculate, open quicklinks, copy snippets, search GitHub and revisit clipboard text. Real application icons come from macOS. Choose System, Light or Dark appearance in Settings.
 
-Launchpad starts quietly in the menu bar with no Dock or app-switcher icon. Click its icon or press Command + Space to open the palette. Right-click the icon for Open, Settings and Quit. Hiding the palette keeps the app running. Settings > General controls Launch at login through macOS Login Items. First launch registers it once; subsequent launches respect changes made in System Settings.
+Launchpad starts quietly in the menu bar with no Dock or app-switcher icon. Click its icon or press Command + Space to open the palette. Right-click the icon for Open, Settings and Quit. Hiding the palette keeps the app running. First launch shows General settings, where you can choose Launch at login through macOS Login Items. Subsequent launches respect changes made in System Settings.
 
 | Shortcut | Action |
 | --- | --- |

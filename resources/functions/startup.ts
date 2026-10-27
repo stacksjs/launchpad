@@ -4,13 +4,11 @@ interface LoginService {
   disable: () => Promise<boolean>
 }
 
-/** Register once, then honor changes made in macOS Login Items between launches. */
+/** Read the OS setting and remember first setup without registering a login item. */
 export async function initializeLogin(service: LoginService, initialized: boolean, remember: () => Promise<void>): Promise<boolean> {
   const enabled = await service.isEnabled()
-  if (initialized) return enabled
-  if (!enabled && !await service.enable()) throw new Error('Could not register Launchpad at login. Try again in Settings.')
-  await remember()
-  return service.isEnabled()
+  if (!initialized) await remember()
+  return enabled
 }
 
 export async function setLoginEnabled(service: LoginService, enabled: boolean): Promise<boolean> {

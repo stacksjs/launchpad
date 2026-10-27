@@ -3,7 +3,7 @@ import { initializeLogin, setLoginEnabled } from '../resources/functions/startup
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
 import AppPreference from '../app/Models/AppPreference'
 
-test('first startup registers at login once and later respects a user disabling it in macOS', async () => {
+test('startup only reads Login Items and respects changes made outside Launchpad', async () => {
   let enabled = false
   let registrations = 0
   let remembered = false
@@ -12,8 +12,10 @@ test('first startup registers at login once and later respects a user disabling 
     enable: async () => { registrations++; enabled = true; return true },
     disable: async () => { enabled = false; return true },
   }
-  expect(await initializeLogin(service, remembered, async () => { remembered = true })).toBe(true)
+  expect(await initializeLogin(service, remembered, async () => { remembered = true })).toBe(false)
   expect(remembered).toBe(true)
+  expect(registrations).toBe(0)
+  expect(await setLoginEnabled(service, true)).toBe(true)
   enabled = false
   expect(await initializeLogin(service, remembered, async () => { remembered = true })).toBe(false)
   expect(registrations).toBe(1)
@@ -21,13 +23,9 @@ test('first startup registers at login once and later respects a user disabling 
   expect(await setLoginEnabled(service, false)).toBe(false)
 })
 
-test('failed registration is not saved as success and pending approval reports the actual OS state', async () => {
-  let remembered = false
+test('registration requires the explicit setting and pending approval reports the actual OS state', async () => {
   const service = { isEnabled: async () => false, enable: async () => false, disable: async () => false }
-  await expect(initializeLogin(service, false, async () => { remembered = true })).rejects.toThrow('Could not register')
-  expect(remembered).toBe(false)
-  expect(await initializeLogin({ ...service, enable: async () => true }, false, async () => { remembered = true })).toBe(false)
-  expect(remembered).toBe(true)
+  expect(await setLoginEnabled({ ...service, enable: async () => true }, true)).toBe(false)
   await expect(setLoginEnabled(service, true)).rejects.toThrow('macOS could not update')
 })
 

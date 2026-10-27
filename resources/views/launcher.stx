@@ -520,11 +520,13 @@ onMount(() => {
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
   try { cleanupTray = await configureTray(activate, openSettings) } catch (reason) { fail(reason) }
+  const firstSetup = preferencesReady() && !preferences().loginInitialized
   await refreshLogin(true)
+  if (firstSetup) openSettings()
   await reload()
   try { cleanup = await registerLauncher(activate) }
   catch (reason) { fail(reason) }
-  if (paletteVisible) activate()
+  if (paletteVisible && !settings()) activate()
   await Promise.allSettled([
     (async () => { try { catalog.set(await api('pantry/catalog')) } catch (reason) { pantryStatus.set(reason.message) } })(),
     refreshPackages(),
