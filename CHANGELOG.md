@@ -1,5 +1,20 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v0.1.2...v1.0.0)
+
+## 🐛 Bug Fixes
+
+- qualify native search editing and saved connections ([1d0b548](https://github.com/stacksjs/launchpad/commit/1d0b548)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.0 ([e55987d](https://github.com/stacksjs/launchpad/commit/e55987d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- pin the published native Buddy release ([8960946](https://github.com/stacksjs/launchpad/commit/8960946)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v0.1.1...v0.1.2)
 
 ## ✨ Features
