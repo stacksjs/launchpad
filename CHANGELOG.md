@@ -1,5 +1,23 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.2...v1.0.3)
+
+## ✨ Features
+
+- track Pantry install receipts by package kind ([f26087a](https://github.com/stacksjs/launchpad/commit/f26087a)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 👷 Build System
+
+- consume Pantry receipt metadata through native releases ([f661f7c](https://github.com/stacksjs/launchpad/commit/f661f7c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.3 ([fc8c50d](https://github.com/stacksjs/launchpad/commit/fc8c50d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.1...v1.0.2)
 
 ## ✨ Features
