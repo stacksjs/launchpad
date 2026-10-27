@@ -1,5 +1,31 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.3...v1.0.4)
+
+## ✨ Features
+
+- unify Command branding and generate native social images ([d21d395](https://github.com/stacksjs/launchpad/commit/d21d395)) _(by Chris Breuer <chris@stacksjs.com>)_
+- run Launchpad in the menu bar and start at login ([eb0d763](https://github.com/stacksjs/launchpad/commit/eb0d763)) _(by Chris Breuer <chris@stacksjs.com>)_
+- configure Launchpad production marketing domain ([d7d3eb8](https://github.com/stacksjs/launchpad/commit/d7d3eb8)) _(by Chris Breuer <chris@stacksjs.com>)_
+- add Launchpad marketing site with native Stacks tooling ([b2614e2](https://github.com/stacksjs/launchpad/commit/b2614e2)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- require a user choice for login startup ([bd6940c](https://github.com/stacksjs/launchpad/commit/bd6940c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- clarify website shortcuts and label keyboard controls ([c25d842](https://github.com/stacksjs/launchpad/commit/c25d842)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 👷 Build System
+
+- consume native site support from published Buddy ([00874b1](https://github.com/stacksjs/launchpad/commit/00874b1)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.4 ([a178f3f](https://github.com/stacksjs/launchpad/commit/a178f3f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.2...v1.0.3)
 
 ## ✨ Features
