@@ -1,0 +1,144 @@
+<script client>
+const preview = state('light')
+</script>
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Launchpad is a free native Mac launcher. Open apps, find clipboard text, search GitHub and install tools with Pantry, all from your keyboard.">
+  <meta name="theme-color" content="#f5f7fa">
+  <meta property="og:title" content="Launchpad | A shorter path to what you do">
+  <meta property="og:description" content="Your apps, links and tools. One keyboard shortcut. A free native launcher for Apple Silicon Macs.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/images/launchpad.png" type="image/png">
+  <title>Launchpad | A shorter path to what you do</title>
+</head>
+<body class="m-0 antialiased text-slate-900 bg-[#f5f7fa]">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="flex gap-5 items-center justify-between mx-auto px-5 md:px-10 h-[72px] max-w-[1280px]">
+    <a class="flex gap-2 items-center font-semibold text-lg tracking-tight" href="/" aria-label="Launchpad home">
+      <StxImage src="/images/launchpad.png" width="40" height="40" sizes="40px" alt="" class="h-10 w-10" loading="eager" />
+      Launchpad
+    </a>
+    <nav aria-label="Main navigation" class="flex gap-5 items-center md:gap-8 font-medium text-sm">
+      <a href="#features" class="hidden sm:block text-slate-600 hover:text-slate-950">Features</a>
+      <a href="#pantry" class="hidden sm:block text-slate-600 hover:text-slate-950">Pantry</a>
+      <a href="https://github.com/stacksjs/launchpad" class="text-slate-600 hover:text-slate-950">GitHub <span aria-hidden="true">↗</span></a>
+      <a href="https://github.com/stacksjs/launchpad/releases/latest" class="button button-small">Download for Mac</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="grid gap-10 grid-cols-1 items-center lg:gap-14 lg:grid-cols-[0.9fr_1.3fr] mx-auto pb-16 pt-12 px-5 md:pb-20 md:pt-20 md:px-10 max-w-[1280px]" aria-labelledby="hero-title">
+      <div>
+        <p class="mb-5 font-semibold text-blue-700 text-xs tracking-[0.16em] uppercase">Your Mac, within reach</p>
+        <h1 id="hero-title" class="m-0 max-w-[12ch] font-semibold leading-[1.04] text-5xl tracking-[-0.055em] md:text-6xl">Less looking.<br>More doing.</h1>
+        <p class="mb-7 mt-6 max-w-[32ch] leading-relaxed text-lg text-slate-600">Open apps, find what you copied, and get back to work. All from one shortcut.</p>
+        <a href="https://github.com/stacksjs/launchpad/releases/latest" class="button">Download for Mac <span aria-hidden="true">↓</span></a>
+      </div>
+      <figure class="m-0 min-w-0">
+        <div class="product-frame">
+          <img :src="preview() === 'light' ? '/images/applications-light.jpg' : '/images/applications.jpg'" src="/images/applications-light.jpg" width="1440" height="900" alt="Launchpad's native application search with real Mac app icons" class="block h-auto w-full" fetchpriority="high">
+        </div>
+        <figcaption class="flex gap-4 items-center justify-between mt-5 text-slate-600 text-xs">
+          <span>At home in light and dark.</span>
+          <div class="inline-flex gap-1 p-1 border border-slate-300 rounded-lg" role="group" aria-label="App appearance preview">
+            <button type="button" class="preview-button" :aria-pressed="preview() === 'light'" @click="preview.set('light')">Light</button>
+            <button type="button" class="preview-button" :aria-pressed="preview() === 'dark'" @click="preview.set('dark')">Dark</button>
+          </div>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="bg-white border-slate-200 border-y" aria-label="Made for your Mac">
+      <div class="grid gap-7 grid-cols-1 md:gap-10 md:grid-cols-3 mx-auto px-5 py-8 md:px-10 max-w-[1280px]">
+        <div class="flex gap-4 items-center"><div class="flex gap-1 shrink-0" aria-hidden="true"><kbd>⌘</kbd><kbd>space</kbd></div><p class="m-0 leading-relaxed text-slate-600 text-sm">Press once. Start typing.<br><strong class="font-medium text-slate-900">Your search is already focused.</strong></p></div>
+        <div class="flex gap-4 items-center"><i class="shrink-0 h-7 w-7 text-slate-600 i-f7-logo-apple" aria-hidden="true"></i><p class="m-0 leading-relaxed text-slate-600 text-sm">Free for Apple Silicon Macs.<br><strong class="font-medium text-slate-900">macOS 13 or later.</strong></p></div>
+        <div class="flex gap-4 items-center"><i class="shrink-0 h-7 w-7 text-slate-600 i-f7-chevron-left-slash-chevron-right" aria-hidden="true"></i><p class="m-0 leading-relaxed text-slate-600 text-sm">Built in the open with Stacks.<br><strong class="font-medium text-slate-900">Make it yours.</strong></p></div>
+      </div>
+    </section>
+
+    <section id="features" class="mx-auto px-5 py-20 md:px-10 md:py-24 max-w-[1280px]" aria-labelledby="features-title">
+      <h2 id="features-title" class="m-0 max-w-[20ch] font-semibold leading-tight text-3xl tracking-[-0.035em] md:text-4xl">The things you reach for.<br>Right where you need them.</h2>
+      <div class="grid gap-6 grid-cols-1 md:grid-cols-2 mt-10">
+        <article class="overflow-hidden bg-[#e9edf4] border border-slate-200 rounded-2xl">
+          <div class="p-7 md:p-8"><h3 class="m-0 font-semibold text-xl tracking-tight">GitHub, without the detour.</h3><p class="mb-0 mt-3 max-w-[40ch] leading-relaxed text-base text-slate-600">Find repositories, issues and pull requests. Check assigned work, review requests and notifications with your own GitHub connection.</p></div>
+          <StxImage sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1279px) 45vw, 588px" src="/images/github.jpg" width="1440" height="900" alt="Launchpad showing issues from the Stacks GitHub repository" class="block h-auto w-full" loading="lazy" />
+        </article>
+        <article class="overflow-hidden bg-white border border-slate-200 rounded-2xl">
+          <div class="p-7 md:p-8"><h3 class="m-0 font-semibold text-xl tracking-tight">Copy. Find. Use again.</h3><p class="mb-0 mt-3 max-w-[40ch] leading-relaxed text-base text-slate-600">Turn on Clipboard History to revisit saved text. Preview it, copy it again, or clear it. You choose what stays.</p></div>
+          <StxImage sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1279px) 45vw, 588px" src="/images/clipboard.jpg" width="1440" height="900" alt="Local Clipboard History with saved text, a preview, and retention controls" class="block h-auto w-full" loading="lazy" />
+        </article>
+      </div>
+      <div class="grid gap-8 grid-cols-1 sm:grid-cols-3 mt-10">
+        <div><h3 class="flex gap-2 items-center m-0 font-semibold text-base"><i class="h-5 w-5 text-blue-700 i-f7-link" aria-hidden="true"></i>Quicklinks</h3><p class="mb-0 mt-2 leading-relaxed text-slate-600 text-sm">Give your regular destinations a shortcut. Open a link as quickly as an app.</p></div>
+        <div><h3 class="flex gap-2 items-center m-0 font-semibold text-base"><i class="h-5 w-5 text-blue-700 i-f7-doc-text" aria-hidden="true"></i>Snippets</h3><p class="mb-0 mt-2 leading-relaxed text-slate-600 text-sm">Keep the text you use often ready to find and copy.</p></div>
+        <div><h3 class="flex gap-2 items-center m-0 font-semibold text-base"><i class="h-5 w-5 text-blue-700 i-f7-number" aria-hidden="true"></i>Calculator</h3><p class="mb-0 mt-2 leading-relaxed text-slate-600 text-sm">Type an expression in search. Get the answer without opening another app.</p></div>
+      </div>
+    </section>
+
+    <section id="pantry" class="bg-[#edf1f6] border-slate-200 border-y" aria-labelledby="pantry-title">
+      <div class="grid gap-10 grid-cols-1 items-center lg:gap-16 lg:grid-cols-[1.3fr_0.8fr] mx-auto px-5 py-16 md:px-10 md:py-20 max-w-[1280px]">
+        <StxImage sizes="(max-width: 1023px) calc(100vw - 40px), (max-width: 1279px) 55vw, 680px" src="/images/pantry.jpg" width="1440" height="900" alt="The Pantry catalog inside Launchpad with original package logos and package types" class="block h-auto w-full product-frame" loading="lazy" />
+        <div><h2 id="pantry-title" class="m-0 font-semibold leading-tight text-3xl tracking-[-0.035em] md:text-4xl">Your next tool<br>is a search away.</h2><p class="mb-0 mt-5 leading-relaxed text-base text-slate-600">Browse Pantry's catalog of apps, command line tools, libraries and fonts. Install through Launchpad and follow the job as it runs.</p><p class="mb-0 mt-4 leading-relaxed text-base text-slate-600">All keeps your installed tools close. Pantry shows the full catalog when you want something new.</p><a href="#setup" class="inline-flex gap-2 items-center mt-6 font-semibold text-blue-700 text-sm hover:text-blue-900">Set up Pantry <span aria-hidden="true">→</span></a></div>
+      </div>
+    </section>
+
+    <section class="mx-auto px-5 py-20 md:px-10 md:py-24 max-w-[1280px]" aria-labelledby="local-title">
+      <div class="max-w-[680px]"><h2 id="local-title" class="m-0 font-semibold leading-tight text-3xl tracking-[-0.035em] md:text-4xl">Your habits stay on your Mac.</h2><p class="mb-0 mt-5 leading-relaxed text-lg text-slate-600">See how you use Launchpad, from apps opened to time in the palette. Local usage data lays the groundwork for your future year in review.</p></div>
+      <div class="grid gap-7 grid-cols-1 md:grid-cols-3 mt-9 pt-7 border-slate-200 border-t">
+        <div><h3 class="m-0 font-semibold text-base">A useful record</h3><p class="mb-0 mt-2 leading-relaxed text-slate-600 text-sm">Launches, visible time, successful app and link opens, and Pantry installs by package type.</p></div>
+        <div><h3 class="m-0 font-semibold text-base">Local by design</h3><p class="mb-0 mt-2 leading-relaxed text-slate-600 text-sm">Usage lives in the app's local database. Search queries, URLs and clipboard contents are excluded from usage records.</p></div>
+        <div><h3 class="m-0 font-semibold text-base">Your controls</h3><p class="mb-0 mt-2 leading-relaxed text-slate-600 text-sm">Inspect, pause or clear usage in Settings. Clipboard History is a separate, opt-in feature.</p></div>
+      </div>
+    </section>
+
+    <section id="setup" class="bg-white border-slate-200 border-t" aria-labelledby="setup-title">
+      <div class="grid gap-10 grid-cols-1 md:gap-16 md:grid-cols-[0.8fr_1.2fr] mx-auto px-5 py-16 md:px-10 md:py-20 max-w-[1280px]">
+        <div><h2 id="setup-title" class="m-0 font-semibold text-3xl tracking-[-0.035em]">Make yourself at home.</h2><p class="mb-0 mt-4 max-w-[34ch] leading-relaxed text-base text-slate-600">A few details before your first Command + Space.</p></div>
+        <div class="min-w-0">
+          <details class="faq" open><summary>How do I install Launchpad?</summary><div class="faq-content"><p>Download the latest signed, notarized release for Apple Silicon. Open the disk image and move Launchpad to Applications. If you use Pantry 0.11.141 or later, install it with:</p><pre><code>pantry install --user --kind app launchpad</code></pre><p>Launch it once. If another app uses Command + Space, release that shortcut in its settings first.</p></div></details>
+          <details class="faq"><summary>How does Pantry installation work?</summary><div class="faq-content"><p>Install <a href="https://github.com/pantry-pm/pantry">Pantry</a> separately, then run:</p><pre><code>pantry desktop setup --yes</code></pre><p>Connect in Launchpad Settings with the single-use pairing code. The connection is stored in macOS Keychain. Pantry's local service handles installations.</p></div></details>
+          <details class="faq"><summary>Do I need a GitHub account?</summary><div class="faq-content"><p>Public GitHub search works without signing in. Add your own access token for private repositories and personal work. Launchpad saves it in macOS Keychain. GitHub searches are sent to GitHub.</p></div></details>
+          <details class="faq"><summary>Can I change the appearance and shortcuts?</summary><div class="faq-content"><p>Choose System, Light or Dark in Settings. Command + Space opens and focuses search, Command + Delete clears it, and Escape dismisses the palette. Clicking another app dismisses it too.</p></div></details>
+          <details class="faq"><summary>Is Launchpad free?</summary><div class="faq-content"><p>Yes. Launchpad is free and open source under the MIT license. The current Mac download is available on GitHub.</p></div></details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="flex flex-col gap-5 justify-between sm:flex-row mx-auto px-5 py-8 md:px-10 max-w-[1280px] text-slate-600 text-sm">
+    <span>Launchpad. Built with <a href="https://stacksjs.com" class="font-medium text-slate-900">Stacks</a>.</span>
+    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Roadmap</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
+  </footer>
+</body>
+</html>
+
+<style>
+  :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  html { scroll-behavior: smooth; scroll-padding-top: 32px; }
+  body { overflow-wrap: break-word; }
+  a { text-decoration: none; }
+  button, summary { font: inherit; cursor: pointer; }
+  a, button, summary { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid #1d4ed8; outline-offset: 5px; }
+  .skip-link { position: fixed; top: 8px; left: 8px; z-index: 20; padding: 12px 18px; background: white; color: #0f172a; border: 1px solid #94a3b8; border-radius: 8px; transform: translateY(-150%); }
+  .skip-link:focus { transform: translateY(0); }
+  .button { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 48px; padding: 12px 20px; border: 1px solid #1d4ed8; border-radius: 10px; background: #1d4ed8; color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background 160ms ease; }
+  .button:hover { background: #1e40af; }
+  .button-small { min-height: 38px; padding: 9px 14px; font-size: 12px; }
+  .product-frame { overflow: hidden; border: 1px solid #b8c2d0; border-radius: 14px; box-shadow: 0 16px 48px -20px #283c5b50, 0 2px 5px #283c5b0a; }
+  .preview-button { min-width: 48px; min-height: 28px; padding: 5px 10px; border: 0; border-radius: 5px; background: transparent; color: #475569; font-size: 12px; }
+  .preview-button[aria-pressed="true"] { background: #fff; color: #0f172a; box-shadow: 0 1px 3px #0f172a24; }
+  kbd { display: inline-flex; min-width: 30px; min-height: 34px; align-items: center; justify-content: center; padding: 4px 8px; border: 1px solid #cbd5e1; border-bottom-width: 3px; border-radius: 7px; background: #f8fafc; color: #334155; font: 13px -apple-system, BlinkMacSystemFont, sans-serif; }
+  .faq { border-bottom: 1px solid #e2e8f0; }
+  .faq summary { padding: 21px 0; font-size: 15px; font-weight: 600; line-height: 1.5; }
+  .faq-content { padding: 0 0 18px; font-size: 14px; line-height: 1.75; color: #475569; }
+  .faq-content p { margin: 0 0 12px; }
+  .faq-content a { color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; }
+  pre { max-width: 100%; overflow-x: auto; margin: 16px 0; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #0f172a; font-size: 12px; }
+  @media (max-width: 420px) { header nav { gap: 12px; } header nav > a:not(.button) { display: none; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; } }
+</style>
