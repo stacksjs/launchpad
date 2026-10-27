@@ -1,5 +1,27 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.1...v1.0.2)
+
+## ✨ Features
+
+- track local launcher sessions duration and successful opens ([fa65154](https://github.com/stacksjs/launchpad/commit/fa65154)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- require Pantry native app installation support ([481e227](https://github.com/stacksjs/launchpad/commit/481e227)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 👷 Build System
+
+- use published native lifecycle and verify usage persistence ([509c785](https://github.com/stacksjs/launchpad/commit/509c785)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.2 ([2abc84b](https://github.com/stacksjs/launchpad/commit/2abc84b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.0...v1.0.1)
 
 ## ✨ Features
