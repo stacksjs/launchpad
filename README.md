@@ -47,7 +47,7 @@ If another launcher owns Command + Space, quit it or reassign its shortcut befor
 
 | Tool | What it does |
 | --- | --- |
-| **Applications** | Find and open installed apps with their real macOS icons. New installations are discovered when the palette opens and while it stays visible. |
+| **Applications** | Find and open installed apps with localized macOS names and real icons. New installations are discovered when the palette opens and while it stays visible. |
 | **Search** | Prioritize names and genuine aliases. Favorites and recent use refine relevant results; compact abbreviations such as `vsc` and `sst` still work. |
 | **Quicklinks** | Save websites or search templates such as `https://example.com/?q={query}`, then use a named alias with your search argument. |
 | **Snippets** | Keep reusable text close and copy it with Return. |

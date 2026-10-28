@@ -1,11 +1,29 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, mkdir, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApplicationDiscovery } from '../app/Desktop/applications'
 import { createApplicationRefresh } from '../resources/functions/applications'
 import { createApplicationIconLoader } from '../resources/functions/application-icons'
 import type { Result } from '../resources/functions/search'
+import { rankResults } from '../resources/functions/search'
+
+test.skipIf(process.platform !== 'darwin')('localized app names display correctly while filenames remain searchable', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'launchpad-localized-app-'))
+  try {
+    const path = join(root, 'Things3.app')
+    await mkdir(join(path, 'Contents/Resources/en.lproj'), { recursive: true })
+    await writeFile(join(path, 'Contents/Info.plist'), '<plist version="1.0"><dict><key>CFBundleName</key><string>Things3</string><key>CFBundleDisplayName</key><string>Things3</string><key>CFBundleIdentifier</key><string>com.example.things</string><key>CFBundleDevelopmentRegion</key><string>en</string></dict></plist>')
+    await writeFile(join(path, 'Contents/Resources/en.lproj/InfoPlist.strings'), '"CFBundleDisplayName" = "Things"; "CFBundleName" = "Things";')
+    const apps = await createApplicationDiscovery([root])()
+    expect(apps[0]?.title).toBe('Things')
+    expect(apps[0]?.key).toBe(path)
+    expect(apps[0]?.content).toBe(path)
+    expect(rankResults(apps, 'Things3')[0]?.title).toBe('Things')
+    expect(rankResults(apps, 'com.example.things')[0]?.title).toBe('Things')
+  }
+  finally { await rm(root, { recursive: true, force: true }) }
+})
 
 test('discovery picks up installations after startup, nested apps and removals', async () => {
   const root = await mkdtemp(join(tmpdir(), 'launchpad-apps-'))
@@ -62,6 +80,12 @@ test('activation refresh shares requests, retains commands and avoids replacing 
   expect(count).toBe(1)
   await refresh()
   expect(replacements).toBe(1)
+  apps = apps.map(app => ({ ...app, searchAliases: ['Original filename'] }))
+  await refresh()
+  expect(rows[0]?.searchAliases).toEqual(['Original filename'])
+  apps = apps.map(app => ({ ...app, searchAliases: ['New filename alias'] }))
+  await refresh()
+  expect(rows[0]?.searchAliases).toEqual(['New filename alias'])
   apps = []
   await refresh()
   expect(rows.map(item => item.title)).toEqual(['Saved'])

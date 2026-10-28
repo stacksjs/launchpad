@@ -7,6 +7,11 @@ request. An unchanged list leaves the search and selection untouched. Discovery
 also scans up to four folder levels below the application roots, without walking
 inside app bundles or following directory symlinks.
 
+Application titles use the desktop package's localized macOS bundle metadata.
+The bundle filename and identifier remain search aliases. Launch paths and
+favorite/history keys stay tied to the bundle path, so a corrected display name
+preserves those records. Missing name metadata falls back to the filename.
+
 All and Applications search the local command list and installed Pantry packages.
 They do not search the full Pantry catalog. The Pantry page uses the SDK's
 `createPackageCatalogSearch` to normalize and sort one immutable catalog snapshot,

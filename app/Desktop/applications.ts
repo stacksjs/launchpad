@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Result } from '../../resources/functions/search'
+import { readApplicationMetadata } from '@stacksjs/desktop/application-metadata'
 
 /** Scan application folders without walking inside bundles or following directory symlinks. */
 export function createApplicationDiscovery(roots = ['/Applications', '/System/Applications', join(homedir(), 'Applications')]) {
@@ -22,7 +23,11 @@ export function createApplicationDiscovery(roots = ['/Applications', '/System/Ap
             if (entry.name.startsWith('.')) continue
             const path = join(root, entry.name)
             if (/\.app$/i.test(entry.name) && (entry.isDirectory() || entry.isSymbolicLink())) {
-              apps.set(path, { key: path, title: entry.name.slice(0, -4), subtitle: 'Application', kind: 'application', content: path })
+              const filename = entry.name.slice(0, -4)
+              const metadata = readApplicationMetadata(path)
+              const title = metadata?.displayName || filename
+              const searchAliases = [...new Set([filename, metadata?.bundleName, metadata?.bundleId].filter((value): value is string => Boolean(value)))].filter(value => value !== title)
+              apps.set(path, { key: path, title, searchAliases, subtitle: 'Application', kind: 'application', content: path })
             }
             else if (entry.isDirectory() && depth < 4) directories.push({ path, depth: depth + 1 })
           }

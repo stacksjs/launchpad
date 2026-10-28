@@ -7,7 +7,7 @@ export function createApplicationRefresh(options: { load: () => Promise<Result[]
     pending ??= options.load().then((apps) => {
       const current = options.current()
       const previous = current.filter(item => item.kind === 'application')
-      if (apps.length !== previous.length || apps.some((app, index) => app.key !== previous[index]?.key || app.title !== previous[index]?.title)) {
+      if (apps.length !== previous.length || apps.some((app, index) => app.key !== previous[index]?.key || app.title !== previous[index]?.title || app.searchAliases?.length !== previous[index]?.searchAliases?.length || app.searchAliases?.some((alias, aliasIndex) => alias !== previous[index]?.searchAliases?.[aliasIndex]))) {
         options.replace([...apps, ...current.filter(item => item.kind !== 'application')])
       }
       options.count(apps.length)
