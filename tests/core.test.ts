@@ -55,9 +55,11 @@ test('aliases match independently and descriptions are literal Pantry discovery 
 })
 
 test('word prefixes and compact app abbreviations still work', () => {
-  const apps = ['Google Chrome', 'Visual Studio Code', 'System Settings'].map(title => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application' }))
+  const apps = ['Google Chrome', 'Visual Studio Code', 'System Settings', 'GitHub Desktop'].map(title => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application' }))
   expect(rankResults(apps, 'chrome').map(item => item.title)).toEqual(['Google Chrome'])
   expect(rankResults(apps, 'chrm').map(item => item.title)).toEqual(['Google Chrome'])
   expect(rankResults(apps, 'vsc').map(item => item.title)).toEqual(['Visual Studio Code'])
   expect(rankResults(apps, 'sst').map(item => item.title)).toEqual(['System Settings'])
+  expect(rankResults(apps, 'vs code').map(item => item.title)).toEqual(['Visual Studio Code'])
+  expect(rankResults(apps, 'git hub').map(item => item.title)).toEqual(['GitHub Desktop'])
 })

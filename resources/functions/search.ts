@@ -66,8 +66,9 @@ function withoutVersion(title: string): string {
   return title.slice(0, end).trimEnd()
 }
 
-function fuzzyDistance(field: string, term: string): number | null {
-  if (term.length < 2 || /\s/.test(term)) return null
+function fuzzyDistance(field: string, input: string): number | null {
+  const term = input.replace(/\s+/g, '')
+  if (term.length < 2) return null
   const words = field.split(/[\s._/-]+/)
   const initials = words.map(word => word[0] || '').join('')
   if (initials === term) return 0
