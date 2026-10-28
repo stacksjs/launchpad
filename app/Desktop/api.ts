@@ -1,4 +1,3 @@
-import { readdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
@@ -14,6 +13,7 @@ import CatalogPackage from '../Models/CatalogPackage'
 import { pantryApi } from './pantry'
 import { clearClipboardHistory, pruneClipboardHistory } from './history'
 import { createActivityApi, startActivityRuntime } from './activity'
+import { installedApplications } from './applications'
 
 const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage }
 // Craft/stx owns the authenticated loopback session and backend process.
@@ -21,25 +21,6 @@ openNativeDatabase({ path: join(homedir(), 'Library/Application Support/Launchpa
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const activityApi = createActivityApi(modelApi)
 export const shutdown = startActivityRuntime(activityApi)
-
-export async function installedApplications() {
-  const roots = ['/Applications', '/System/Applications', '/System/Applications/Utilities', join(homedir(), 'Applications')]
-  const apps: { key: string, title: string, subtitle: string, kind: string, content: string }[] = []
-  for (const root of roots) {
-    let entries
-    try { entries = await readdir(root, { withFileTypes: true }) }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
-      throw error
-    }
-    for (const entry of entries) {
-      if (!entry.name.endsWith('.app')) continue
-      const path = join(root, entry.name)
-      apps.push({ key: path, title: entry.name.slice(0, -4), subtitle: 'Application', kind: 'application', content: path })
-    }
-  }
-  return apps.sort((a, b) => a.title.localeCompare(b.title))
-}
 
 export default async function handle(request: Request): Promise<Response | null> {
   const pathname = new URL(request.url).pathname

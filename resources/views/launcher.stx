@@ -14,10 +14,11 @@ import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execut
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
-import { pantryResults, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
+import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
 import type { PackageCatalogEntry, DesktopInstalledPackage, DesktopInstallJob } from '../functions/pantry'
 import { activityPayload, formatUsageTime, recordSuccessfulOperation } from '../functions/activity'
 import type { ActivityAction, ActivitySummary } from '../functions/activity'
+import { createApplicationRefresh } from '../functions/applications'
 
 const catalog = state<PackageCatalogEntry[]>([])
 const pantryInstalled = state<DesktopInstalledPackage[]>([])
@@ -61,7 +62,7 @@ const usageIssue = state('')
 const usageQueue: ReturnType<typeof activityPayload>[] = []
 let usageTask: Promise<void> | null = null
 let usageClearing = false
-let paletteVisible = false
+const paletteVisible = state(false)
 const icons = state<Record<string, string>>({})
 const preferences = state<Record<string, any>>({})
 const preferencesReady = state(false)
@@ -86,16 +87,22 @@ const list = useRef('results')
 let cleanup = () => {}
 let cleanupTray = () => {}
 
+const searchCatalog = derived(() => createPackageCatalogSearch(catalog()))
+const installedPackages = derived(() => pantryResults(installedCatalog(catalog(), pantryInstalled()), items(), pantryInstalled()))
+const localItems = derived(() => [...items(), ...installedPackages()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+const githubCommands = derived(() => githubItems().map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const allResults = derived(() => {
-  const packages = pantryResults(catalog(), items(), pantryInstalled(), category() === 'pantry' ? pantryFilter() : 'all', category() === 'pantry', query())
-  const combined = category() === 'github' ? githubItems() : category() === 'pantry' ? packages : [...items(), ...packages.filter(item => item.installedVersion)]
-  const source = combined.map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id, icon: item.icon || icons()[item.content] }))
+  if (category() === 'pantry') {
+    const packages = pantryResults(searchCatalog()(query(), { kind: pantryFilter() === 'all' ? undefined : pantryFilter(), limit: 50000 }), items(), pantryInstalled(), pantryFilter(), true)
+    return rankResults(packages.map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })), query(), 'pantry')
+  }
+  const source = category() === 'github' ? githubCommands() : localItems()
   if (category() === 'github') return source
   const answer = category() === 'all' ? calculate(query()) : null
   const found = rankResults(source, query(), category())
   return answer === null ? found : [{ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer }, ...found]
 })
-const results = derived(() => allResults().slice(0, visibleLimit()))
+const results = derived(() => allResults().slice(0, visibleLimit()).map(item => ({ ...item, icon: item.icon || icons()[item.content] })))
 const active = derived(() => results()[selected()])
 const actionLabel = derived(() => active()?.kind === 'pantry' ? 'Details' : ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
 
@@ -190,7 +197,16 @@ async function pollInstall() {
   catch (reason) { pantryStatus.set(reason.message) }
   finally { pollingJob = false }
 }
-useInterval(pollInstall, 1000)
+useInterval(pollInstall, 1000, { enabled: () => installJobs().some(job => ['queued', 'running'].includes(job.status)) })
+
+const refreshApplications = createApplicationRefresh({ load: () => api('applications'), current: items, replace: value => items.set(value), count: count => status.set(count + ' applications · Local commands') })
+useInterval(() => { void refreshApplications().catch(fail) }, 5000, { enabled: () => paletteVisible() })
+
+effect(() => {
+  if (!paletteVisible()) return
+  const paths = results().filter(item => item.kind === 'application' && !item.icon).map(item => item.content)
+  if (paths.length) void applicationIcons(paths).then(value => { if (Object.keys(value).length) icons.set({ ...icons(), ...value }) }).catch(fail)
+})
 
 async function reload() {
   loading.set(true)
@@ -202,17 +218,15 @@ async function reload() {
     ])
     records.set(Object.fromEntries(launches.map(row => [row.key, { ...row, lastUsed: row.lastUsed ?? row.last_used }])))
     status.set(apps.length + ' applications · Local commands')
-    const missing = apps.map(item => item.content).filter(path => !icons()[path])
-    if (missing.length) void applicationIcons(missing).then(value => icons.set({ ...icons(), ...value })).catch(fail)
   }
   catch (reason) { error.set(reason.message) }
   finally { loading.set(false) }
 }
 
-function focusSearch() { query.set(''); category.set('all'); selected.set(0); void nextTick(() => search.current?.focus()) }
-function chooseCategory(value) { query.set(''); category.set(value); selected.set(0); void nextTick(() => search.current?.focus()) }
+function focusSearch() { batch(() => { query.set(''); category.set('all'); selected.set(0) }); void nextTick(() => search.current?.focus()) }
+function chooseCategory(value) { batch(() => { query.set(''); category.set(value); selected.set(0) }); void nextTick(() => search.current?.focus()) }
 function fail(reason) { error.set(reason.message || String(reason)) }
-function openSettings() { settings.set(true); error.set(''); void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus())) }
+function openSettings() { settings.set(true); error.set(''); if (settingsSection() === 'general') void refreshLogin(); void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus())) }
 function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
 async function refreshLogin(initialize = false) {
   if (loginBusy()) return
@@ -239,8 +253,8 @@ async function changeLogin(enabled) {
   finally { loginBusy.set(false) }
 }
 function closeEditor() { editor.set(false); void nextTick(() => search.current?.focus()) }
-function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); paletteVisibility(true) }
-function paletteVisibility(visible) { paletteVisible = visible; track(visible ? 'palette_opened' : 'palette_dismissed') }
+function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); paletteVisibility(true); void refreshApplications().catch(fail) }
+function paletteVisibility(visible) { paletteVisible.set(visible); track(visible ? 'palette_opened' : 'palette_dismissed') }
 async function dismissLauncher() { paletteVisibility(false); void flushUsage(); await nativeWindow.hide() }
 async function recordExecution(target, duration) {
   track('command_executed', target, duration)
@@ -512,7 +526,7 @@ effect(() => { query(); category(); items(); selected.set(0); visibleLimit.set(1
 useEventListener('keydown', key, { capture: true })
 onMount(() => {
   const stopBlur = windowEvents.onBlur(() => { void dismissLauncher() })
-  const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
+  const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshApplications().catch(fail); if (settings() && settingsSection() === 'general') void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
   const stopClose = windowEvents.onClose(() => paletteVisibility(false))
   const stopMinimize = windowEvents.onMinimize(() => paletteVisibility(false))
   onDestroy(() => { paletteVisibility(false); void flushUsage(); stopBlur(); stopFocus(); stopClose(); stopMinimize() })
@@ -526,7 +540,7 @@ onMount(async () => {
   await reload()
   try { cleanup = await registerLauncher(activate) }
   catch (reason) { fail(reason) }
-  if (paletteVisible && !settings()) activate()
+  if (paletteVisible() && !settings()) activate()
   await Promise.allSettled([
     (async () => { try { catalog.set(await api('pantry/catalog')) } catch (reason) { pantryStatus.set(reason.message) } })(),
     refreshPackages(),

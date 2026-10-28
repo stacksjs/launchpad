@@ -1,5 +1,6 @@
 import { app, clipboard, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
+import { createApplicationIconLoader } from './application-icons'
 
 export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
 
@@ -29,18 +30,7 @@ export async function configureTray(show: () => void, settings: () => void): Pro
   }
 }
 
-export async function applicationIcons(paths: string[]): Promise<Record<string, string>> {
-  const icons: Record<string, string> = {}
-  let index = 0
-  await Promise.all(Array.from({ length: 4 }, async () => {
-    while (index < paths.length) {
-      const path = paths[index++]!
-      const icon = await app.icon(path)
-      if (icon) icons[path] = icon
-    }
-  }))
-  return icons
-}
+export const applicationIcons = createApplicationIconLoader(path => app.icon(path))
 
 export async function registerLauncher(show: () => void): Promise<() => void> {
   if (!nativeWindow.available) throw new Error('Launchpad requires its native Craft window.')
