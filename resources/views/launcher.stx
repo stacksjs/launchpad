@@ -293,7 +293,7 @@ async function usagePreference(enabled) {
     await preference('usage', JSON.stringify({ enabled }))
     usageEnabled.set(enabled)
     if (!enabled) usageQueue.splice(0)
-    paletteVisibility(paletteVisible)
+    paletteVisibility(paletteVisible())
     await refreshUsage()
   }
   catch (reason) { fail(reason) }
