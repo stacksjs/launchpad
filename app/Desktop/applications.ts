@@ -28,7 +28,7 @@ export function createApplicationDiscovery(roots = ['/Applications', '/System/Ap
           }
         }))
       }
-      return [...apps.values()].sort((a, b) => a.title.localeCompare(b.title))
+      return [...apps.values()].sort((a, b) => a.title.localeCompare(b.title) || a.key.localeCompare(b.key))
     })().finally(() => { pending = undefined })
     return pending
   }

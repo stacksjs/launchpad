@@ -35,6 +35,20 @@ test('concurrent discovery shares one scan and missing roots do not discard vali
   finally { await rm(root, { recursive: true, force: true }) }
 })
 
+test('same-name apps have stable ordering regardless of directory scan completion', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'launchpad-apps-'))
+  try {
+    const first = join(root, 'A')
+    const second = join(root, 'B')
+    await Promise.all([first, second].map(path => mkdir(join(path, 'Example.app'), { recursive: true })))
+    for (let run = 0; run < 20; run++) {
+      const apps = await createApplicationDiscovery(run % 2 ? [first, second] : [second, first])()
+      expect(apps.map(app => app.content)).toEqual([join(first, 'Example.app'), join(second, 'Example.app')])
+    }
+  }
+  finally { await rm(root, { recursive: true, force: true }) }
+})
+
 test('activation refresh shares requests, retains commands and avoids replacing unchanged results', async () => {
   let rows: Result[] = [{ key: 'snippet', title: 'Saved', kind: 'snippet', content: 'text', subtitle: '' }]
   let reads = 0
