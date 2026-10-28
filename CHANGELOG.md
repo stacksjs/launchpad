@@ -1,5 +1,23 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.5...v1.0.6)
+
+## 🐛 Bug Fixes
+
+- keep duplicate app names in a stable search order ([f48e7f2](https://github.com/stacksjs/launchpad/commit/f48e7f2)) _(by Chris Breuer <chris@stacksjs.com>)_
+- preserve palette visibility when changing usage settings ([5eff9c0](https://github.com/stacksjs/launchpad/commit/5eff9c0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- refresh installed apps and reduce launcher search work ([50a2e5a](https://github.com/stacksjs/launchpad/commit/50a2e5a)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.6 ([5fe936f](https://github.com/stacksjs/launchpad/commit/5fe936f)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use the published Pantry search SDK and release workflow ([f6efa28](https://github.com/stacksjs/launchpad/commit/f6efa28)) _(by Chris Breuer <chris@stacksjs.com>)_
+- document menu bar behavior for Apple review ([0634126](https://github.com/stacksjs/launchpad/commit/0634126)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.4...v1.0.5)
 
 ## 🔧 Chores
