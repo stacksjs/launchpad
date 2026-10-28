@@ -1,5 +1,20 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.6...v1.0.7)
+
+## 🐛 Bug Fixes
+
+- preserve app abbreviations and literal Pantry keyword results ([783fa72](https://github.com/stacksjs/launchpad/commit/783fa72)) _(by Chris Breuer <chris@stacksjs.com>)_
+- rank app identities ahead of unrelated package metadata ([4c016f2](https://github.com/stacksjs/launchpad/commit/4c016f2)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.7 ([f935f87](https://github.com/stacksjs/launchpad/commit/f935f87)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.5...v1.0.6)
 
 ## 🐛 Bug Fixes
