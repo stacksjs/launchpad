@@ -2,7 +2,7 @@ import type { NativeAppStoreMetadata } from 'ts-pantry/native'
 
 export default {
   locale: 'en-US',
-  reviewNotes: 'Launchpad is a free keyboard launcher. Command + Space opens and focuses search; Escape and outside clicks dismiss it. Clipboard capture is opt in and text stays local. Usage records stay in the local model API. Public GitHub search works without an account. Pantry catalog search works without the Pantry CLI. Installation controls connect to a separately installed Pantry CLI service using a user-entered, single-use pairing code and a Keychain token. That external process installs selected catalog packages into user locations, including applications, libraries, command line tools and fonts. The Store app does not embed or spawn the installer. This external installer behavior is included for review; it is not hidden behind another distribution edition.',
+  reviewNotes: 'Review version 1.0.5, Build 31. This build includes the blue Command-symbol app icon and menu bar behavior. Launchpad has no Dock icon. On first launch, General settings lets the user opt into launch at login. Subsequent starts stay hidden until Command + Space or the Command menu bar icon is used. General settings also shows the actual macOS login registration status. Launchpad is a free keyboard launcher. Command + Space opens and focuses search; Escape and outside clicks dismiss it. Clipboard capture is opt in and text stays local. Usage records stay in the local model API. Public GitHub search works without an account. Pantry catalog search works without the Pantry CLI. Installation controls connect to a separately installed Pantry CLI service using a user-entered, single-use pairing code and a Keychain token. That external process installs selected catalog packages into user locations, including applications, libraries, command line tools and fonts. The Store app does not embed or spawn the installer. This external installer behavior is included for review; it is not hidden behind another distribution edition.',
   subtitle: 'Your keyboard. More useful.',
   privacyPolicyUrl: 'https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md',
   description: `Bring everyday actions to your keyboard.
@@ -17,6 +17,7 @@ Press Command + Space to open Launchpad from another app. Find an application, r
 • Enable private Clipboard History with text previews and retention controls.
 • Search GitHub repositories, issues and pull requests. Connect for assigned issues, reviews and notifications.
 • Browse Pantry applications, command line tools, libraries and fonts with original logos. Connect a separately installed Pantry CLI to manage installations.
+• Stay ready in the menu bar without a Dock icon. Choose launch at login in General settings.
 • Choose System, Light or Dark appearance.
 • Keep local command activity for a future year review, with pause and delete controls.
 
@@ -35,6 +36,6 @@ If another app owns Command + Space, release that shortcut before using Launchpa
   ageRating: { userGeneratedContent: true },
   releaseType: 'AFTER_APPROVAL',
   usesNonExemptEncryption: false,
-  screenshots: [{ platform: 'MAC_APP_STORE', files: ['assets/screenshots/applications.jpg', 'assets/screenshots/applications-light.jpg', 'assets/screenshots/calculator.jpg', 'assets/screenshots/github.jpg', 'assets/screenshots/pantry.jpg', 'assets/screenshots/clipboard.jpg'] }],
+  screenshots: [{ platform: 'MAC_APP_STORE', files: ['assets/screenshots/applications.jpg', 'assets/screenshots/applications-light.jpg', 'assets/screenshots/calculator.jpg', 'assets/screenshots/github.jpg', 'assets/screenshots/pantry.jpg', 'assets/screenshots/clipboard.jpg', 'assets/screenshots/general.jpg'] }],
   submitForReview: false,
 } satisfies NativeAppStoreMetadata
