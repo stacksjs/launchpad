@@ -20,7 +20,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/applications.jpg">
   <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/applications-light.jpg">
-  <img src="assets/screenshots/applications-light.jpg" width="1440" height="900" alt="Launchpad application search with real Mac icons in light mode">
+  <img src="assets/screenshots/applications-light.jpg" width="1440" height="900" alt="Launchpad application search with real Mac icons">
 </picture>
 
 <p align="center"><sub>Real app icons, light and dark appearance, and a palette that stays out of your way.</sub></p>
