@@ -30,25 +30,31 @@ export function rankResults(items: Result[], input: string, category = 'all'): R
       const aliases = [item.alias, ...(item.searchAliases ?? [])].filter((value): value is string => Boolean(value)).map(value => value.toLocaleLowerCase())
       const fields = [title, ...aliases]
       const words = term.split(/[^\p{L}\p{N}+#]+/u).filter(Boolean)
+      let abbreviation: number | null = null
       if (title === term || withoutVersion(title) === term) relevance = 6
       else if (aliases.includes(term)) relevance = 5
       else if (title.startsWith(term) || title.split(/[\s._/-]+/).some(word => word.startsWith(term))) relevance = 4
+      else if (item.kind === 'application' && (abbreviation = fuzzyDistance(title, term)) !== null && abbreviation <= 2) {
+        relevance = 4
+        distance = abbreviation
+      }
       else if (aliases.some(alias => alias.startsWith(term))) relevance = 3
       else if (fields.some(field => field.includes(term)) || (words.length > 0 && words.every(word => fields.some(field => field.split(/[^\p{L}\p{N}+#]+/u).some(token => token.startsWith(word)))))) relevance = 2
       else {
-        // Fuzzy names stay within one identity field. Descriptions never supply scattered letters.
-        const distances = fields.map(field => fuzzyDistance(field, term)).filter((value): value is number => value !== null)
-        if (distances.length) {
+        const descriptionMatch = category === 'pantry' && words.length > 0 && words.every(word => [...fields, item.searchText?.toLocaleLowerCase() || ''].some(field => field.split(/[^\p{L}\p{N}+#]+/u).some(token => token.startsWith(word))))
+        if (!descriptionMatch) {
+          // Fuzzy names stay within one identity field. Descriptions never supply scattered letters.
+          const distances = fields.map(field => fuzzyDistance(field, term)).filter((value): value is number => value !== null)
+          if (!distances.length) return []
           relevance = 1
           distance = Math.min(...distances)
         }
-        else if (category !== 'pantry' || !words.length || !words.every(word => [...fields, item.searchText?.toLocaleLowerCase() || ''].some(field => field.split(/[^\p{L}\p{N}+#]+/u).some(token => token.startsWith(word))))) return []
       }
     }
     score += Math.min(item.launches ?? 0, 25)
     return [{ item, relevance, distance, score }]
   })
-  const hasIdentityMatch = query && matches.some(match => match.relevance >= 2)
+  const hasIdentityMatch = Boolean(query) && matches.some(match => match.relevance >= 2)
   return matches.filter(match => !hasIdentityMatch || match.relevance !== 1)
     .sort((a, b) => b.relevance - a.relevance || a.distance - b.distance || b.score - a.score || (b.item.lastUsed ?? 0) - (a.item.lastUsed ?? 0) || a.item.title.localeCompare(b.item.title)).map(value => value.item)
 }
@@ -65,6 +71,8 @@ function fuzzyDistance(field: string, term: string): number | null {
   const words = field.split(/[\s._/-]+/)
   const initials = words.map(word => word[0] || '').join('')
   if (initials === term) return 0
+  const prefix = initials.slice(0, -1)
+  if (words.length > 1 && term.length > prefix.length && term.startsWith(prefix) && words.at(-1)!.startsWith(term.slice(prefix.length))) return 0
   let best: number | null = null
   for (const part of [field, ...words]) {
     let position = -1

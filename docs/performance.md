@@ -16,9 +16,9 @@ Launch history and favorites still affect ranking.
 Search ranks exact names first, then exact aliases, name prefixes and literal
 identity matches. Trailing version numbers do not demote an app such as Things3
 when searching for Things. Favorites and launch history break ties within the
-same relevance tier. Weak fuzzy matches are hidden when a literal identity
-match exists. Compact abbreviations and initials remain available when no
-literal match exists.
+same relevance tier. Compact application abbreviations and initials count as
+name matches. Other weak fuzzy matches are hidden when a literal identity
+match exists.
 
 Pantry package names, identifiers, aliases and executable names are separate
 identity fields. Fuzzy matches cannot combine letters across these fields.

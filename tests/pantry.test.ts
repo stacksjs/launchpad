@@ -5,7 +5,7 @@ import { bundledPackageCatalog } from 'ts-pantry/catalog'
 import AppPreference from '../app/Models/AppPreference'
 import CatalogPackage from '../app/Models/CatalogPackage'
 import { pantryApi } from '../app/Desktop/pantry'
-import { installedCatalog, pantryResults } from '../resources/functions/pantry'
+import { createPackageCatalogSearch, installedCatalog, pantryResults } from '../resources/functions/pantry'
 import { rankResults } from '../resources/functions/search'
 
 test('the complete public catalog persists through a read-only native model API', async () => {
@@ -49,4 +49,20 @@ test('Things search excludes unrelated installed packages from the complete Pant
   expect(rankResults([app, ...packages], 'Things').map(item => item.title)).toEqual(['Things3'])
   expect(rankResults(packages, 'jq')[0]?.title).toBe('jq')
   expect(rankResults(packages, 'git')[0]?.title).toBe('git')
+})
+
+test('compact app abbreviations survive literal matches in real Pantry executable names', () => {
+  const catalog = bundledPackageCatalog()
+  const apps = ['Google Chrome', 'Visual Studio Code', 'System Settings'].map(title => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application' }))
+  const packages = pantryResults(catalog, apps, catalog.map(entry => ({ name: entry.domain, version: '1' })))
+  expect(rankResults([...apps, ...packages], 'vsc')[0]?.title).toBe('Visual Studio Code')
+  expect(rankResults([...apps, ...packages], 'vscode').some(item => item.title === 'Visual Studio Code')).toBe(true)
+  expect(rankResults([...apps, ...packages], 'sst')[0]?.title).toBe('System Settings')
+})
+
+test('literal Pantry descriptions survive when the package name also has a fuzzy match', () => {
+  const catalog = bundledPackageCatalog()
+  const candidates = createPackageCatalogSearch(catalog)('json', { limit: 50000 })
+  const results = rankResults(pantryResults(candidates, [], [], 'all', true), 'json', 'pantry')
+  expect(results.some(item => item.title === 'jansson')).toBe(true)
 })
