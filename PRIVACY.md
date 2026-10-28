@@ -12,7 +12,7 @@ Launchpad reads standard Applications directories to find and open apps, and ask
 
 Background recording is off until you enable it in Settings. Enabling starts with new copies and does not import the existing clipboard. Launchpad saves plain text, skips protected or transient pasteboard types, and applies additional exclusions for known credential apps. These checks cannot recognize every secret: unmarked passwords or other sensitive text can be captured. Pause history before copying material you want to keep private.
 
-History keeps at most 200 entries and removes entries older than the selected 1, 7 or 30 day retention period while the app runs. Choose Clear history in Settings, or delete individual entries from the Clipboard category with Command Delete. Save current clipboard explicitly reads and stores the current text when you request it. Copying snippets, calculations or history items puts their text on the macOS clipboard, where other apps may read it subject to system permissions.
+History keeps at most 200 entries and removes entries older than the selected 1, 7 or 30 day retention period while the app runs. Choose Clear history in Settings, or delete individual entries from the Clipboard category using the selected item's Delete control. Save current clipboard explicitly reads and stores the current text when you request it. Copying snippets, calculations or history items puts their text on the macOS clipboard, where other apps may read it subject to system permissions.
 
 ## Local activity and year review
 

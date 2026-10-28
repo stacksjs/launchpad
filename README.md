@@ -1,84 +1,185 @@
-# Launchpad
+<p align="center">
+  <img src="public/images/launchpad.svg" width="88" height="88" alt="Launchpad Command symbol">
+</p>
 
-A native macOS launcher built with Stacks, stx, ts-css and Craft.
+<h1 align="center">Launchpad</h1>
 
-Press Command + Space to find apps, calculate, open quicklinks, copy snippets, search GitHub and revisit clipboard text. Real application icons come from macOS. Choose System, Light or Dark appearance in Settings.
+<p align="center">
+  Your apps, links and tools. One keyboard shortcut.<br>
+  A free, native macOS launcher built with Stacks, stx and Craft.
+</p>
 
-Launchpad starts quietly in the menu bar with no Dock or app-switcher icon. Click its icon or press Command + Space to open the palette. Right-click the icon for Open, Settings and Quit. Hiding the palette keeps the app running. First launch shows General settings, where you can choose Launch at login through macOS Login Items. Subsequent launches respect changes made in System Settings.
+<p align="center">
+  <a href="https://launchpad.stacksjs.com">Website</a> ·
+  <a href="https://github.com/stacksjs/launchpad/releases/latest">Download for Mac</a> ·
+  <a href="#get-started">Get started</a> ·
+  <a href="#development">Development</a> ·
+  <a href="https://github.com/stacksjs/launchpad/issues">Issues</a>
+</p>
 
-| Shortcut | Action |
-| --- | --- |
-| Command + Space | Show and focus Launchpad |
-| Command N | Create a quicklink or snippet |
-| Command D | Favorite the selected result |
-| Command Delete | Clear the search |
-| Command G | Open GitHub search |
-| Command Shift V | Open Clipboard History |
-| Command comma | Open Settings |
-| Escape | Hide the palette |
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/applications.jpg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/applications-light.jpg">
+  <img src="assets/screenshots/applications-light.jpg" width="1440" height="900" alt="Launchpad application search with real Mac icons in light mode">
+</picture>
 
-Clipboard History is opt-in. It records new text locally, skips protected pasteboard types, keeps at most 200 entries and supports 1, 7 or 30 day retention. Unmarked sensitive text can still be saved. Pause recording before copying private material. Saved items have a text preview and can be removed individually or cleared in Settings.
+<p align="center"><sub>Real app icons, light and dark appearance, and a palette that stays out of your way.</sub></p>
 
-GitHub includes repositories, issues, pull requests, assigned issues, review requests and notifications. Public search works without signing in. An optional personal access token is stored in macOS Keychain. Use repository scope to narrow results. GitHub searches go directly to GitHub; local launcher searches stay on your Mac.
+## Get started
 
-Local activity supports a future year review: process sessions, palette opens, successful app and link opens, tool categories, application names and command latency. The bundled backend checkpoints running time and palette-open time through Stacks models every 15 seconds, using compact daily totals. Running time includes the background launcher; gaps over one minute from sleep or suspension are excluded. An unexpected quit can lose time since the last checkpoint. Timing starts with this version; older activity remains available without inventing historical durations. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Pantry job receipts provide successful and failed install counts for apps, CLI tools, libraries and fonts, with known job durations. Duplicate jobs count once. Settings lets you inspect, pause and clear events, time totals and install receipts. No hosted usage API or cloud sync is enabled. See [the local usage contract](docs/local-usage.md) for metric definitions and API behavior.
+**Requires macOS 13 or later on an Apple Silicon Mac.** Bun is needed for development, not for running the installed app.
 
-## Install with Pantry
-
-Requires [Pantry](https://pantry.dev) 0.11.142 or later for automatic app detection.
+With [Pantry](https://pantry.dev) 0.11.142 or later:
 
 ```sh
-pantry upgrade
 pantry install launchpad
 ```
 
-Pantry installs the signed, notarized application into your Applications folder. The release action publishes each version through Pantry’s scanned registry using a token restricted to Launchpad.
+Or [download the latest release](https://github.com/stacksjs/launchpad/releases/latest), open the disk image, and install Launchpad. Public direct-download builds are signed and notarized.
 
-## Branding and share images
+Open Launchpad once, then press **Command + Space** from another app to start typing. Use the arrow keys to select a result and Return to open or copy it. Escape or clicking outside dismisses the palette.
 
-The website, app icon and tray share the Command symbol. `assets/brand/launchpad.svg`
-is the source mark. `bun run generate:brand` renders its PNG and macOS icon set
-with ts-images and the native SVG renderer. Builds regenerate these assets.
+Launchpad lives in the menu bar with no Dock or app-switcher icon. First launch opens General settings, where you can opt into **Launch at login**. Later starts stay hidden until you open the palette. Click the Command symbol to open it, or right-click for Open, Settings and Quit.
 
-`config/images.ts` declares one 1200 by 630 share card per website page. Buddy
-generates it with ts-images during `bun run build:site`, using the real app capture,
-the shared mark and bundled, licensed Geist fonts. Add a page entry there when
-the website gains another route. Run `./buddy generate:images --social` to preview
-the cards on their own.
+If another launcher owns Command + Space, quit it or reassign its shortcut before opening Launchpad.
+
+## What you can do
+
+| Tool | What it does |
+| --- | --- |
+| **Applications** | Find and open installed apps with their real macOS icons. New installations are discovered when the palette opens and while it stays visible. |
+| **Search** | Prioritize names and genuine aliases. Favorites and recent use refine relevant results; compact abbreviations such as `vsc` and `sst` still work. |
+| **Quicklinks** | Save websites or search templates such as `https://example.com/?q={query}`, then use a named alias with your search argument. |
+| **Snippets** | Keep reusable text close and copy it with Return. |
+| **Calculator** | Calculate locally with parentheses, powers and percentages, then copy the answer. |
+| **Clipboard History** | Search and preview saved text, with opt-in recording, retention controls and individual deletion. |
+| **GitHub** | Search repositories, issues and pull requests, or check assigned issues, review requests and notifications. |
+| **Pantry** | Browse apps, CLI tools, libraries and fonts, inspect upstream details, and request installs from the Pantry CLI. |
+| **Local usage** | See app sessions, palette time, app and link opens, commands and Pantry install totals. These records prepare for a future year review. |
+| **Appearance** | Choose System, Light or Dark in Settings. |
+
+**All shows your installed tools.** Installed Pantry packages sit alongside Mac apps and saved commands. The Pantry tab shows the full discovery catalog. Ordinary launcher search matches package identities; descriptions are searchable on the Pantry page.
+
+## GitHub and Pantry
+
+| GitHub | Pantry |
+| --- | --- |
+| ![GitHub issue search scoped to the Stacks repository](assets/screenshots/github.jpg) | ![Pantry catalog with original package logos and package types](assets/screenshots/pantry.jpg) |
+
+### GitHub
+
+Public repository search works without signing in. Choose a view and optionally narrow the scope to `owner/repository`. Connect a personal access token in Settings for account features and authorized private resources. The token stays in macOS Keychain and can be removed by disconnecting.
+
+GitHub searches go to GitHub's API. Your app, snippet and clipboard searches stay on your Mac.
+
+### Pantry
+
+You can browse the catalog before connecting the installer. To install through Launchpad, set up [Pantry](https://pantry.dev)'s local desktop service:
+
+```sh
+pantry desktop setup --yes
+```
+
+Open **Settings → Pantry** and enter the single-use pairing code. Launchpad stores the connection token in macOS Keychain. Package details show original logos, upstream links, installed versions and job status. The separately installed Pantry CLI performs installations under your user account.
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| <kbd>⌘</kbd> <kbd>Space</kbd> | Open Launchpad and focus search |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Move through results |
+| <kbd>Return</kbd> | Open or copy the selected result |
+| <kbd>⌘</kbd> <kbd>Delete</kbd> | Clear the search |
+| <kbd>⌘</kbd> <kbd>N</kbd> | Create a quicklink or snippet |
+| <kbd>⌘</kbd> <kbd>D</kbd> | Toggle a favorite |
+| <kbd>⌘</kbd> <kbd>E</kbd> | Edit the selected saved command |
+| <kbd>⌘</kbd> <kbd>G</kbd> | Open GitHub search |
+| <kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>V</kbd> | Open Clipboard History |
+| <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings |
+| <kbd>Escape</kbd> | Dismiss the palette |
+
+Saved commands and clipboard entries have a separate Delete control. Command + Delete clears what you typed.
+
+## Your data
+
+Launchpad works without a Stacks account or hosted API. Its local SQLite database holds commands, preferences, favorites, clipboard entries and usage records in the macOS app container.
+
+- **Clipboard recording is opt-in.** Keep up to 200 text entries with 1, 7 or 30 day retention. Protected pasteboard types are skipped, but unmarked sensitive text can still be captured. Pause recording before copying private material.
+- **Usage stays local.** Inspect, pause or clear it in Settings. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Year-review image export is planned; the current app collects and summarizes the local records.
+- **Credentials use Keychain.** GitHub and Pantry connection tokens are separate from the local database.
+- **Connected services use the network.** GitHub receives GitHub searches. Catalog refreshes and logos come from Pantry's public sources; installations contact the registry and upstream providers through Pantry.
+- **No cloud synchronization is enabled.** Local clipboard history and usage history have separate clear controls.
+
+Read the [privacy policy](PRIVACY.md) and [local usage contract](docs/local-usage.md) for retention, metric definitions and API behavior.
 
 ## Development
 
-Requires an Apple Silicon Mac, macOS 13 or later, Bun 1.3 or later and the Pantry runtime declared in `pantry.json`.
+Use an Apple Silicon Mac with macOS 13 or later and Bun 1.3 or later. Buddy provisions the immutable Craft runtime and toolchain declared in `pantry.json`.
 
 ```sh
-bun install
+git clone https://github.com/stacksjs/launchpad.git
+cd launchpad
+bun install --frozen-lockfile
 ./buddy dev
+```
+
+### Checks and builds
+
+```sh
 ./buddy lint
 ./buddy typecheck
 ./buddy test
+./buddy build
+./buddy package
 ```
 
-Models under `app/Models` declare schema, validation and `useApi` routes for the compiled local backend. The authenticated loopback transport comes from stx. Craft owns the native window, global shortcut, application icons, clipboard and Keychain integration. Direct and Store builds use the macOS sandbox.
+`bun run test:usage-native` additionally qualifies the compiled backend with the Pantry Craft runtime active, or an explicit `CRAFT_BIN` for development. It uses isolated fixtures for model persistence, timing and Pantry job receipts. `bun scripts/benchmark-search.ts` measures local search computation; see [performance notes](docs/performance.md).
 
-## Build and release
+### How it fits together
 
-The marketing website uses stx pages in `resources/views/site`, ts-css utilities
-and the real app screenshots in `public/images`. Run `./buddy dev --site` for
-the local website with hot reload, or `./buddy build --site` to generate
-`dist/site`. Website output is separate from the native app bundle. Plain
-`./buddy dev` continues to launch the desktop app.
+[Stacks](https://stacksjs.com) provides the model API and application tooling. [stx](https://github.com/stacksjs/stx) and ts-css render the interface; [Craft](https://github.com/home-lang/craft) supplies the native window, menu bar, global shortcut, application icons, clipboard and Keychain bridge. The backend ships with the app and uses an authenticated loopback session. Direct and Store packages use the macOS sandbox.
 
-The production website is `https://launchpad.stacksjs.com`. The Stacks server's
-[site catalog](https://github.com/stacksjs/stacks/blob/main/config/cloud.ts)
-owns its `launchpad` static site. Stacks' deployment workflow checks out this
-repository, installs its locked dependencies, and runs `bun run build:site`.
-An operator with the Stacks deployment credentials can publish just this site
-from the Stacks checkout with `./buddy deploy --prod --site launchpad --yes`.
+| Path | Responsibility |
+| --- | --- |
+| `resources/views/launcher.stx` | Native launcher interface |
+| `resources/functions/` | Search, execution and native integrations |
+| `app/Models/` | Local schema, validation and generated API definitions |
+| `app/Desktop/` | Bundled API, discovery, clipboard and usage services |
+| `resources/views/site/` | Marketing website |
+| `assets/` | App icon sources, licensed fonts and real screenshots |
+| `tests/` | Regression tests and API qualification |
+| `craft.config.ts` | Native app and window configuration |
+| `pantry.json` | Pinned runtime, checks and delivery targets |
 
-`./buddy build` builds the app; `./buddy package` creates a disk image. `bun run release:patch` qualifies a clean main checkout before creating and pushing a version tag. Pantry's reusable workflow provisions the pinned runtime and handles signing, notarization, packaging and delivery. Release inputs are encrypted in `.env.production`; `.env.keys` stays private.
+Model definitions drive native schema upgrades. Keep application features in the Stacks model API and improve shared framework capabilities at their sources.
 
-See [the v1 plan](docs/planning/v1.md), [primary-source research](docs/planning/research.md), [privacy policy](PRIVACY.md) and [feature issues](https://github.com/stacksjs/launchpad/issues). Store publication is confirmed only after Apple approval and availability.
+### Website and branding
 
-Pantry includes applications, command line tools, libraries and fonts. All shows installed Pantry packages alongside your installed Mac apps and commands; the Pantry tab shows the full catalog. Open a package to see its original logo, upstream links, installed version and installation status. Connect the separately installed Pantry CLI in Settings using `pantry desktop setup --yes` and its single-use pairing code. Launchpad stores the token in macOS Keychain and sends installation requests to Pantry's local service.
+```sh
+./buddy dev --site
+bun run build:site
+```
 
-Escape dismisses the palette immediately. Command + Delete clears the search; saved items have a separate Delete control. Clicking another app dismisses it through the native focus event. Command + Space opens the main search and focuses its input.
+The website builds separately to `dist/site` and is published at [launchpad.stacksjs.com](https://launchpad.stacksjs.com). The Stacks server's [site catalog](https://github.com/stacksjs/stacks/blob/main/config/cloud.ts) owns deployment. From the Stacks checkout, an authorized operator can deploy it with `./buddy deploy --prod --site launchpad --yes`.
+
+The Command mark starts at `assets/brand/launchpad.svg`. `bun run generate:brand` renders the PNG and macOS icon set with ts-images and the native SVG renderer. `config/images.ts` defines the website's share cards, generated by `./buddy generate:images --social`. Builds reuse the shared mark and licensed Geist fonts.
+
+### Releases
+
+```sh
+bun run release:patch
+```
+
+Release patch versions until the project policy changes. Buddy qualifies a clean `main` checkout and creates the version tag. [Pantry's reusable native workflow](https://github.com/pantry-pm/pantry/blob/main/.github/workflows/native-app.yml) handles runtime provisioning, signing, notarization, packaging and registry delivery. Apple packaging and submission also run through Buddy. App Store availability follows Apple's review and release process.
+
+Release inputs are encrypted in `.env.production`; `.env.keys` remains private. Keep credentials and signing material out of source changes and issue reports.
+
+## Contributing
+
+Read [AGENTS.md](AGENTS.md), branch before editing `main`, and include a focused regression test for behavior changes. Run the relevant checks above and use conventional commit messages. Report bugs and propose features in [GitHub Issues](https://github.com/stacksjs/launchpad/issues); include your app version, macOS version and reproduction steps, without tokens or private clipboard contents.
+
+The [v1 plan](docs/planning/v1.md), [research](docs/planning/research.md) and [changelog](CHANGELOG.md) document scope and shipped changes.
+
+## License and credits
+
+Launchpad declares the MIT license in [package.json](package.json). Bundled [fonts](assets/fonts/LICENSE.txt) and the [Command mark's source artwork](assets/brand/NOTICE.md) retain their respective notices.
