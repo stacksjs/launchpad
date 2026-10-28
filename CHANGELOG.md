@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.7...v1.0.8)
+
+## 🐛 Bug Fixes
+
+- preserve spaced application abbreviations in search ([def36a3](https://github.com/stacksjs/launchpad/commit/def36a3)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.8 ([84c0783](https://github.com/stacksjs/launchpad/commit/84c0783)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.6...v1.0.7)
 
 ## 🐛 Bug Fixes
