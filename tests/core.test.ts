@@ -32,3 +32,32 @@ test('a quicklink alias keeps the command visible while typing its argument', ()
   expect(quicklinkArgument(item, 'Web search one & two')).toBe('one & two')
   expect(quicklinkArgument(item, 'web')).toBeNull()
 })
+
+test('identity matches outrank favorites and hide weak fuzzy matches', () => {
+  const item = (title: string, extra = {}) => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application', ...extra })
+  const things = item('Things3')
+  const fuzzy = item('The Interesting Grid System', { favorite: true, launches: 100 })
+  const prefix = item('Things Helper', { favorite: true, launches: 100 })
+  expect(rankResults([fuzzy, prefix, things], 'things').map(value => value.title)).toEqual(['Things3', 'Things Helper'])
+  expect(rankResults([things, fuzzy], 'thng')[0]?.title).toBe('Things3')
+})
+
+test('aliases match independently and descriptions are literal Pantry discovery terms', () => {
+  const packageResult = { key: 'package', title: 'Widget', kind: 'pantry', content: 'widget.dev', subtitle: '', searchAliases: ['alpha', 'beta'], searchText: 'A tool for formatting source code with C++ and Node.js' }
+  expect(rankResults([packageResult], 'abt')).toEqual([])
+  expect(rankResults([packageResult], 'formatting')).toEqual([])
+  expect(rankResults([packageResult], 'formatting', 'pantry')).toEqual([packageResult])
+  expect(rankResults([packageResult], 'source formatting', 'pantry')).toEqual([packageResult])
+  expect(rankResults([packageResult], 'frmtng', 'pantry')).toEqual([])
+  expect(rankResults([packageResult], 'c++', 'pantry')).toEqual([packageResult])
+  expect(rankResults([packageResult], 'node.js', 'pantry')).toEqual([packageResult])
+  expect(rankResults([packageResult], '???')).toEqual([])
+})
+
+test('word prefixes and compact app abbreviations still work', () => {
+  const apps = ['Google Chrome', 'Visual Studio Code', 'System Settings'].map(title => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application' }))
+  expect(rankResults(apps, 'chrome').map(item => item.title)).toEqual(['Google Chrome'])
+  expect(rankResults(apps, 'chrm').map(item => item.title)).toEqual(['Google Chrome'])
+  expect(rankResults(apps, 'vsc').map(item => item.title)).toEqual(['Visual Studio Code'])
+  expect(rankResults(apps, 'sst').map(item => item.title)).toEqual(['System Settings'])
+})

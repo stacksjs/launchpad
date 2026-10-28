@@ -41,3 +41,12 @@ test('All prepares only installed Pantry packages while Pantry keeps the complet
   expect(results[0]?.content).toBe('stedolan.github.io/jq')
   expect(pantryResults(catalog, [], installed, 'all', true)).toHaveLength(catalog.length)
 })
+
+test('Things search excludes unrelated installed packages from the complete Pantry catalog', () => {
+  const catalog = bundledPackageCatalog()
+  const app = { key: '/Applications/Things3.app', title: 'Things3', kind: 'application', content: '/Applications/Things3.app', subtitle: 'Application' }
+  const packages = pantryResults(catalog, [app], catalog.map(entry => ({ name: entry.domain, version: '1' })))
+  expect(rankResults([app, ...packages], 'Things').map(item => item.title)).toEqual(['Things3'])
+  expect(rankResults(packages, 'jq')[0]?.title).toBe('jq')
+  expect(rankResults(packages, 'git')[0]?.title).toBe('git')
+})

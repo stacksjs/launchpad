@@ -50,7 +50,8 @@ export function pantryResults(catalog: readonly PackageCatalogEntry[], applicati
   return catalog.filter(entry => (filter === 'all' || entry.kind === filter) && (includeInstalledApps || !(entry.kind === 'app' && apps.has(identity(entry.name))))).map(entry => ({
     key: `pantry:${entry.domain}`, title: entry.name,
     subtitle: `${versions.has(entry.domain) ? `Installed · ${versions.get(entry.domain)}` : `Pantry · ${entry.kind}`} · ${entry.description}`,
-    kind: !includeInstalledApps && entry.kind === 'app' && appPaths.has(entry.domain) ? 'application' : 'pantry', content: !includeInstalledApps && entry.kind === 'app' && appPaths.has(entry.domain) ? appPaths.get(entry.domain)! : entry.domain, alias: [entry.domain, ...entry.aliases, ...entry.programs, entry.description].join(' '),
+    kind: !includeInstalledApps && entry.kind === 'app' && appPaths.has(entry.domain) ? 'application' : 'pantry', content: !includeInstalledApps && entry.kind === 'app' && appPaths.has(entry.domain) ? appPaths.get(entry.domain)! : entry.domain,
+    searchAliases: [entry.domain, ...entry.aliases, ...entry.programs], searchText: entry.description,
     icon: entry.logo?.url, package: entry, installedVersion: versions.get(entry.domain),
   }))
 }
