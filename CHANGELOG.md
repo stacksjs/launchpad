@@ -1,5 +1,25 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.8...v1.0.9)
+
+## 🐛 Bug Fixes
+
+- display localized app names while retaining filename aliases ([a5136a3](https://github.com/stacksjs/launchpad/commit/a5136a3)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- use theme-neutral screenshot alt text ([b591caf](https://github.com/stacksjs/launchpad/commit/b591caf)) _(by Chris Breuer <chris@stacksjs.com>)_
+- expand the project overview with screenshots and setup guides ([b10870b](https://github.com/stacksjs/launchpad/commit/b10870b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.9 ([1c7f95a](https://github.com/stacksjs/launchpad/commit/1c7f95a)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use the published localized application metadata API ([f32327b](https://github.com/stacksjs/launchpad/commit/f32327b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.7...v1.0.8)
 
 ## 🐛 Bug Fixes
