@@ -8,7 +8,8 @@
 <body>
 <script client>
 import type { Result } from '../functions/search'
-import { createResultSearch, quicklinkUrl } from '../functions/search'
+import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
+import { createResultPresentation, resultWindow } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
@@ -42,6 +43,7 @@ const records = state<Record<string, any>>({})
 const selected = state(0)
 const visibleLimit = state(100)
 const resultScrollTop = state(0)
+const resultViewportHeight = state(450)
 const loading = state(true)
 const error = state('')
 const status = state('Ready when you are')
@@ -95,13 +97,16 @@ const searchCatalog = derived(() => createPackageCatalogSearch(catalog()))
 const installedPackages = derived(() => pantryResults(installedCatalog(catalog(), pantryInstalled()), items(), pantryInstalled()))
 const localItems = derived(() => [...items(), ...installedPackages()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const searchLocal = derived(() => createResultSearch(localItems()))
-const searchPackages = derived(() => createResultSearch(pantryResults(catalog(), items(), pantryInstalled(), pantryFilter(), true).map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id }))))
+const searchPackages = derived(() => {
+  const filter = pantryFilter()
+  const search = createResultSearch(pantryResults(catalog(), items(), pantryInstalled(), filter, true).map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+  const candidates = searchCatalog()
+  return cacheResultQueries(input => input.trim() ? search(input, 'pantry', candidates(input, { kind: filter === 'all' ? undefined : filter, limit: 50000 }).map(item => 'pantry:' + item.domain)) : search('', 'pantry'))
+})
 const githubCommands = derived(() => githubItems().map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const allResults = derived(() => {
   if (category() === 'pantry') {
-    if (!query().trim()) return searchPackages()('', 'pantry')
-    const packages = searchCatalog()(query(), { kind: pantryFilter() === 'all' ? undefined : pantryFilter(), limit: 50000 })
-    return searchPackages()(query(), 'pantry', packages.map(item => 'pantry:' + item.domain))
+    return searchPackages()(query())
   }
   const source = category() === 'github' ? githubCommands() : localItems()
   if (category() === 'github') return source
@@ -109,9 +114,19 @@ const allResults = derived(() => {
   const found = searchLocal()(query(), category())
   return answer === null ? found : [{ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer }, ...found]
 })
-const results = derived(() => allResults().slice(0, visibleLimit()).map(item => ({ ...item, icon: item.icon || icons()[item.content] })))
+const presentResults = createResultPresentation()
+const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
+const viewport = derived(() => resultWindow(results().length, resultScrollTop(), resultViewportHeight()), { equals: (a, b) => a.start === b.start && a.end === b.end && a.bottom === b.bottom })
+const renderedResults = derived(() => results().slice(viewport().start, viewport().end))
 const active = derived(() => results()[selected()])
 const actionLabel = derived(() => active()?.kind === 'pantry' ? 'Details' : ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
+
+function scrollResults(event) {
+  batch(() => {
+    resultScrollTop.set(event.target.scrollTop)
+    resultViewportHeight.set(event.target.clientHeight)
+  })
+}
 
 // The framework's enabled option skips callbacks but keeps its interval running.
 function pollWhile(callback, milliseconds, enabled) {
@@ -559,11 +574,13 @@ function key(event) {
 effect(() => { query(); category(); items(); selected.set(0); visibleLimit.set(100); resultScrollTop.set(0); if (list.current) list.current.scrollTop = 0 })
 useEventListener('keydown', key, { capture: true })
 onMount(() => {
+  const resize = new ResizeObserver(entries => resultViewportHeight.set(entries[0]?.contentRect.height || 450))
+  if (list.current) resize.observe(list.current)
   const stopBlur = windowEvents.onBlur(() => { void dismissLauncher() })
   const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshApplications().catch(fail); if (settings() && settingsSection() === 'general') void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
   const stopClose = windowEvents.onClose(() => paletteVisibility(false))
   const stopMinimize = windowEvents.onMinimize(() => paletteVisibility(false))
-  onDestroy(() => { paletteVisibility(false); void flushUsage(); stopBlur(); stopFocus(); stopClose(); stopMinimize() })
+  onDestroy(() => { resize.disconnect(); paletteVisibility(false); void flushUsage(); stopBlur(); stopFocus(); stopClose(); stopMinimize() })
 })
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
@@ -619,13 +636,15 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <span :if="category() !== 'clipboard'">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
     </div>
     <div class="result-region">
-    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="resultScrollTop.set($event.target.scrollTop)">
+    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="scrollResults($event)">
       <p :if="loading() || (category() === 'github' && githubLoading())" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : 'Finding your applications...' }}</p>
       <div :if="!loading() && !githubLoading() && results().length === 0" class="empty">
         <p>{{ category() === 'clipboard' ? 'Keep useful text close.' : 'Nothing here yet.' }}</p>
         <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
       </div>
-      <button :for="(item, index) in results()" :key="item.key" :id="'result-' + index" type="button" role="option" :aria-selected="index === selected()" :class="index === selected() ? 'result selected' : 'result'" @click="selected.set(index); run(item)" @mousemove="selected.set(index)">
+      <div aria-hidden="true" :style="'height:' + viewport().top + 'px;flex-shrink:0'"></div>
+      <!-- Recycle visible DOM slots; item bindings and absolute result indexes update together. -->
+      <button :for="(item, index) in renderedResults()" :key="index" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
         <span class="item-icon" aria-hidden="true">
           <img :if="['application', 'pantry'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="lazy" decoding="async">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
@@ -639,8 +658,9 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <span class="result-copy"><span class="result-title">{{ item.title }}</span><span class="result-subtitle">{{ item.subtitle }}</span></span>
         <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
         <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
-        <span :if="index === selected()" class="return-key" aria-hidden="true">↵</span>
+        <span :if="viewport().start + index === selected()" class="return-key" aria-hidden="true">↵</span>
       </button>
+      <div aria-hidden="true" :style="'height:' + viewport().bottom + 'px;flex-shrink:0'"></div>
     </div>
     <pre :if="category() === 'clipboard' && active()" class="clipboard-preview" aria-label="Selected clipboard text">{{ active().content }}</pre>
     </div>

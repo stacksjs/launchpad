@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { calculate } from '../resources/functions/calculator'
-import { createResultSearch, quicklinkArgument, quicklinkUrl, rankResults } from '../resources/functions/search'
+import { cacheResultQueries, createResultSearch, quicklinkArgument, quicklinkUrl, rankResults } from '../resources/functions/search'
 
 test('calculator respects precedence, unary minus, powers, parentheses and percentages', () => {
   expect(calculate('12 + 3 * 4')).toBe('24')
@@ -79,4 +79,27 @@ test('prepared search keeps ranking, Unicode identities, quicklink arguments and
   expect(changed('')[0]?.title).toBe('Things Helper')
   expect(changed('task-manager')[0]?.title).toBe('Things3')
   expect(search('task-manager')).toEqual([])
+})
+
+test('query results are reused across backspacing and categories and evicted at the cache bound', () => {
+  let reads = 0
+  const search = cacheResultQueries((query, category) => {
+    reads++
+    return [{ key: query, title: query, kind: category, content: '', subtitle: '' }]
+  }, 2)
+  const m = search('m')
+  search('ma')
+  expect(search(' M ')).toBe(m)
+  expect(reads).toBe(2)
+  expect(search('m', 'application')).not.toBe(m)
+  expect(reads).toBe(3)
+  search('ma')
+  expect(reads).toBe(4)
+  expect(search('m')).not.toBe(m)
+  expect(reads).toBe(5)
+  const item = { key: 'app', title: 'Mail', kind: 'application', content: '', subtitle: '' }
+  const prepared = createResultSearch([item])
+  expect(prepared('m')).toBe(prepared('M'))
+  expect(prepared('m', 'all', [])).toEqual([])
+  expect(createResultSearch([{ ...item, title: 'Changed' }])('m')).toEqual([])
 })

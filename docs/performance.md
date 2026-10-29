@@ -33,6 +33,19 @@ prepared Pantry results without rebuilding result objects on every keystroke.
 Changing commands, installed packages, favorites, history or catalog data
 rebuilds the relevant snapshot.
 
+Each snapshot also retains the most recent 64 query results. Backspacing and
+reopening an unchanged search reuse those arrays. Pantry caches the full SDK
+candidate lookup and ranking together, scoped to the current package filter.
+Icon presentation keeps unchanged result objects instead of cloning every row
+when a query or an unrelated icon changes.
+
+The result list mounts only the viewport plus two rows of overscan on each side.
+Fixed-height spacers retain the full scroll range. Visible DOM slots are recycled
+across queries and scrolling; their item bindings, absolute indexes, selection,
+actions and accessibility positions all update together. Keyboard navigation and
+Show more still address the full result list. Caching search alone did not avoid
+the cost of updating 100 mounted rows on each keystroke.
+
 Search ranks exact names first, then exact aliases, name prefixes and literal
 identity matches. Trailing version numbers do not demote an app such as Things3
 when searching for Things. Favorites and launch history break ties within the
@@ -103,6 +116,40 @@ affects elapsed times; these are observations, not timing assertions in CI. The
 tests cover discovery freshness and fallback, removals, shared requests,
 unchanged-list stability, prepared search semantics, installed-only preparation,
 viewport icon demand, bounded icon loading and HTTP cancellation.
+
+## Typing and rendering
+
+A follow-up browser fixture reproduced the `m` stall even with the prepared
+search implementation. With 112 application fixtures (including bundle aliases
+that match `m`), 1,774 Pantry entries and a 720 × 450 viewport, the Chromium
+input-handler measurement was:
+
+| All category, typing `m` | Before (`c32901e`) | Recycled viewport rows |
+| --- | --- | --- |
+| Median handler time | 147.1 ms | 11.6 ms |
+| p95 handler time | 152.2 ms | 14.0 ms |
+| Mounted result rows | 100 | 7 |
+
+The updated Pantry fixture measured a median of 8.9 ms and p95 of 16.6 ms,
+with five mounted result rows. Twelve clear-and-type cycles created zero new
+result rows in both updated fixtures. Timings include input dispatch and the
+reactive DOM update, exclude native icon extraction and compositor presentation,
+and are Chromium fixture measurements rather than native WebKit guarantees.
+
+`scripts/benchmark-typing.mjs` runs the built HTML with isolated synthetic data,
+skips native startup and blocks external requests. It verifies mounted row bounds,
+titles after scrolling and backspacing, keyboard selection and package actions
+after slot reuse. With Playwright available in the development environment:
+
+```sh
+./buddy build
+node scripts/benchmark-typing.mjs dist/Launchpad.app/Contents/Resources/index.html
+```
+
+`LAUNCHPAD_PLAYWRIGHT_MODULE` can select an installed Playwright module and
+`LAUNCHPAD_BROWSER_EXECUTABLE` can select a Chromium executable.
+`LAUNCHPAD_TYPING_CATEGORIES=all` restricts comparisons to the reported All case.
+Additional HTML paths compare independently built versions with the same fixture.
 
 ## Answering the Spotlight question
 

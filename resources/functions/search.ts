@@ -24,6 +24,24 @@ function prepareField(value: string) {
 }
 type SearchField = ReturnType<typeof prepareField>
 
+/** A bounded cache belongs to one data snapshot, so edits naturally invalidate it. */
+export function cacheResultQueries(search: (input: string, category: string) => Result[], capacity = 64) {
+  const cache = new Map<string, Result[]>()
+  return (input: string, category = 'all'): Result[] => {
+    const key = JSON.stringify([category, input.trim().toLocaleLowerCase()])
+    const previous = cache.get(key)
+    if (previous) {
+      cache.delete(key)
+      cache.set(key, previous)
+      return previous
+    }
+    const result = search(input, category)
+    if (cache.size >= capacity) cache.delete(cache.keys().next().value!)
+    cache.set(key, result)
+    return result
+  }
+}
+
 /** Prepare an immutable result snapshot once. Optional keys select SDK catalog candidates. */
 export function createResultSearch(items: readonly Result[]) {
   const prepared = items.map((item) => {
@@ -36,7 +54,7 @@ export function createResultSearch(items: readonly Result[]) {
   for (let index = 1; index < ordered.length; index++) ordered[index]!.order = ordered[index - 1]!.order + (compare(ordered[index - 1]!, ordered[index]!) === 0 ? 0 : 1)
   const byKey = new Map(prepared.map(entry => [entry.item.key, entry]))
   const defaults = new Map<string, Result[]>()
-  return (input: string, category = 'all', keys?: readonly string[]): Result[] => {
+  const search = (input: string, category = 'all', keys?: readonly string[]): Result[] => {
     const query = input.trim().toLocaleLowerCase()
     if (!query && !keys) {
       if (!defaults.has(category)) defaults.set(category, ordered.filter(entry => category === 'all' || entry.item.kind === category).map(entry => entry.item))
@@ -84,6 +102,8 @@ export function createResultSearch(items: readonly Result[]) {
     return matches.filter(match => !hasIdentityMatch || match.relevance !== 1)
       .sort((a, b) => b.relevance - a.relevance || a.distance - b.distance || a.order - b.order).map(value => value.item)
   }
+  const cached = cacheResultQueries(search)
+  return (input: string, category = 'all', keys?: readonly string[]) => keys ? search(input, category, keys) : cached(input, category)
 }
 
 export function rankResults(items: Result[], input: string, category = 'all'): Result[] {
