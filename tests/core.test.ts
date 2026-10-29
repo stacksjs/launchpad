@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { calculate } from '../resources/functions/calculator'
-import { quicklinkArgument, quicklinkUrl, rankResults } from '../resources/functions/search'
+import { createResultSearch, quicklinkArgument, quicklinkUrl, rankResults } from '../resources/functions/search'
 
 test('calculator respects precedence, unary minus, powers, parentheses and percentages', () => {
   expect(calculate('12 + 3 * 4')).toBe('24')
@@ -62,4 +62,21 @@ test('word prefixes and compact app abbreviations still work', () => {
   expect(rankResults(apps, 'sst').map(item => item.title)).toEqual(['System Settings'])
   expect(rankResults(apps, 'vs code').map(item => item.title)).toEqual(['Visual Studio Code'])
   expect(rankResults(apps, 'git hub').map(item => item.title)).toEqual(['GitHub Desktop'])
+})
+
+test('prepared search keeps ranking, Unicode identities, quicklink arguments and SDK candidate boundaries', () => {
+  const apps = ['Things3', 'Things Helper', 'Visual Studio Code', 'Éditeur'].map(title => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application' }))
+  const link = { key: 'web', title: 'Web search', alias: 'web', kind: 'quicklink', content: 'https://example.com/{query}', subtitle: '' }
+  const search = createResultSearch([...apps, link])
+  expect(search('things').map(item => item.title)).toEqual(['Things3', 'Things Helper'])
+  expect(search('vsc').map(item => item.title)).toEqual(['Visual Studio Code'])
+  expect(search('ÉDIT').map(item => item.title)).toEqual(['Éditeur'])
+  expect(search('web any query')).toEqual([link])
+  expect(search('', 'quicklink')).toEqual([link])
+  expect(search('things', 'all', ['Things Helper', 'missing'])).toEqual([apps[1]!])
+  expect(search('things', 'all', [])).toEqual([])
+  const changed = createResultSearch(apps.map(item => ({ ...item, favorite: item.title === 'Things Helper', searchAliases: item.title === 'Things3' ? ['task-manager'] : [] })))
+  expect(changed('')[0]?.title).toBe('Things Helper')
+  expect(changed('task-manager')[0]?.title).toBe('Things3')
+  expect(search('task-manager')).toEqual([])
 })

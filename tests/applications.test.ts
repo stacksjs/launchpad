@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApplicationDiscovery } from '../app/Desktop/applications'
 import { createApplicationRefresh } from '../resources/functions/applications'
-import { createApplicationIconLoader } from '../resources/functions/application-icons'
+import { createApplicationIconLoader, visibleApplicationPaths } from '../resources/functions/application-icons'
 import type { Result } from '../resources/functions/search'
 import { rankResults } from '../resources/functions/search'
 
@@ -51,6 +51,49 @@ test('concurrent discovery shares one scan and missing roots do not discard vali
     expect(first[0]?.content).toBe(join(root, 'Things3.app'))
   }
   finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('watched discovery reuses snapshots and reconciles installs and removals even if a notification is missed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'launchpad-watched-apps-'))
+  const later = join(root, 'later')
+  const discovery = createApplicationDiscovery([root, later], { watch: true, maxAgeMs: 200 })
+  async function titles() { return (await discovery()).map(app => app.title) }
+  async function eventually(expected: string[]) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (JSON.stringify(await titles()) === JSON.stringify(expected)) return
+      await Bun.sleep(20)
+    }
+    expect(await titles()).toEqual(expected)
+  }
+  try {
+    const first = await discovery()
+    expect(await discovery()).toBe(first)
+    await mkdir(join(root, 'Tools/New.app'), { recursive: true })
+    await eventually(['New'])
+    await mkdir(join(later, 'Later.app'), { recursive: true })
+    await eventually(['Later', 'New'])
+    await rm(join(root, 'Tools/New.app'), { recursive: true })
+    await eventually(['Later'])
+    const current = await discovery()
+    // Wait for any coalesced filesystem notifications before checking reuse.
+    await Bun.sleep(100)
+    const settled = await discovery()
+    expect(settled).toEqual(current)
+    expect(await discovery()).toBe(settled)
+  }
+  finally { discovery.close(); await rm(root, { recursive: true, force: true }) }
+})
+
+test('watch safety scans refresh the snapshot even without a filesystem notification', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'launchpad-watch-fallback-'))
+  const discovery = createApplicationDiscovery([root], { watch: true, maxAgeMs: 0 })
+  try {
+    const first = await discovery()
+    expect(await discovery()).not.toBe(first)
+    await mkdir(join(root, 'Added.app'))
+    expect((await discovery()).map(app => app.title)).toEqual(['Added'])
+  }
+  finally { discovery.close(); await rm(root, { recursive: true, force: true }) }
 })
 
 test('same-name apps have stable ordering regardless of directory scan completion', async () => {
@@ -110,4 +153,11 @@ test('icon reads share a global concurrency bound, cache misses and survive one 
   await icons(['a', 'missing', 'broken'])
   expect(reads.sort()).toEqual(['a', 'b', 'broken', 'c', 'missing'])
   expect(peak).toBe(2)
+})
+
+test('icon demand follows the visible viewport and excludes icons already loaded', () => {
+  const apps = Array.from({ length: 100 }, (_, index) => ({ key: String(index), title: String(index), kind: 'application', content: '/app' + index, subtitle: '' }))
+  expect(visibleApplicationPaths(apps, 0, 260)).toEqual(apps.slice(0, 7).map(item => item.content))
+  expect(visibleApplicationPaths(apps, 520, 260)).toEqual(apps.slice(8, 17).map(item => item.content))
+  expect(visibleApplicationPaths([{ ...apps[0]!, icon: 'data:icon' }, { ...apps[1]!, kind: 'snippet' }], 0, 260)).toEqual([])
 })

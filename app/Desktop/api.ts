@@ -20,7 +20,11 @@ const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherA
 openNativeDatabase({ path: join(homedir(), 'Library/Application Support/Launchpad/launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const activityApi = createActivityApi(modelApi)
-export const shutdown = startActivityRuntime(activityApi)
+const stopActivity = startActivityRuntime(activityApi)
+export const shutdown = async () => {
+  installedApplications.close()
+  await stopActivity()
+}
 
 export default async function handle(request: Request): Promise<Response | null> {
   const pathname = new URL(request.url).pathname

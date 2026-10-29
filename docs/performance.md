@@ -1,11 +1,22 @@
 # App discovery and search performance
 
-Launchpad refreshes installed applications when the palette is activated or
-focused, and every five seconds while it is visible. Periodic application scans
-pause while the palette is hidden. Concurrent activation and focus reads share one
-request. An unchanged list leaves the search and selection untouched. Discovery
-also scans up to four folder levels below the application roots, without walking
-inside app bundles or following directory symlinks.
+Launchpad discovers applications in `/Applications`, `/System/Applications` and
+`~/Applications`, up to four folder levels below those roots. It does not walk
+inside app bundles, follow directory symlinks or index document contents. Search
+does not use Spotlight's index.
+
+The palette checks the application list on activation, focus and every five
+seconds while visible. The backend reuses its last snapshot until a filesystem
+event invalidates it or it is 30 seconds old. Directory watchers cover only the
+discovery folders; they never watch app resource trees. Events invalidate cached
+data without starting a background scan. Missing roots are retried, removed
+watchers and metadata are released, and concurrent requests share one scan.
+An unchanged list leaves search and selection untouched.
+
+The safety refresh catches missed notifications and metadata changes inside
+existing bundles, including localized names. Such changes can take up to 30
+seconds to appear while the palette is visible. Hidden palettes do not run the
+discovery timer; the next activation reconciles changes.
 
 Application titles use the desktop package's localized macOS bundle metadata.
 The bundle filename and identifier remain search aliases. Launch paths and
@@ -15,8 +26,12 @@ preserves those records. Missing name metadata falls back to the filename.
 All and Applications search the local command list and installed Pantry packages.
 They do not search the full Pantry catalog. The Pantry page uses the SDK's
 `createPackageCatalogSearch` to normalize and sort one immutable catalog snapshot,
-then reuse its index across keystrokes. Replacing the catalog rebuilds the index.
-Launch history and favorites still affect ranking.
+then reuse its index across keystrokes. Local results and Pantry results also
+prepare normalized fields, words, initials and ranking tie-breakers once per
+data snapshot. Empty-query ordering is reused. SDK catalog candidates select
+prepared Pantry results without rebuilding result objects on every keystroke.
+Changing commands, installed packages, favorites, history or catalog data
+rebuilds the relevant snapshot.
 
 Search ranks exact names first, then exact aliases, name prefixes and literal
 identity matches. Trailing version numbers do not demote an app such as Things3
@@ -30,24 +45,78 @@ identity fields. Fuzzy matches cannot combine letters across these fields.
 Descriptions are searchable by literal words on the Pantry page, and do not
 produce package matches in All or Applications.
 
-Native icons load for displayed results while the palette is open. Icon updates
+Native icons load for the visible viewport plus two rows of overscan while the
+palette is open, including when scrolling with the keyboard. Requests debounce
+for 50 ms to avoid extracting icons for intermediate queries. Settings, command
+editing and package details stop scheduling result icons. Remote logos use lazy
+loading and asynchronous image decoding. Icon updates
 do not rerank search results. Reads share a four-request concurrency limit and a
 per-process cache, including unavailable icons. One unreadable icon does not
-discard the other icons. Install-job polling only runs while jobs are pending.
-Clipboard collection and the local usage checkpoints retain their existing
-background behavior.
+discard the other icons.
 
-Run `bun scripts/benchmark-search.ts` to compare the previous per-query catalog
-path with the prepared path. With 1,774 catalog packages, 112 applications and 40
-installed package fixtures on this Mac, the measured 95th percentile was:
+Inactive polling intervals are paused, removing their timer wakeups rather than
+only skipping their callbacks. Install polling runs only for pending jobs,
+clipboard polling only when history is enabled, and usage retries only while
+events are queued. Usage summaries refresh only while their settings page is
+visible. Enabled clipboard collection and the backend's 15-second usage
+checkpoints retain their existing background behavior and recording semantics.
 
-| Search | Previous | Prepared |
-| --- | --- | --- |
-| All | 33.9 ms | 0.07 ms |
-| Pantry | 35.5 ms | 1.58 ms |
+GitHub debounce timers run only in the visible GitHub category. Changing the
+query, leaving the category or hiding the palette aborts the superseded HTTP
+request and clears its loading state.
+
+## Measurements
+
+Measured on this Mac on October 29, 2026 with 1,774 catalog packages, 112
+applications and 40 installed package fixtures. The baseline is commit
+`52b5171`. Search runs 30 warmups followed by 300 queries, cycling through
+`""`, `t`, `thi`, `things`, `git` and `source code`.
+
+| Search | Baseline p95 | Prepared p95 | Baseline CPU, 300 queries | Prepared CPU, 300 queries |
+| --- | --- | --- | --- | --- |
+| All | 1.402 ms | 0.516 ms | 335.986 ms | 159.372 ms |
+| Pantry | 6.606 ms | 2.722 ms | 904.868 ms | 417.358 ms |
+
+Preparing both search snapshots took 38.197 ms once, excluded from query
+measurements. The measured query CPU reduction was about 53–54%.
+
+For 120 unchanged discovery reads after warmup, rescanning consumed 423.724 ms
+of process CPU, versus 0.330 ms for watched snapshots. The corresponding p95
+elapsed times were 4.225 ms and 0.0042 ms. These reads exclude startup, watcher
+setup, invalidation and periodic safety scans; they do not represent whole-app
+CPU consumption.
+
+Reproduce the baseline comparison and discovery measurement:
+
+```sh
+git show 52b5171:resources/functions/search.ts > /tmp/launchpad-search-baseline.ts
+bun scripts/benchmark-search.ts /tmp/launchpad-search-baseline.ts
+bun scripts/benchmark-discovery.ts
+```
+
+Without a baseline path, the search benchmark compares preparing the current
+search implementation on each query against reusing prepared snapshots.
 
 These timings cover search computation only. They exclude native bridge latency,
-icon extraction and WebView rendering, and are measurements rather than timing
-assertions in the test suite. The regression tests verify live discovery,
-removals, request sharing, unchanged-list stability, installed-only preparation,
-and bounded icon loading.
+icon extraction and WebView rendering. Other activity on the Mac noticeably
+affects elapsed times; these are observations, not timing assertions in CI. The
+tests cover discovery freshness and fallback, removals, shared requests,
+unchanged-list stability, prepared search semantics, installed-only preparation,
+viewport icon demand, bounded icon loading and HTTP cancellation.
+
+## Answering the Spotlight question
+
+Suggested wording:
+
+> Launchpad keeps a small app and command index rather than indexing your files.
+> It caches discovery, reuses prepared search data and pauses discovery polling
+> when hidden. That keeps its indexing work limited. We haven't run a controlled
+> comparison with Spotlight, so I wouldn't claim a specific CPU advantage yet.
+
+[Apple describes Spotlight](https://support.apple.com/en-us/102321) as system-wide
+search backed by a regularly updated index of device data. The difference in
+scope explains why Launchpad has less to index; it does not prove lower total
+CPU usage. A comparison needs the same Mac, idle and active-search workloads,
+fresh and steady-state indexing, all related processes, and the same optional
+clipboard, integration and usage settings. Launchpad does not turn off macOS's
+own Spotlight indexing.

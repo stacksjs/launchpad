@@ -1,3 +1,12 @@
+import type { Result } from './search'
+
+/** Fetch only the viewport and two overscan rows, including after keyboard scrolling. */
+export function visibleApplicationPaths(results: readonly Result[], scrollTop: number, height: number): string[] {
+  const start = Math.max(0, Math.floor(scrollTop / 52) - 2)
+  const end = Math.ceil((scrollTop + height) / 52) + 2
+  return results.slice(start, end).filter(item => item.kind === 'application' && !item.icon).map(item => item.content)
+}
+
 /** Cache native icons and share concurrent bridge calls. Missing icons must not cause render loops. */
 export function createApplicationIconLoader(load: (path: string) => Promise<string | null>, concurrency = 4) {
   const cache = new Map<string, string | null>()

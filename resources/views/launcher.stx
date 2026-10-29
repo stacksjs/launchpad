@@ -8,7 +8,8 @@
 <body>
 <script client>
 import type { Result } from '../functions/search'
-import { rankResults, quicklinkUrl } from '../functions/search'
+import { createResultSearch, quicklinkUrl } from '../functions/search'
+import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
@@ -40,6 +41,7 @@ const items = state<Result[]>([])
 const records = state<Record<string, any>>({})
 const selected = state(0)
 const visibleLimit = state(100)
+const resultScrollTop = state(0)
 const loading = state(true)
 const error = state('')
 const status = state('Ready when you are')
@@ -60,6 +62,7 @@ const usageEnabled = state(true)
 const usageSummary = state<ActivitySummary | null>(null)
 const usageIssue = state('')
 const usageQueue: ReturnType<typeof activityPayload>[] = []
+const usagePending = state(0)
 let usageTask: Promise<void> | null = null
 let usageClearing = false
 const paletteVisible = state(false)
@@ -81,6 +84,7 @@ const tokenInput = state('')
 let historyCursor = -1
 let historyBusy = false
 let githubEpoch = 0
+let githubRequest: AbortController | null = null
 const search = useRef('search')
 const commandTitle = useRef('commandTitle')
 const list = useRef('results')
@@ -90,21 +94,30 @@ let cleanupTray = () => {}
 const searchCatalog = derived(() => createPackageCatalogSearch(catalog()))
 const installedPackages = derived(() => pantryResults(installedCatalog(catalog(), pantryInstalled()), items(), pantryInstalled()))
 const localItems = derived(() => [...items(), ...installedPackages()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+const searchLocal = derived(() => createResultSearch(localItems()))
+const searchPackages = derived(() => createResultSearch(pantryResults(catalog(), items(), pantryInstalled(), pantryFilter(), true).map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id }))))
 const githubCommands = derived(() => githubItems().map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const allResults = derived(() => {
   if (category() === 'pantry') {
-    const packages = pantryResults(searchCatalog()(query(), { kind: pantryFilter() === 'all' ? undefined : pantryFilter(), limit: 50000 }), items(), pantryInstalled(), pantryFilter(), true)
-    return rankResults(packages.map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })), query(), 'pantry')
+    if (!query().trim()) return searchPackages()('', 'pantry')
+    const packages = searchCatalog()(query(), { kind: pantryFilter() === 'all' ? undefined : pantryFilter(), limit: 50000 })
+    return searchPackages()(query(), 'pantry', packages.map(item => 'pantry:' + item.domain))
   }
   const source = category() === 'github' ? githubCommands() : localItems()
   if (category() === 'github') return source
   const answer = category() === 'all' ? calculate(query()) : null
-  const found = rankResults(source, query(), category())
+  const found = searchLocal()(query(), category())
   return answer === null ? found : [{ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer }, ...found]
 })
 const results = derived(() => allResults().slice(0, visibleLimit()).map(item => ({ ...item, icon: item.icon || icons()[item.content] })))
 const active = derived(() => results()[selected()])
 const actionLabel = derived(() => active()?.kind === 'pantry' ? 'Details' : ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
+
+// The framework's enabled option skips callbacks but keeps its interval running.
+function pollWhile(callback, milliseconds, enabled) {
+  const timer = useInterval(callback, milliseconds)
+  effect(() => { if (enabled()) timer.resume(); else timer.pause() })
+}
 
 async function api(path, method = 'GET', body?) {
   const response = await fetch('/api/' + path, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) })
@@ -197,15 +210,21 @@ async function pollInstall() {
   catch (reason) { pantryStatus.set(reason.message) }
   finally { pollingJob = false }
 }
-useInterval(pollInstall, 1000, { enabled: () => installJobs().some(job => ['queued', 'running'].includes(job.status)) })
+pollWhile(pollInstall, 1000, () => installJobs().some(job => ['queued', 'running'].includes(job.status)))
 
 const refreshApplications = createApplicationRefresh({ load: () => api('applications'), current: items, replace: value => items.set(value), count: count => status.set(count + ' applications · Local commands') })
-useInterval(() => { void refreshApplications().catch(fail) }, 5000, { enabled: () => paletteVisible() })
+pollWhile(() => { void refreshApplications().catch(fail) }, 5000, () => paletteVisible())
 
+const loadResultIcons = useDebounce((paths) => {
+  void applicationIcons(paths).then(value => {
+    if (Object.entries(value).some(([path, icon]) => icons()[path] !== icon)) icons.set({ ...icons(), ...value })
+  }).catch(fail)
+}, 50)
 effect(() => {
-  if (!paletteVisible()) return
-  const paths = results().filter(item => item.kind === 'application' && !item.icon).map(item => item.content)
-  if (paths.length) void applicationIcons(paths).then(value => { if (Object.keys(value).length) icons.set({ ...icons(), ...value }) }).catch(fail)
+  loadResultIcons.cancel()
+  if (!paletteVisible() || settings() || editor() || packageDetail()) return
+  const paths = visibleApplicationPaths(results(), resultScrollTop(), list.current?.clientHeight || 450)
+  if (paths.length) loadResultIcons(paths)
 })
 
 async function reload() {
@@ -270,13 +289,15 @@ function track(action: ActivityAction, target = { kind: 'launcher' }, durationMs
   if (!preferencesReady() || usageClearing || (!usageEnabled() && !['palette_opened', 'palette_dismissed'].includes(action))) return
   if (usageQueue.length >= 500) { usageIssue.set('The local API is unavailable. New activity could not be queued.'); return }
   usageQueue.push(activityPayload(action, target, durationMs))
+  usagePending.set(usageQueue.length)
   void flushUsage()
 }
 function flushUsage(): Promise<void> {
   if (usageTask) return usageTask
+  if (!usageQueue.length) return Promise.resolve()
   usageTask = (async () => {
     try {
-      while (usageQueue.length) { const event = usageQueue[0]; await api('activity-events', 'POST', event); if (usageQueue[0] === event) usageQueue.shift() }
+      while (usageQueue.length) { const event = usageQueue[0]; await api('activity-events', 'POST', event); if (usageQueue[0] === event) usageQueue.shift(); usagePending.set(usageQueue.length) }
       usageIssue.set('')
     }
     catch { usageIssue.set('Usage is waiting for the local API and will retry while Launchpad is running.') }
@@ -292,7 +313,7 @@ async function usagePreference(enabled) {
     await flushUsage()
     await preference('usage', JSON.stringify({ enabled }))
     usageEnabled.set(enabled)
-    if (!enabled) usageQueue.splice(0)
+    if (!enabled) { usageQueue.splice(0); usagePending.set(0) }
     paletteVisibility(paletteVisible())
     await refreshUsage()
   }
@@ -301,13 +322,13 @@ async function usagePreference(enabled) {
 async function clearUsage() {
   if (!await stxConfirm('Delete all locally stored usage history? Your future year review will start again.')) return
   usageClearing = true
-  try { await flushUsage(); usageQueue.splice(0); await api('activity-events', 'DELETE'); await refreshUsage() }
+  try { await flushUsage(); usageQueue.splice(0); usagePending.set(0); await api('activity-events', 'DELETE'); await refreshUsage() }
   catch (reason) { fail(reason) }
   finally { usageClearing = false }
 }
-useInterval(flushUsage, 3000, { enabled: () => preferencesReady() })
-useInterval(refreshUsage, 15000, { enabled: () => settings() && settingsSection() === 'usage' })
-effect(() => { if (settings() && settingsSection() === 'usage') void refreshUsage() })
+pollWhile(flushUsage, 3000, () => preferencesReady() && usagePending() > 0)
+pollWhile(refreshUsage, 15000, () => paletteVisible() && settings() && settingsSection() === 'usage')
+effect(() => { if (paletteVisible() && settings() && settingsSection() === 'usage') void refreshUsage() })
 
 function historyResult(row) {
   const source = row.sourceApp || row.source_app || ''
@@ -380,11 +401,16 @@ async function loadPreferences() {
 }
 async function refreshGitHub() {
   const epoch = ++githubEpoch
-  if (category() !== 'github') return
+  githubRequest?.abort()
+  githubRequest = null
+  githubLoading.set(false)
+  if (!paletteVisible() || category() !== 'github') return
+  const controller = new AbortController()
+  githubRequest = controller
   githubLoading.set(true)
   githubItems.set([])
   try {
-    const found = await githubResults(githubView(), query(), githubScope(), githubViewer()?.login || '')
+    const found = await githubResults(githubView(), query(), githubScope(), githubViewer()?.login || '', controller.signal)
     if (epoch !== githubEpoch) return
     githubItems.set(found)
     track('github_search', { kind: 'github' })
@@ -394,7 +420,15 @@ async function refreshGitHub() {
   finally { if (epoch === githubEpoch) githubLoading.set(false) }
 }
 const searchGitHub = useDebounce(refreshGitHub, 400)
-effect(() => { category(); githubView(); query(); githubScope(); githubViewer(); ++githubEpoch; searchGitHub() })
+effect(() => {
+  category(); githubView(); query(); githubScope(); githubViewer(); paletteVisible()
+  ++githubEpoch
+  githubRequest?.abort()
+  githubLoading.set(false)
+  searchGitHub.cancel()
+  if (paletteVisible() && category() === 'github') searchGitHub()
+})
+onDestroy(() => githubRequest?.abort())
 async function connectAccount() {
   saving.set(true)
   try { githubViewer.set(await connectGitHub(tokenInput())); tokenInput.set(''); error.set(''); void refreshGitHub() }
@@ -414,7 +448,7 @@ async function saveScope() {
   }
   catch (reason) { fail(reason) }
 }
-useInterval(pollClipboard, 800, { enabled: () => preferencesReady() && historyEnabled() })
+pollWhile(pollClipboard, 800, () => preferencesReady() && historyEnabled())
 
 async function run(item = active()) {
   if (!item || saving()) return
@@ -517,12 +551,12 @@ function key(event) {
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
     selected.set(Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1))))
-    void nextTick(() => list.current?.scrollTo({ top: Math.max(0, selected() * 54 - 108) }))
+    void nextTick(() => list.current?.scrollTo({ top: Math.max(0, selected() * 52 - 104) }))
   }
   if (event.key === 'Enter') { event.preventDefault(); void run() }
 }
 
-effect(() => { query(); category(); items(); selected.set(0); visibleLimit.set(100) })
+effect(() => { query(); category(); items(); selected.set(0); visibleLimit.set(100); resultScrollTop.set(0); if (list.current) list.current.scrollTop = 0 })
 useEventListener('keydown', key, { capture: true })
 onMount(() => {
   const stopBlur = windowEvents.onBlur(() => { void dismissLauncher() })
@@ -585,7 +619,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <span :if="category() !== 'clipboard'">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
     </div>
     <div class="result-region">
-    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands">
+    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="resultScrollTop.set($event.target.scrollTop)">
       <p :if="loading() || (category() === 'github' && githubLoading())" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : 'Finding your applications...' }}</p>
       <div :if="!loading() && !githubLoading() && results().length === 0" class="empty">
         <p>{{ category() === 'clipboard' ? 'Keep useful text close.' : 'Nothing here yet.' }}</p>
@@ -593,7 +627,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
       </div>
       <button :for="(item, index) in results()" :key="item.key" :id="'result-' + index" type="button" role="option" :aria-selected="index === selected()" :class="index === selected() ? 'result selected' : 'result'" @click="selected.set(index); run(item)" @mousemove="selected.set(index)">
         <span class="item-icon" aria-hidden="true">
-          <img :if="['application', 'pantry'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34">
+          <img :if="['application', 'pantry'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="lazy" decoding="async">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
           <span :if="item.kind === 'pantry' && !item.icon" class="i-f7-cube-box"></span>
           <span :if="item.kind === 'quicklink'" class="i-f7-link"></span>
