@@ -23,3 +23,13 @@ export function createResultPresentation() {
     return result
   })
 }
+
+/** Park unused slots instead of destroying rows as matches shrink, including an empty result list. */
+export function createResultSlots(minimum = 13) {
+  const empty: Result = { key: '', title: '', subtitle: '', kind: '', content: '' }
+  const slots: Result[] = Array.from({ length: minimum }, () => empty)
+  return (items: readonly Result[], start: number, end: number): Result[] => {
+    for (let index = 0; index < end - start; index++) slots[index] = items[start + index]!
+    return slots.slice()
+  }
+}

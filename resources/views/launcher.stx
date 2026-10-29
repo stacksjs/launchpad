@@ -9,7 +9,7 @@
 <script client>
 import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
-import { createResultPresentation, resultWindow } from '../functions/result-list'
+import { createResultPresentation, createResultSlots, resultWindow } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
@@ -117,7 +117,11 @@ const allResults = derived(() => {
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
 const viewport = derived(() => resultWindow(results().length, resultScrollTop(), resultViewportHeight()), { equals: (a, b) => a.start === b.start && a.end === b.end && a.bottom === b.bottom })
-const renderedResults = derived(() => results().slice(viewport().start, viewport().end))
+const resultSlots = derived(() => {
+  items(); records(); catalog(); pantryInstalled(); githubItems()
+  return createResultSlots()
+})
+const renderedResults = derived(() => resultSlots()(results(), viewport().start, viewport().end))
 const active = derived(() => results()[selected()])
 const actionLabel = derived(() => active()?.kind === 'pantry' ? 'Details' : ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
 
@@ -565,8 +569,10 @@ function key(event) {
   if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
-    selected.set(Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1))))
-    void nextTick(() => list.current?.scrollTo({ top: Math.max(0, selected() * 52 - 104) }))
+    const index = Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1)))
+    const top = Math.max(0, index * 52 - 104)
+    batch(() => { selected.set(index); resultScrollTop.set(top) })
+    void nextTick(() => { if (selected() === index) list.current?.scrollTo({ top }) })
   }
   if (event.key === 'Enter') { event.preventDefault(); void run() }
 }
@@ -605,7 +611,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
   <div class="palette-content" x-show="!settings() && !editor() && !packageDetail()">
   <header class="flex gap-4 items-center px-6" @mousedown="nativeWindow.startDrag()">
     <span class="i-f7-search search-icon" aria-hidden="true"></span>
-    <input ref="search" x-model="query" type="search" placeholder="Search anything, do something." autocomplete="off" spellcheck="false" role="combobox" aria-label="Search applications and commands" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="'result-' + selected()" @mousedown.stop="">
+    <input ref="search" x-model="query" type="search" placeholder="Search anything, do something." autocomplete="off" spellcheck="false" role="combobox" aria-label="Search applications and commands" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="active() ? 'result-' + selected() : null" @mousedown.stop="">
     <button type="button" class="escape" @click="dismissLauncher()" aria-label="Hide Launchpad">esc</button>
   </header>
   <nav class="flex gap-1 items-center px-5" aria-label="Search categories">
@@ -643,8 +649,8 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
       </div>
       <div aria-hidden="true" :style="'height:' + viewport().top + 'px;flex-shrink:0'"></div>
-      <!-- Recycle visible DOM slots; item bindings and absolute result indexes update together. -->
-      <button :for="(item, index) in renderedResults()" :key="index" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
+      <!-- Park unused slots so fast typing and backspacing never need to recreate result rows. -->
+      <button :for="(item, index) in renderedResults()" :key="index" x-show="index < viewport().end - viewport().start" :disabled="index >= viewport().end - viewport().start" :aria-hidden="index >= viewport().end - viewport().start" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="index < viewport().end - viewport().start && viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
         <span class="item-icon" aria-hidden="true">
           <img :if="['application', 'pantry'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="lazy" decoding="async">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
@@ -814,7 +820,7 @@ nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .new { color: var(--muted); font-size: 24px; line-height: 24px; width: 28px; }
 .section-label { height: 30px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
 .section-label > span:last-child { color: var(--muted); font-size: 10px; }
-.results { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+.results { flex: 1; overflow-y: auto; overflow-anchor: none; padding-bottom: 8px; }
 .result { display: flex; align-items: center; gap: 13px; width: 100%; height: 52px; padding: 7px 12px; border: 1px solid transparent; text-align: left; border-radius: 7px; margin: 0; }
 .result.selected { background: var(--selected); border-color: var(--selected-border); }
 .item-icon { width: 33px; height: 33px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--icon-surface); color: var(--accent); flex-shrink: 0; }

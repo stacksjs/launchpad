@@ -103,3 +103,21 @@ test('query results are reused across backspacing and categories and evicted at 
   expect(prepared('m', 'all', [])).toEqual([])
   expect(createResultSearch([{ ...item, title: 'Changed' }])('m')).toEqual([])
 })
+
+test('launch frequency remains meaningful above 25 uses, with recency only breaking ties', () => {
+  const app = (title: string, launches: number, lastUsed: number) => ({ key: title, title, launches, lastUsed, subtitle: 'Application', kind: 'application', content: `/Applications/${title}.app` })
+  const apps = [app('Maps', 80, 500), app('Music', 150, 400), app('Mail', 400, 100), app('Messages', 150, 200)]
+  const search = createResultSearch(apps)
+  for (const query of ['m', 'M', ' m ', 'ma', 'mail', 'mai', 'ma', 'm']) {
+    expect(search(query)[0]?.title).toBe('Mail')
+    expect(search(query, 'application')[0]?.title).toBe('Mail')
+  }
+  expect(search('m').map(item => item.title)).toEqual(['Mail', 'Music', 'Messages', 'Maps'])
+  expect(search('maps')[0]?.title).toBe('Maps')
+  const updated = createResultSearch(apps.map(item => item.title === 'Maps' ? { ...item, launches: 600 } : item))
+  expect(updated('M')[0]?.title).toBe('Maps')
+  expect(search('M')[0]?.title).toBe('Mail')
+  const favorite = createResultSearch(apps.map(item => ({ ...item, favorite: item.title === 'Messages' })))
+  expect(favorite('m')[0]?.title).toBe('Messages')
+  expect(favorite('mail')[0]?.title).toBe('Mail')
+})

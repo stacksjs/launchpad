@@ -39,17 +39,28 @@ candidate lookup and ranking together, scoped to the current package filter.
 Icon presentation keeps unchanged result objects instead of cloning every row
 when a query or an unrelated icon changes.
 
-The result list mounts only the viewport plus two rows of overscan on each side.
-Fixed-height spacers retain the full scroll range. Visible DOM slots are recycled
-across queries and scrolling; their item bindings, absolute indexes, selection,
-actions and accessibility positions all update together. Keyboard navigation and
-Show more still address the full result list. Caching search alone did not avoid
-the cost of updating 100 mounted rows on each keystroke.
+The result list keeps a small pool of 13 DOM slots for the fixed-height native
+window, showing the viewport plus two rows of overscan on each side. Unused slots
+are hidden, disabled and removed from accessibility navigation. They remain
+available when backspacing expands a narrow or empty search, avoiding new row
+construction. Source-data changes reset parked contents, including clipboard
+clearing and GitHub disconnection. Fixed-height spacers retain the full scroll
+range. Item bindings, absolute indexes, selection, actions and accessibility
+positions update together. Keyboard navigation and Show more still address the
+full result list. Scroll anchoring is disabled so recycled rows cannot shift the
+selected result out of view. Caching search alone did not avoid the cost of
+updating 100 mounted rows on each keystroke.
 
 Search ranks exact names first, then exact aliases, name prefixes and literal
 identity matches. Trailing version numbers do not demote an app such as Things3
-when searching for Things. Favorites and launch history break ties within the
-same relevance tier. Compact application abbreviations and initials count as
+when searching for Things. Within the same relevance tier and fuzzy distance,
+explicit favorites lead, followed by total successful Launchpad launches, then
+most recent use. Launch frequency has no 25-use ceiling: with Mail launched 400
+times and Maps 80 times, `M` puts Mail first even if Maps was used more recently.
+An exact `Maps` search still puts Maps first. This history measures commands
+launched through Launchpad, not application activity elsewhere in macOS. It
+persists through the native LaunchRecord API, and updated records invalidate
+cached search results immediately. Compact application abbreviations and initials count as
 name matches. Other weak fuzzy matches are hidden when a literal identity
 match exists.
 
@@ -150,6 +161,33 @@ node scripts/benchmark-typing.mjs dist/Launchpad.app/Contents/Resources/index.ht
 `LAUNCHPAD_BROWSER_EXECUTABLE` can select a Chromium executable.
 `LAUNCHPAD_TYPING_CATEGORIES=all` restricts comparisons to the reported All case.
 Additional HTML paths compare independently built versions with the same fixture.
+
+The expanded regression fixture exercises complete typing and backspacing
+sequences with no delay between inputs, including cold and warm caches, cache
+eviction, zero results, Unicode quicklink arguments, multiword names, calculator
+expressions and Pantry descriptions/program names. It uses 112 application
+fixtures, 200 clipboard entries, commands and the complete Pantry catalog. A run
+of 1,204 input events across all seven categories measured:
+
+| Category | Input events | Median handler | p95 handler |
+| --- | --- | --- | --- |
+| All | 288 | 1.0 ms | 5.7 ms |
+| Applications | 192 | 2.6 ms | 12.7 ms |
+| Quicklinks | 172 | 2.5 ms | 3.3 ms |
+| Snippets | 112 | 2.1 ms | 3.0 ms |
+| Clipboard | 160 | 2.2 ms | 3.4 ms |
+| Pantry | 168 | 5.3 ms | 10.3 ms |
+| GitHub | 112 | 2.0 ms | 2.4 ms |
+
+Each input checks that the visible rows match the current query state and that
+no new result-row nodes are created. The fixture also checks rapid keyboard
+navigation, Show more, bottom-of-list scrolling, current-row actions, clearing
+parked contents, and reranking an already-cached `M` query after changing launch
+frequency. A database test verifies history after reopening the native database.
+GitHub HTTP responses are simulated locally to verify debouncing, cancellation
+and rejection of obsolete responses. GitHub's input timing excludes the
+400-millisecond debounce and network response latency; remote results remain
+asynchronous. These browser observations are not timing guarantees on every Mac.
 
 ## Answering the Spotlight question
 

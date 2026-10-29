@@ -47,9 +47,10 @@ export function createResultSearch(items: readonly Result[]) {
   const prepared = items.map((item) => {
     const title = prepareField(item.title)
     const aliases = [item.alias, ...(item.searchAliases ?? [])].filter((value): value is string => Boolean(value)).map(prepareField)
-    return { item, title, aliases, fields: [title, ...aliases], versionless: withoutVersion(title.text), description: splitWords(item.searchText?.toLocaleLowerCase() || ''), score: (item.favorite ? 100 : 0) + (item.kind === 'application' ? 10 : 0) + Math.min(item.launches ?? 0, 25), order: 0 }
+    return { item, title, aliases, fields: [title, ...aliases], versionless: withoutVersion(title.text), description: splitWords(item.searchText?.toLocaleLowerCase() || ''), order: 0 }
   })
-  const compare = (a: typeof prepared[number], b: typeof prepared[number]) => b.score - a.score || (b.item.lastUsed ?? 0) - (a.item.lastUsed ?? 0) || a.item.title.localeCompare(b.item.title)
+  // Explicit favorites lead each relevance tier. Frequency is never capped; recency breaks frequency ties.
+  const compare = (a: typeof prepared[number], b: typeof prepared[number]) => Number(Boolean(b.item.favorite)) - Number(Boolean(a.item.favorite)) || (b.item.launches ?? 0) - (a.item.launches ?? 0) || (b.item.lastUsed ?? 0) - (a.item.lastUsed ?? 0) || Number(b.item.kind === 'application') - Number(a.item.kind === 'application') || a.item.title.localeCompare(b.item.title)
   const ordered = prepared.slice().sort(compare)
   for (let index = 1; index < ordered.length; index++) ordered[index]!.order = ordered[index - 1]!.order + (compare(ordered[index - 1]!, ordered[index]!) === 0 ? 0 : 1)
   const byKey = new Map(prepared.map(entry => [entry.item.key, entry]))
