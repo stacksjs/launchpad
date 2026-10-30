@@ -1,5 +1,70 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.12...v1.1.0)
+
+## ✨ Features
+
+- **launcher**: add Files, Windows, People, Calendar and Emoji tabs, Search and Extensions settings ([816012a](https://github.com/stacksjs/launchpad/commit/816012a)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **search**: compose files, windows, contacts, events, emoji and conversions in one tested pipeline ([944db7a](https://github.com/stacksjs/launchpad/commit/944db7a)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **sources**: add live window, contact and event sources with latest-wins loading ([3405dfa](https://github.com/stacksjs/launchpad/commit/3405dfa)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **extensions**: install declarative quicklink and snippet packs ([6119ec8](https://github.com/stacksjs/launchpad/commit/6119ec8)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **windows**: list, search and raise open windows; look up contacts and events ([2dd232d](https://github.com/stacksjs/launchpad/commit/2dd232d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **snippets**: expand placeholders and run system plans through fixed ports ([0e8a71e](https://github.com/stacksjs/launchpad/commit/0e8a71e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **emoji**: search emoji with a leading colon and copy with Return ([2763028](https://github.com/stacksjs/launchpad/commit/2763028)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **files**: search file names through Spotlight's index ([199ac78](https://github.com/stacksjs/launchpad/commit/199ac78)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **rates**: download euro based exchange rates once opted in ([5897823](https://github.com/stacksjs/launchpad/commit/5897823)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **search**: convert units, temperatures, data sizes and currencies ([7eaf768](https://github.com/stacksjs/launchpad/commit/7eaf768)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **search**: add a web search fallback, system commands and richer result dispatch ([9c5d800](https://github.com/stacksjs/launchpad/commit/9c5d800)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **a11y**: announce the result count and show full titles on hover ([7de4db3](https://github.com/stacksjs/launchpad/commit/7de4db3)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **keyboard**: navigate results with Control N and P and Page Up and Down ([9177995](https://github.com/stacksjs/launchpad/commit/9177995)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **search**: add aliases for Calculator, Maps, Xcode, Docker and other common apps ([9f6b58d](https://github.com/stacksjs/launchpad/commit/9f6b58d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **calculator**: read thousands separators such as 1,250 ([3f36a98](https://github.com/stacksjs/launchpad/commit/3f36a98)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **a11y**: expose the selected category and settings tab to assistive tech ([34292c6](https://github.com/stacksjs/launchpad/commit/34292c6)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **site**: label the issues link as Issues, not Roadmap ([8859e60](https://github.com/stacksjs/launchpad/commit/8859e60)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **commands**: explain blank names and trim quicklink addresses ([7c8a2a1](https://github.com/stacksjs/launchpad/commit/7c8a2a1)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: use correct singular counts and accept a pairing code typed in groups ([788f304](https://github.com/stacksjs/launchpad/commit/788f304)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **settings**: allow clearing the GitHub repository scope ([a154490](https://github.com/stacksjs/launchpad/commit/a154490)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **clipboard**: skip oversized or blank copies instead of stopping history ([fbc2aca](https://github.com/stacksjs/launchpad/commit/fbc2aca)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **pantry**: refuse oversized requests before reading the body ([8a4f075](https://github.com/stacksjs/launchpad/commit/8a4f075)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **usage**: drop activity events the local API will never accept ([d6c040f](https://github.com/stacksjs/launchpad/commit/d6c040f)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: delete ranking records with their item, label favorite and confirm setup copy ([d89adc3](https://github.com/stacksjs/launchpad/commit/d89adc3)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **github**: trim notification searches and tidy issue search queries ([12a52f4](https://github.com/stacksjs/launchpad/commit/12a52f4)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **history**: enforce the entry cap on rows beyond the newest thousand ([edd177d](https://github.com/stacksjs/launchpad/commit/edd177d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **usage**: record application names the backend accepts and show days ([38a48e9](https://github.com/stacksjs/launchpad/commit/38a48e9)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **quicklinks**: explain a missing http or https address instead of Invalid URL ([216afd2](https://github.com/stacksjs/launchpad/commit/216afd2)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **pantry**: keep the catalog readable when one saved row is damaged ([36fc045](https://github.com/stacksjs/launchpad/commit/36fc045)) _(by Chris Breuer <chris@stacksjs.com>)_
+- start even when a saved preference is damaged ([5c1ee40](https://github.com/stacksjs/launchpad/commit/5c1ee40)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **discovery**: survive unreadable folders and bundles during a scan ([06182cb](https://github.com/stacksjs/launchpad/commit/06182cb)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **github**: map notification links precisely and guard personal views ([4b98e70](https://github.com/stacksjs/launchpad/commit/4b98e70)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **calculator**: ignore bare numbers and accept pasted operator signs ([993596f](https://github.com/stacksjs/launchpad/commit/993596f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ⚡ Performance Improvements
+
+- answer file searches from memory and never overlap slow scripts ([1678511](https://github.com/stacksjs/launchpad/commit/1678511)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ♻️ Code Refactoring
+
+- share the result row height between scrolling and icon loading ([22a324d](https://github.com/stacksjs/launchpad/commit/22a324d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- describe files, system commands, conversions, emoji, windows, contacts and extensions ([8d92199](https://github.com/stacksjs/launchpad/commit/8d92199)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 👷 Build System
+
+- let the hardened direct build send Apple events ([cc621b1](https://github.com/stacksjs/launchpad/commit/cc621b1)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.0 ([a1b8d95](https://github.com/stacksjs/launchpad/commit/a1b8d95)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.11...v1.0.12)
 
 ## ✨ Features
