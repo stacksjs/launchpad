@@ -1,7 +1,13 @@
-import { app, clipboard, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
+import { app, appleScript, clipboard, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { clipboardDecision } from './clipboard'
+import { contactOpenScript } from './contacts'
+import { eventOpenScript } from './calendar'
+import { createSources } from './sources'
+import { expandSnippet } from './snippets'
+import { runSystemPlan } from './system-commands'
+import { windowFocusScript } from './windows'
 
 export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
 
@@ -61,7 +67,51 @@ export async function registerLauncher(show: () => void): Promise<() => void> {
   }
 }
 
-export const execute = createExecutor({ openApplication: path => shell.openPath(path), openLink: url => shell.openExternal(url), copyText: text => clipboard.writeText(text), dismiss: () => nativeWindow.hide() })
+/** Settings that change how a launch behaves. The launcher view keeps this in step with the saved preference. */
+export const behavior = { paste: false }
+
+const runScript = (source: string) => appleScript.execute(source)
+async function script(source: string | null, refusal: string) {
+  if (!source) throw new Error(refusal)
+  const outcome = await runScript(source)
+  if (!outcome.ok) throw new Error(`${refusal} Allow Launchpad under System Settings > Privacy & Security > Automation, then try again.`)
+}
+
+/** Type Command V into the app that regains focus when the palette hides. Needs the Accessibility permission. */
+export async function pasteIntoFrontmost(): Promise<void> {
+  if (await permissions.check('accessibility') !== 'granted') {
+    await permissions.request('accessibility').catch(() => {})
+    throw new Error('Allow Launchpad under System Settings > Privacy & Security > Accessibility to paste snippets into other apps.')
+  }
+  // The palette is hiding; wait for macOS to hand focus back before sending the keystroke.
+  await new Promise(resolve => setTimeout(resolve, 180))
+  await script('tell application "System Events" to keystroke "v" using command down', 'Launchpad could not paste.')
+}
+
+export const execute = createExecutor({
+  openApplication: path => shell.openPath(path), openLink: url => shell.openExternal(url), copyText: text => clipboard.writeText(text), dismiss: () => nativeWindow.hide(),
+  openPath: path => shell.openPath(path),
+  runSystem: command => runSystemPlan(command, {
+    appleScript: runScript,
+    spawn: (program, args) => shell.spawn(`system-${command.id}-${Date.now()}`, program, [...args]),
+    openUrl: url => shell.openExternal(url),
+    openPath: path => shell.openPath(path),
+  }),
+  focusWindow: token => script(windowFocusScript(token), 'Launchpad could not switch to that window.'),
+  openContact: id => script(contactOpenScript(id), 'Launchpad could not open that contact.'),
+  openEvent: uid => script(eventOpenScript(uid), 'Launchpad could not open that event.'),
+  expandText: text => expandSnippet(text, { now: new Date(), uuid: () => crypto.randomUUID(), clipboard: () => clipboard.readText().then(value => value ?? '') }),
+  pasteText: async () => { if (behavior.paste) await pasteIntoFrontmost() },
+})
+
+export const sources = createSources({
+  appleScript: runScript,
+  accessibility: () => permissions.check('accessibility'),
+  requestAccessibility: () => permissions.request('accessibility'),
+})
+
+export const revealInFinder = (path: string) => shell.showInFinder(path)
+export const openPrivacySettings = (name: 'accessibility' | 'automation') => name === 'accessibility' ? permissions.openSettings('accessibility') : shell.openExternal('x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Automation')
 
 export async function captureClipboard(): Promise<string> {
   const content = await clipboard.readText()
