@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.11...v1.0.12)
+
+## ✨ Features
+
+- **search**: add intelligent application aliases and personal names ([870827e](https://github.com/stacksjs/launchpad/commit/870827e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.12 ([8fb51d9](https://github.com/stacksjs/launchpad/commit/8fb51d9)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.10...v1.0.11)
 
 ## ✨ Features
