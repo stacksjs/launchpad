@@ -1,9 +1,10 @@
+import { resultRowHeight } from './result-list'
 import type { Result } from './search'
 
 /** Fetch only the viewport and two overscan rows, including after keyboard scrolling. */
 export function visibleApplicationPaths(results: readonly Result[], scrollTop: number, height: number): string[] {
-  const start = Math.max(0, Math.floor(scrollTop / 52) - 2)
-  const end = Math.ceil((scrollTop + height) / 52) + 2
+  const start = Math.max(0, Math.floor(scrollTop / resultRowHeight) - 2)
+  const end = Math.ceil((scrollTop + height) / resultRowHeight) + 2
   return results.slice(start, end).filter(item => item.kind === 'application' && !item.icon).map(item => item.content)
 }
 

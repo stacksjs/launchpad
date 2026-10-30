@@ -12,7 +12,7 @@ import pkg from '../../package.json'
 import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
 import { parseApplicationAliases } from '../functions/search-text'
-import { createResultPresentation, createResultSlots, resultWindow } from '../functions/result-list'
+import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
@@ -649,7 +649,7 @@ function key(event) {
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
     const index = Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1)))
-    const top = Math.max(0, index * 52 - 104)
+    const top = Math.max(0, index * resultRowHeight - 2 * resultRowHeight)
     batch(() => { selected.set(index); resultScrollTop.set(top) })
     void nextTick(() => { if (selected() === index) list.current?.scrollTo({ top }) })
   }
