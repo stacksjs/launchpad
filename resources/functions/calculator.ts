@@ -1,8 +1,12 @@
 /** A bounded arithmetic parser. Never evaluates JavaScript or loads code. */
-export function calculate(input: string): string | null {
-  if (input.length > 200 || !/\d/.test(input)) return null
+export function calculate(raw: string): string | null {
+  if (raw.length > 200 || !/\d/.test(raw)) return null
+  // Accept the multiplication and division signs people paste, and ** as a power.
+  const input = raw.replaceAll('×', '*').replaceAll('÷', '/').replaceAll('**', '^')
   const tokens = input.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[()+\-*/^%]/gi)
   if (!tokens || tokens.join('') !== input.replace(/\s/g, '')) return null
+  // A lone number is a search for that text, not a sum worth answering.
+  if (tokens.length === 1) return null
   let index = 0
   function expression(min = 0): number {
     const token = tokens![index++]

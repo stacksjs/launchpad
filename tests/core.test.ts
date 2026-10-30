@@ -134,3 +134,12 @@ test('launch frequency remains meaningful above 25 uses, with recency only break
   expect(favorite('m')[0]?.title).toBe('Messages')
   expect(favorite('mail')[0]?.title).toBe('Mail')
 })
+
+test('calculator ignores bare numbers and accepts pasted operator signs', () => {
+  expect(calculate('2020')).toBeNull()
+  expect(calculate('3.14')).toBeNull()
+  expect(calculate('50%')).toBe('0.5')
+  expect(calculate('6 × 7')).toBe('42')
+  expect(calculate('84 ÷ 2')).toBe('42')
+  expect(calculate('2 ** 10')).toBe('1024')
+})
