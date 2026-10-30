@@ -24,3 +24,8 @@ test('the web fallback is a bounded row that every engine can turn into an https
     expect(quicklinkUrl(row.content, 'cats & dogs')).toContain('cats%20%26%20dogs')
   }
 })
+
+test('an inherited property name is not a search engine', () => {
+  expect(readSearchSettings('{"web":"constructor"}').web).toBe(defaultSearchSettings.web)
+  expect(readSearchSettings('{"web":"__proto__"}').web).toBe(defaultSearchSettings.web)
+})

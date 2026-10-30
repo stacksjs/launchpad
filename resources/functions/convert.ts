@@ -119,7 +119,7 @@ export function resolveUnit(value: string): ResolvedUnit | null {
   const exact = exactUnits.get(raw)
   if (exact) return { category: exact.category, symbol: exact.unit.symbol, factor: exact.unit.factor }
   const name = raw.toLocaleLowerCase()
-  const temperature = temperatureNames[name]
+  const temperature = Object.hasOwn(temperatureNames, name) ? temperatureNames[name] : undefined
   if (temperature) return { category: 'temperature', symbol: `°${temperature}`, factor: 1, temperature }
   const found = looseUnits.get(name)
   return found ? { category: found.category, symbol: found.unit.symbol, factor: found.unit.factor } : null
@@ -161,7 +161,8 @@ export function resolveCurrency(value: string): string | null {
   const key = value.trim().replace(/\.$/, '')
   const code = key.toUpperCase()
   if ((currencyCodes as readonly string[]).includes(code) && /^[a-z]{3}$/i.test(key)) return code
-  return currencyNames[key.toLocaleLowerCase()] ?? null
+  const name = key.toLocaleLowerCase()
+  return Object.hasOwn(currencyNames, name) ? currencyNames[name]! : null
 }
 
 /** Rates are quoted per one euro, as published by the European Central Bank. EUR itself is implied. */

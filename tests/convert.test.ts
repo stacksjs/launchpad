@@ -87,3 +87,11 @@ test('currency conversion needs opt-in, then waits for rates, then uses euro bas
   expect(convertCurrency(1, 'EUR', 'EUR', rates)).toBe(1)
   expect(convertCurrency(1, 'USD', 'EUR', { rates: { USD: 0 }, updatedAt: 0 })).toBeNull()
 })
+
+test('inherited object keys are never treated as units or currencies', () => {
+  for (const word of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf']) {
+    expect(resolveUnit(word)).toBeNull()
+    expect(resolveCurrency(word)).toBeNull()
+    expect(conversionResult(`5 ${word} in ${word}`, { enabled: true, table: rates })).toBeNull()
+  }
+})

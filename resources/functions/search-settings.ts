@@ -28,7 +28,7 @@ export function readSearchSettings(value: string | undefined): SearchSettings {
   return {
     files: typeof saved.files === 'boolean' ? saved.files : defaultSearchSettings.files,
     currency: saved.currency === true,
-    web: saved.web === 'off' || (typeof saved.web === 'string' && saved.web in webEngines) ? saved.web as SearchSettings['web'] : defaultSearchSettings.web,
+    web: saved.web === 'off' || (typeof saved.web === 'string' && Object.hasOwn(webEngines, saved.web)) ? saved.web as SearchSettings['web'] : defaultSearchSettings.web,
     paste: saved.paste === true,
   }
 }

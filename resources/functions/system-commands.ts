@@ -87,3 +87,22 @@ export function systemCommandResults(): Result[] {
 
 /** These help once you search for them, but a dozen power commands do not belong in the idle list. */
 export const quietKinds: readonly string[] = ['system', 'emoji', 'extension']
+
+export interface SystemPorts {
+  appleScript: (source: string) => Promise<{ ok: boolean }>
+  spawn: (command: string, args: readonly string[]) => Promise<void>
+  openUrl: (url: string) => Promise<void>
+  openPath: (path: string) => Promise<void>
+}
+
+/** Run one fixed plan. A refused script explains where the permission lives instead of failing silently. */
+export async function runSystemPlan(command: SystemCommand, ports: SystemPorts): Promise<void> {
+  const { plan } = command
+  if (plan.type === 'applescript') {
+    const outcome = await ports.appleScript(plan.source)
+    if (!outcome.ok) throw new Error(`macOS did not run "${command.title}". Allow Launchpad under System Settings > Privacy & Security > Automation, then try again.`)
+  }
+  else if (plan.type === 'spawn') await ports.spawn(plan.command, plan.args)
+  else if (plan.type === 'url') await ports.openUrl(plan.url)
+  else await ports.openPath(plan.path)
+}
