@@ -70,3 +70,9 @@ A manifest is strictly validated and cannot run code, reach the network or read 
 **Snippet placeholders.** `{date}`, `{time}`, `{datetime}`, `{weekday}`, `{year}`, `{uuid}`
 and `{clipboard}` are filled in when a snippet is used. `{{date}}` stays literal. The
 clipboard is read only if the snippet asks for it.
+
+**Builds.** Direct downloads are hardened and carry the Apple events entitlement, which macOS
+requires before it will even ask for the Automation permission. A sandboxed Mac App Store
+build does not have that entitlement, and the sandbox can also stop Spotlight file search, so
+files, windows, contacts, calendar and system commands may be unavailable there. Launchpad says
+so in the tab instead of failing silently.
