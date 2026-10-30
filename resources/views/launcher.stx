@@ -12,6 +12,7 @@ import pkg from '../../package.json'
 import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
 import { parseApplicationAliases } from '../functions/search-text'
+import { historyPreference as readHistoryPreference, parsePreference } from '../functions/preferences'
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
@@ -468,11 +469,11 @@ async function loadPreferences() {
   await nativeWindow.setAppearance(theme)
   if (values.githubScope) githubScope.set(values.githubScope.value)
   if (values.history) {
-    const saved = JSON.parse(values.history.value)
-    historyEnabled.set(saved.enabled === true)
-    historyDays.set([1, 7, 30].includes(saved.days) ? saved.days : 7)
+    const saved = readHistoryPreference(values.history.value)
+    historyEnabled.set(saved.enabled)
+    historyDays.set(saved.days)
   }
-  if (values.usage) usageEnabled.set(JSON.parse(values.usage.value).enabled === true)
+  if (values.usage) usageEnabled.set(parsePreference(values.usage.value).enabled === true)
   preferencesReady.set(true)
 }
 async function refreshGitHub() {
