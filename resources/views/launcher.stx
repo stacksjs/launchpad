@@ -18,6 +18,7 @@ import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
+import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -422,7 +423,7 @@ effect(() => { if (paletteVisible() && settings() && settingsSection() === 'usag
 
 function historyResult(row) {
   const source = row.sourceApp || row.source_app || ''
-  return { key: 'clipboard:' + row.id, id: row.id, title: row.content.slice(0, 100), subtitle: source ? 'Clipboard · ' + source.split('.').pop() : 'Saved clipboard text', kind: 'clipboard', content: row.content }
+  return { key: 'clipboard:' + row.id, id: row.id, title: clipboardTitle(row.content), subtitle: source ? 'Clipboard · ' + source.split('.').pop() : 'Saved clipboard text', kind: 'clipboard', content: row.content }
 }
 async function reloadHistory() {
   const rows = await all('clipboard-entries')
@@ -457,12 +458,13 @@ async function pollClipboard() {
   historyBusy = true
   try {
     const snapshot = await clipboard.historySnapshot(historyCursor)
-    if (snapshot.text && snapshot.text !== items().find(item => item.kind === 'clipboard')?.content) {
+    const decision = clipboardDecision(snapshot.text)
+    if (decision === 'save' && snapshot.text !== items().find(item => item.kind === 'clipboard')?.content) {
       await api('clipboard-entries', 'POST', { content: snapshot.text, capturedAt: Date.now(), sourceApp: snapshot.sourceBundleId }); track('clipboard_saved', { kind: 'clipboard' })
       await reloadHistory()
     }
     historyCursor = snapshot.changeCount
-    historyStatus.set(snapshot.blocked ? 'Protected clipboard content skipped' : 'Recording new text locally')
+    historyStatus.set(snapshot.blocked ? 'Protected clipboard content skipped' : decision === 'too-large' ? 'Text over 20,000 characters skipped' : 'Recording new text locally')
   }
   catch (reason) { historyEnabled.set(false); historyStatus.set('History stopped'); fail(reason) }
   finally { historyBusy = false }

@@ -1,6 +1,7 @@
 import { app, clipboard, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
+import { clipboardDecision } from './clipboard'
 
 export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
 
@@ -64,7 +65,8 @@ export const execute = createExecutor({ openApplication: path => shell.openPath(
 
 export async function captureClipboard(): Promise<string> {
   const content = await clipboard.readText()
-  if (!content) throw new Error('There is no text on the clipboard, or macOS has denied access.')
-  if (content.length > 20000) throw new Error('Clipboard text is too large to save.')
+  const decision = clipboardDecision(content)
+  if (decision === 'empty') throw new Error('There is no text on the clipboard, or macOS has denied access.')
+  if (decision === 'too-large') throw new Error('Clipboard text is too large to save.')
   return content
 }
