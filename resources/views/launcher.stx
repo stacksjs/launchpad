@@ -218,6 +218,10 @@ async function openPackageApplication() {
   }
   catch (reason) { fail(reason) }
 }
+async function copySetupCommand() {
+  try { await clipboard.writeText('pantry desktop setup --yes'); pantryStatus.set('Setup command copied. Run it in your terminal.') }
+  catch (reason) { pantryStatus.set(reason.message || 'Could not copy the setup command.') }
+}
 function closePackage() { packageDetail.set(null); void nextTick(() => search.current?.focus()) }
 async function startInstall() {
   const item = packageDetail()
@@ -625,6 +629,9 @@ async function remove() {
   if (!item?.id || !['snippet', 'quicklink', 'clipboard'].includes(item.kind)) return
   try {
     await api((item.kind === 'clipboard' ? 'clipboard-entries/' : 'commands/') + item.id, 'DELETE')
+    // Favorites and launch counts for a deleted item would otherwise stay in the database.
+    const record = records()[item.key]
+    if (record) await api('launch-records/' + record.id, 'DELETE').catch(() => {})
     await reload()
   }
   catch (reason) { fail(reason) }
@@ -765,7 +772,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet', 'clipboard'].includes(active()?.kind)" type="button" class="footer-action" @click="remove()" aria-label="Delete selected saved item">Delete</button>
-    <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active()" title="Favorite (Command D)">☆ <kbd>⌘ D</kbd></button>
+    <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active()" title="Favorite (Command D)" :aria-label="active()?.favorite ? 'Remove from favorites' : 'Add to favorites'" :aria-pressed="Boolean(active()?.favorite)">☆ <kbd>⌘ D</kbd></button>
     <button type="button" class="footer-action primary" @click="run()" :disabled="!active() || saving()">{{ actionLabel() }} <kbd>↵</kbd></button>
   </footer>
   </div>
@@ -823,7 +830,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <h2>Your tools, through Pantry.</h2>
         <p class="help">Search applications, command line tools, libraries and fonts locally. Installation uses the Pantry CLI you install separately, with your user account and its package permissions.</p>
         <p class="help">Run this once in your terminal, then enter the five minute pairing code below.</p>
-        <div class="setup-command"><code>pantry desktop setup --yes</code><button type="button" class="text-action" @click="clipboard.writeText('pantry desktop setup --yes')">Copy</button></div>
+        <div class="setup-command"><code>pantry desktop setup --yes</code><button type="button" class="text-action" @click="copySetupCommand()">Copy</button></div>
         <form :if="!pantryReady()" @submit.prevent="connectPackages()"><label for="pantry-code">Pantry pairing code</label><input id="pantry-code" x-model="pantryCode" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="8 digit code"><button type="submit" class="save-button" :disabled="packageBusy() || pantryRestoring() || pantryCode().length !== 8">Connect Pantry</button></form>
         <button :if="!pantryReady()" type="button" class="text-action" @click="refreshPackages()" :disabled="packageBusy() || pantryRestoring()">Check saved connection</button>
         <div :if="pantryReady()" class="flex gap-3 items-center"><button type="button" class="secondary-button" @click="refreshPackages()" :disabled="packageBusy() || pantryRestoring()">Refresh connection</button><button type="button" class="text-action" @click="disconnectPackages()" :disabled="pantryRestoring()">Disconnect Pantry</button></div>
