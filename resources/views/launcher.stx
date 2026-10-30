@@ -7,6 +7,8 @@
 </head>
 <body>
 <script client>
+import type { NativeUpdateState } from '@stacksjs/desktop'
+import pkg from '../../package.json'
 import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
 import { createResultPresentation, createResultSlots, resultWindow } from '../functions/result-list'
@@ -54,6 +56,19 @@ const kind = state('quicklink')
 const content = state('')
 const alias = state('')
 const saving = state(false)
+const updateState = state<NativeUpdateState>({ currentVersion: pkg.version, phase: 'idle' })
+const updateBusy = derived(() => ['checking', 'downloading', 'installing'].includes(updateState().phase))
+const updateMessage = derived(() => {
+  const update = updateState()
+  if (update.phase === 'checking') return 'Checking for updates...'
+  if (update.phase === 'available') return 'Launchpad ' + update.version + ' is available.'
+  if (update.phase === 'current') return 'You are up to date.'
+  if (update.phase === 'downloading') return 'Downloading update... ' + Math.round(update.percent || 0) + '%'
+  if (update.phase === 'ready') return 'Launchpad ' + update.version + ' is ready to install.'
+  if (update.phase === 'installing') return 'Verifying and installing update...'
+  if (update.phase === 'installed') return 'Restarting Launchpad...'
+  return update.error || 'Check for the latest version of Launchpad.'
+})
 const settings = state(false)
 const settingsSection = state('general')
 const loginEnabled = state(false)
@@ -264,7 +279,45 @@ async function reload() {
 function focusSearch() { batch(() => { query.set(''); category.set('all'); selected.set(0) }); void nextTick(() => search.current?.focus()) }
 function chooseCategory(value) { batch(() => { query.set(''); category.set(value); selected.set(0) }); void nextTick(() => search.current?.focus()) }
 function fail(reason) { error.set(reason.message || String(reason)) }
-function openSettings() { settings.set(true); error.set(''); if (settingsSection() === 'general') void refreshLogin(); void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus())) }
+function openSettings(checkUpdates = false) {
+  settings.set(true)
+  error.set('')
+  if (settingsSection() === 'general') {
+    void refreshLogin()
+    if (checkUpdates === true) void updateLaunchpad()
+    else void refreshUpdate()
+  }
+  void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus()))
+}
+let updateRequest = 0
+let updateRefreshing = false
+async function refreshUpdate() {
+  if (updateRefreshing) return
+  updateRefreshing = true
+  const attempt = updateRequest
+  try {
+    const response = await fetch('/api/updates', { cache: 'no-store' })
+    if (!response.ok) throw new Error('Could not read update status.')
+    const result = await response.json()
+    if (attempt === updateRequest) updateState.set(result)
+  }
+  catch (reason) { if (attempt === updateRequest) updateState.set({ ...updateState(), phase: 'error', error: reason.message }) }
+  finally { updateRefreshing = false }
+}
+async function updateLaunchpad(action = 'check') {
+  if (updateBusy()) return
+  updateRequest++
+  updateState.set({ ...updateState(), phase: action === 'check' ? 'checking' : action === 'download' ? 'downloading' : 'installing', error: undefined })
+  try {
+    const response = await fetch('/api/updates/' + action, { method: 'POST' })
+    const result = await response.json()
+    updateState.set(result)
+    if (!response.ok && response.status !== 409) throw new Error(result.error || 'Update request failed.')
+  }
+  catch (reason) { updateState.set({ ...updateState(), phase: 'error', error: reason.message }) }
+}
+function checkForUpdates() { settingsSection.set('general'); openSettings(true) }
+pollWhile(refreshUpdate, 500, () => paletteVisible() && settings() && settingsSection() === 'general' && updateBusy())
 function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
 async function refreshLogin(initialize = false) {
   if (loginBusy()) return
@@ -589,7 +642,7 @@ onMount(() => {
 })
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
-  try { cleanupTray = await configureTray(activate, openSettings) } catch (reason) { fail(reason) }
+  try { cleanupTray = await configureTray(activate, openSettings, checkForUpdates) } catch (reason) { fail(reason) }
   const firstSetup = preferencesReady() && !preferences().loginInitialized
   await refreshLogin(true)
   if (firstSetup) openSettings()
@@ -705,6 +758,10 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <label class="toggle-row"><input type="checkbox" :checked="loginEnabled()" :disabled="loginBusy()" @change="changeLogin($event.target.checked)"> Launch at login</label>
         <p class="help" role="status">{{ loginStatus() }}</p>
         <button type="button" class="text-action" :disabled="loginBusy()" @click="refreshLogin()">Refresh login status</button>
+        <h2 class="mt-5">Launchpad {{ updateState().currentVersion }}</h2>
+        <p class="help" role="status" aria-live="polite">{{ updateMessage() }}</p>
+        <button :if="updateState().phase !== 'unavailable' && updateState().phase !== 'ready' && updateState().phase !== 'installed'" type="button" class="text-action" :disabled="updateBusy()" @click="updateLaunchpad(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : 'Check for Updates...' }}</button>
+        <button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="updateLaunchpad('install')">Install and Restart</button>
       </section>
       <section :if="settingsSection() === 'appearance'">
     <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>

@@ -1,5 +1,6 @@
-import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { applicationDataDirectory, createNativeUpdateApi } from '@stacksjs/desktop'
+import pkg from '../../package.json'
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
 import Command from '../Models/Command'
 import LaunchRecord from '../Models/LaunchRecord'
@@ -17,8 +18,9 @@ import { installedApplications } from './applications'
 
 const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage }
 // Craft/stx owns the authenticated loopback session and backend process.
-openNativeDatabase({ path: join(homedir(), 'Library/Application Support/Launchpad/launchpad.sqlite'), models })
+openNativeDatabase({ path: join(applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' }), 'launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
+const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: pkg.version })
 const activityApi = createActivityApi(modelApi)
 const stopActivity = startActivityRuntime(activityApi)
 export const shutdown = async () => {
@@ -27,6 +29,8 @@ export const shutdown = async () => {
 }
 
 export default async function handle(request: Request): Promise<Response | null> {
+  const update = await updates(request)
+  if (update) return update
   const pathname = new URL(request.url).pathname
   const pantry = await pantryApi(request, { onJobs: activityApi.recordPantryJobs })
   if (pantry) return pantry

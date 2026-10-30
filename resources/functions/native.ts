@@ -4,9 +4,12 @@ import { createApplicationIconLoader } from './application-icons'
 
 export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
 
-export async function configureTray(show: () => void, settings: () => void): Promise<() => void> {
+export async function configureTray(show: () => void, settings: () => void, updates: () => void): Promise<() => void> {
   const stopClick = nativeTray.onClick(() => { void nativeWindow.show().then(() => nativeWindow.focus()).then(show) })
-  const stopMenu = nativeTray.onMenuAction(event => { if (event.action === 'launchpad.settings') settings() })
+  const stopMenu = nativeTray.onMenuAction(event => {
+    if (event.action === 'launchpad.settings') settings()
+    if (event.action === 'launchpad.updates') updates()
+  })
   try {
     await nativeWindow.center()
     await nativeTray.setIcon('command')
@@ -15,6 +18,7 @@ export async function configureTray(show: () => void, settings: () => void): Pro
     await nativeTray.setMenu([
       { label: 'Open Launchpad', action: 'show' },
       { label: 'Settings...', action: 'launchpad.settings' },
+      { label: 'Check for Updates...', action: 'launchpad.updates' },
       { type: 'separator' },
       { label: 'Quit Launchpad', action: 'quit' },
     ])
