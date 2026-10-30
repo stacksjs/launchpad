@@ -163,7 +163,7 @@ async function api(path, method = 'GET', body?) {
   const response = await fetch('/api/' + path, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) })
   if (!response.ok) {
     const data = await response.json().catch(() => ({}))
-    throw new Error(data.error || 'Could not save your changes. Try again.')
+    throw Object.assign(new Error(data.error || 'Could not save your changes. Try again.'), { status: response.status })
   }
   return response.status === 204 ? null : (await response.json()).data
 }
@@ -378,7 +378,16 @@ function flushUsage(): Promise<void> {
   if (!usageQueue.length) return Promise.resolve()
   usageTask = (async () => {
     try {
-      while (usageQueue.length) { const event = usageQueue[0]; await api('activity-events', 'POST', event); if (usageQueue[0] === event) usageQueue.shift(); usagePending.set(usageQueue.length) }
+      while (usageQueue.length) {
+        const event = usageQueue[0]
+        try { await api('activity-events', 'POST', event) }
+        catch (reason) {
+          // The backend will never accept a rejected event, so it must not block the ones behind it.
+          if (!(reason.status >= 400 && reason.status < 500 && ![408, 429].includes(reason.status))) throw reason
+        }
+        if (usageQueue[0] === event) usageQueue.shift()
+        usagePending.set(usageQueue.length)
+      }
       usageIssue.set('')
     }
     catch { usageIssue.set('Usage is waiting for the local API and will retry while Launchpad is running.') }
