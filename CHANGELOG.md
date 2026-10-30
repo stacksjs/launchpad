@@ -1,5 +1,25 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.10...v1.0.11)
+
+## ✨ Features
+
+- add native update controls in settings and tray ([e64d048](https://github.com/stacksjs/launchpad/commit/e64d048)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- qualify native releases with isolated app data ([ed83f64](https://github.com/stacksjs/launchpad/commit/ed83f64)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use the published native updater packages ([d00c62e](https://github.com/stacksjs/launchpad/commit/d00c62e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- support verified updates in direct Mac builds ([e29c3a7](https://github.com/stacksjs/launchpad/commit/e29c3a7)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.11 ([a911e18](https://github.com/stacksjs/launchpad/commit/a911e18)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.9...v1.0.10)
 
 ## ⚡ Performance Improvements
