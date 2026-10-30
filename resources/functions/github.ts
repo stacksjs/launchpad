@@ -45,6 +45,19 @@ export function githubWebUrl(value: string, fallback: string): string {
   return url.href
 }
 
+interface NotificationLike { subject: { title: string }, repository: { full_name: string } }
+
+/** Whitespace around the search text must not hide matches. */
+export function filterNotifications<T extends NotificationLike>(items: readonly T[], query: string): T[] {
+  const term = query.trim().toLocaleLowerCase()
+  return items.filter(item => `${item.subject.title} ${item.repository.full_name}`.toLocaleLowerCase().includes(term))
+}
+
+/** GitHub's search syntax is space separated, so empty qualifiers must not leave gaps. */
+export function issueSearchQuery(scope: string, personal: string, query: string): string {
+  return [scope ? `repo:${scope}` : '', 'is:open', personal, query.trim()].filter(Boolean).join(' ')
+}
+
 export async function githubResults(view: GitHubView, query: string, repository: string, login = '', signal?: AbortSignal): Promise<Result[]> {
   const controller = new AbortController()
   const cancel = () => controller.abort(signal?.reason)
@@ -69,11 +82,10 @@ async function loadGitHubResults(view: GitHubView, query: string, repository: st
   }
   if (view === 'notifications') {
     const data = await fetchGitHubNotifications(options(signal))
-    const term = query.toLocaleLowerCase()
-    return data.filter(item => `${item.subject.title} ${item.repository.full_name}`.toLocaleLowerCase().includes(term)).map(item => ({ key: `github:notification:${item.id}`, title: item.subject.title, subtitle: `${item.repository.full_name} · ${item.reason}`, kind: 'github', content: githubWebUrl(item.subject.url || '', item.repository.html_url) }))
+    return filterNotifications(data, query).map(item => ({ key: `github:notification:${item.id}`, title: item.subject.title, subtitle: `${item.repository.full_name} · ${item.reason}`, kind: 'github', content: githubWebUrl(item.subject.url || '', item.repository.html_url) }))
   }
   const kind = view === 'pulls' || view === 'reviews' ? 'pr' : 'issue'
   const personal = view === 'assigned' ? `assignee:${login}` : view === 'reviews' ? `review-requested:${login}` : ''
-  const data = await searchGitHubIssues(`${scope ? `repo:${scope}` : ''} is:open ${personal} ${query}`, kind, options(signal))
+  const data = await searchGitHubIssues(issueSearchQuery(scope, personal, query), kind, options(signal))
   return data.items.map(item => ({ key: `github:issue:${item.id}`, title: item.title, subtitle: `${kind === 'pr' ? 'Pull request' : 'Issue'} #${item.number} · ${item.state} · ${item.user.login}`, kind: 'github', content: githubWebUrl(item.html_url, '') }))
 }

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { githubResults, githubWebUrl } from '../resources/functions/github'
+import { filterNotifications, githubResults, githubWebUrl, issueSearchQuery } from '../resources/functions/github'
 
 test('GitHub notification API links open the matching issue or pull request on GitHub', () => {
   expect(githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/pulls/12', '')).toBe('https://github.com/stacksjs/launchpad/pull/12')
@@ -38,4 +38,17 @@ test('API links only map known resources and never rewrite a repository that is 
   expect(githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/issues/7', '')).toBe('https://github.com/stacksjs/launchpad/issues/7')
   expect(githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/releases/9', 'https://github.com/stacksjs/launchpad')).toBe('https://github.com/stacksjs/launchpad')
   expect(() => githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/releases/9', '')).toThrow('unsupported destination')
+})
+
+test('notification search ignores surrounding whitespace and case', () => {
+  const notification = (title: string, repository: string) => ({ subject: { title }, repository: { full_name: repository } })
+  const items = [notification('Fix search', 'stacksjs/launchpad'), notification('Add docs', 'stacksjs/other')]
+  expect(filterNotifications(items, ' FIX ')).toEqual([items[0]!])
+  expect(filterNotifications(items, 'stacksjs/other')).toEqual([items[1]!])
+  expect(filterNotifications(items, '')).toHaveLength(2)
+})
+
+test('issue searches never contain empty qualifiers or stray spaces', () => {
+  expect(issueSearchQuery('', '', '')).toBe('is:open')
+  expect(issueSearchQuery('stacksjs/launchpad', 'assignee:chris', ' bug ')).toBe('repo:stacksjs/launchpad is:open assignee:chris bug')
 })
