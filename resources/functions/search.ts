@@ -17,6 +17,8 @@ export interface Result {
   package?: import('ts-pantry/catalog').PackageCatalogEntry
   installedVersion?: string
   icon?: string
+  /** What a secondary Copy takes: a file path, an email address or a phone number. */
+  detail?: string
 }
 
 const splitWords = (value: string) => value.split(/[^\p{L}\p{N}+#]+/u).filter(Boolean)

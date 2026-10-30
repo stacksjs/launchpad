@@ -47,7 +47,7 @@ export function parseContacts(output: string): ContactEntry[] {
 export function contactResults(entries: readonly ContactEntry[]): Result[] {
   return entries.map(entry => ({
     key: `contact:${entry.id}`, title: entry.name, subtitle: ['Contact', entry.organization, entry.email, entry.phone].filter(Boolean).join(' · '),
-    kind: 'contact', content: entry.id, searchText: [entry.email, entry.phone, entry.organization].join(' '),
+    kind: 'contact', content: entry.id, detail: contactDetail(entry), searchText: [entry.email, entry.phone, entry.organization].join(' '),
   }))
 }
 
