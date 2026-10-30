@@ -13,17 +13,12 @@ interface ExecutionPorts {
   openPath?: (path: string) => Promise<void>
   runSystem?: (command: SystemCommand) => Promise<void>
   focusWindow?: (token: string) => Promise<void>
+  openContact?: (id: string) => Promise<void>
+  openEvent?: (uid: string) => Promise<void>
   /** Resolve snippet placeholders such as {date} and {clipboard} just before use. */
   expandText?: (text: string) => Promise<string>
   /** Type the copied text into the app that was in front, after the palette is hidden. */
   pasteText?: (text: string) => Promise<void>
-}
-
-/** Only these address books schemes may leave the app for a contact. */
-export function contactUrl(value: string): string {
-  const url = new URL(value)
-  if (url.protocol !== 'addressbook:') throw new Error('Contacts returned an unsupported destination.')
-  return url.href
 }
 
 /** The same dispatch path is used by search and Pantry application details. */
@@ -47,8 +42,14 @@ export function createExecutor(ports: ExecutionPorts) {
         if (!ports.focusWindow) throw new Error('Window switching is not available.')
         await ports.focusWindow(result.content)
       }
-      else if (result.kind === 'contact') await ports.openLink(contactUrl(result.content))
-      else if (result.kind === 'event') await ports.openApplication(result.content)
+      else if (result.kind === 'contact') {
+        if (!ports.openContact) throw new Error('Contacts is not available.')
+        await ports.openContact(result.content)
+      }
+      else if (result.kind === 'event') {
+        if (!ports.openEvent) throw new Error('Calendar is not available.')
+        await ports.openEvent(result.content)
+      }
       else if (result.kind === 'snippet') {
         pasted = ports.expandText ? await ports.expandText(result.content) : result.content
         await ports.copyText(pasted)

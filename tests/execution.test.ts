@@ -74,18 +74,20 @@ test('web, file, system, window, contact, event and emoji results each take thei
     openPath: async path => { effects.push(`path:${path}`) },
     runSystem: async command => { effects.push(`system:${command.id}`) },
     focusWindow: async token => { effects.push(`window:${token}`) },
+    openContact: async id => { effects.push(`contact:${id}`) },
+    openEvent: async uid => { effects.push(`event:${uid}`) },
   })
   const run = (kind: string, content: string, query = '') => execute({ key: kind, title: 'T', subtitle: '', kind, content }, query)
   await run('web', 'https://duckduckgo.com/?q={query}', ' cats & dogs ')
   await run('file', '/Users/me/Notes.txt')
   await run('system', 'toggle-mute')
   await run('window', '123|2')
-  await run('contact', 'addressbook://ABC-123')
-  await run('event', '/System/Applications/Calendar.app')
+  await run('contact', 'ABC-123:ABPerson')
+  await run('event', 'EVT-9')
   await run('emoji', '🚀')
   expect(effects.filter(effect => effect !== 'hidden')).toEqual([
     'link:https://duckduckgo.com/?q=cats%20%26%20dogs', 'path:/Users/me/Notes.txt', 'system:toggle-mute', 'window:123|2',
-    'link:addressbook://ABC-123', 'app:/System/Applications/Calendar.app', 'copy:🚀',
+    'contact:ABC-123:ABPerson', 'event:EVT-9', 'copy:🚀',
   ])
 })
 
@@ -94,7 +96,8 @@ test('forged system, contact and window results are refused before anything runs
   const execute = createExecutor({ openApplication: async () => {}, openLink: async url => { effects.push(url) }, copyText: async () => {}, dismiss: async () => { effects.push('hidden') }, runSystem: async () => { effects.push('ran') } })
   const run = (kind: string, content: string) => execute({ key: kind, title: 'T', subtitle: '', kind, content }, '')
   await expect(run('system', 'rm -rf /')).rejects.toThrow('not available')
-  await expect(run('contact', 'https://evil.example/')).rejects.toThrow('unsupported')
+  await expect(run('contact', 'ABC')).rejects.toThrow('not available')
+  await expect(run('event', 'EVT')).rejects.toThrow('not available')
   await expect(run('window', '1|1')).rejects.toThrow('not available')
   expect(effects).toEqual([])
 })
