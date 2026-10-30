@@ -1,5 +1,5 @@
 export const activityActions = ['session_started', 'session_ended', 'palette_opened', 'palette_dismissed', 'command_executed', 'link_opened', 'command_created', 'clipboard_saved', 'package_installed', 'github_search'] as const
-export const activityKinds = ['launcher', 'application', 'quicklink', 'snippet', 'clipboard', 'calculator', 'github', 'pantry'] as const
+export const activityKinds = ['launcher', 'application', 'quicklink', 'snippet', 'clipboard', 'calculator', 'github', 'pantry', 'file', 'system', 'web', 'window', 'contact', 'event', 'emoji'] as const
 export type ActivityAction = typeof activityActions[number]
 export type ActivityKind = typeof activityKinds[number]
 export const pantryPackageKinds = ['app', 'cli', 'library', 'font'] as const
