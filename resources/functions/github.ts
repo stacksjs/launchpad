@@ -30,11 +30,16 @@ export async function disconnectGitHub() {
   credential = ''
 }
 
+const apiResource = /^\/repos\/([^/]+\/[^/]+)\/(issues|pulls|commits)\/([^/]+)$/
+
 export function githubWebUrl(value: string, fallback: string): string {
   const url = new URL(value || fallback)
   if (url.hostname === 'api.github.com' && url.pathname.startsWith('/repos/')) {
-    url.hostname = 'github.com'
-    url.pathname = url.pathname.replace('/repos/', '/').replace('/pulls/', '/pull/')
+    const match = apiResource.exec(url.pathname)
+    // Releases, check suites and similar API resources have no matching web path.
+    const web = match ? `/${match[1]}/${match[2] === 'pulls' ? 'pull' : match[2]}/${match[3]}` : null
+    if (!web && !fallback) throw new Error('GitHub returned an unsupported destination.')
+    return githubWebUrl(web ? `https://github.com${web}` : fallback, '')
   }
   if (url.protocol !== 'https:' || url.hostname !== 'github.com') throw new Error('GitHub returned an unsupported destination.')
   return url.href
@@ -55,6 +60,7 @@ export async function githubResults(view: GitHubView, query: string, repository:
 
 async function loadGitHubResults(view: GitHubView, query: string, repository: string, login: string, signal: AbortSignal): Promise<Result[]> {
   if (['assigned', 'reviews', 'notifications'].includes(view) && !credential) throw new Error('Connect GitHub in Settings to see your personal work and notifications.')
+  if (['assigned', 'reviews'].includes(view) && !login) throw new Error('GitHub is still loading your account. Try again in a moment.')
   const scope = repository.trim()
   if (scope && !/^[\w.-]+\/[\w.-]+$/.test(scope)) throw new Error('Use owner/repository for the repository scope, or leave it empty.')
   if (view === 'repositories') {

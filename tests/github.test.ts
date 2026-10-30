@@ -32,3 +32,10 @@ test('superseded GitHub searches cancel the underlying HTTP request', async () =
   }
   finally { globalThis.fetch = fetcher }
 })
+
+test('API links only map known resources and never rewrite a repository that is named pulls', () => {
+  expect(githubWebUrl('https://api.github.com/repos/stacksjs/pulls/pulls/3', '')).toBe('https://github.com/stacksjs/pulls/pull/3')
+  expect(githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/issues/7', '')).toBe('https://github.com/stacksjs/launchpad/issues/7')
+  expect(githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/releases/9', 'https://github.com/stacksjs/launchpad')).toBe('https://github.com/stacksjs/launchpad')
+  expect(() => githubWebUrl('https://api.github.com/repos/stacksjs/launchpad/releases/9', '')).toThrow('unsupported destination')
+})
