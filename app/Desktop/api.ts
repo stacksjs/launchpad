@@ -17,6 +17,7 @@ import { clearClipboardHistory, pruneClipboardHistory } from './history'
 import { createActivityApi, startActivityRuntime } from './activity'
 import { installedApplications } from './applications'
 import { createRatesApi } from './rates'
+import { createFilesApi } from './files'
 
 const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage, ExchangeRate }
 // Craft/stx owns the authenticated loopback session and backend process.
@@ -26,6 +27,7 @@ const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', curren
 const activityApi = createActivityApi(modelApi)
 const stopActivity = startActivityRuntime(activityApi)
 const ratesApi = createRatesApi()
+const filesApi = createFilesApi()
 export const shutdown = async () => {
   installedApplications.close()
   await stopActivity()
@@ -46,6 +48,8 @@ export default async function handle(request: Request): Promise<Response | null>
   if (pathname === '/api/clipboard-entries' && request.method === 'GET') await pruneClipboardHistory()
   const rates = await ratesApi(request)
   if (rates) return rates
+  const files = await filesApi(request)
+  if (files) return files
   const activity = await activityApi(request)
   if (activity) return activity
   const response = await modelApi(request)
