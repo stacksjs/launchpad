@@ -621,8 +621,12 @@ async function saveCommand() {
       closeEditor()
       return
     }
-    if (kind() === 'quicklink') quicklinkUrl(content(), '')
-    await api('commands' + (editId() === null ? '' : '/' + editId()), editId() === null ? 'POST' : 'PATCH', { title: title().trim(), kind: kind(), content: content(), alias: alias().trim() })
+    const name = title().trim()
+    if (!name) throw new Error('Give the command a name.')
+    const text = kind() === 'quicklink' ? content().trim() : content()
+    if (!text.trim()) throw new Error(kind() === 'quicklink' ? 'Enter the quicklink address.' : 'Enter the text to copy.')
+    if (kind() === 'quicklink') quicklinkUrl(text, '')
+    await api('commands' + (editId() === null ? '' : '/' + editId()), editId() === null ? 'POST' : 'PATCH', { title: name, kind: kind(), content: text, alias: alias().trim() })
     if (editId() === null) track('command_created', { kind: kind() })
     editor.set(false)
     await reload()
