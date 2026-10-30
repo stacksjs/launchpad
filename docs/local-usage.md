@@ -15,8 +15,8 @@ SQLite schema from these definitions. Existing event history is retained.
 | App running | Awake time while the bundled backend runs, including with the palette hidden. |
 | Palette open | The part of running time when the palette is visible, including Settings and package details. |
 | Apps opened | Successful application commands, including Open application in Pantry details. |
-| Links opened | Successful quicklinks, GitHub result commands, and website links in the interface. |
-| Commands | Successful app, quicklink, GitHub, snippet, clipboard and calculator commands. |
+| Links opened | Successful quicklinks, GitHub result commands, web searches, and website links in the interface. |
+| Commands | Successful app, quicklink, GitHub, snippet, clipboard, calculator and conversion commands, and system commands, files, web searches, windows, contacts, events and emoji. |
 | Pantry installs | Successful installation jobs requested through Launchpad, grouped into apps, CLI tools, libraries and fonts. Failed jobs have a separate count. |
 | Pantry install time | Time between Pantry's reported start and finish for successful jobs. Jobs without start metadata do not add elapsed time. |
 | Active days | Local calendar days with a palette opening, successful command, successful website link or successful Pantry completion. Background time alone does not create an active day. |
@@ -125,3 +125,13 @@ bun run test:usage-native
 For framework development, `CRAFT_BIN` can select a locally built Craft webview
 runtime. The fixture uses its own temporary database and does not modify your
 Launchpad history.
+
+## What the newer tools record
+
+Files, windows, contacts, events, web searches and emoji count as commands by their
+category only (`file`, `window`, `contact`, `event`, `web`, `emoji`, `system`). Nothing
+about the item is recorded: no file name or path, window title, person, event, search
+text or address. They are also never added to favorites or launch counts, so the local
+ranking database never holds a path or a contact either. System commands and emoji
+are ordinary ranked items. Exchange rates, file results and contact results are not
+usage records and are not kept beyond the exchange rate table.

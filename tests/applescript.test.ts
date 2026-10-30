@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { appleScriptString, cleanField, parseRecords } from '../resources/functions/applescript'
+import { appleScriptString, cleanField, describeScriptFailure, parseRecords } from '../resources/functions/applescript'
 import { contactDetail, contactOpenScript, contactResults, contactSearchScript, maxContacts, parseContacts } from '../resources/functions/contacts'
 import { describeEventStart, eventOpenScript, eventResults, parseEvents, parseLocalIso, upcomingEventsScript } from '../resources/functions/calendar'
 import { parseWindows, windowFocusScript, windowListScript, windowResults } from '../resources/functions/windows'
@@ -74,6 +74,20 @@ test('events parse local ISO times, sort by start and describe their day', () =>
   expect(eventResults(events, now)[0]).toMatchObject({ kind: 'event', title: 'Standup', subtitle: 'Today 09:00 · Work', key: 'event:A-1', content: 'A-1' })
   expect(eventOpenScript('A-1')).toContain('uid is "A-1"')
   for (const bad of ['', 'a"b', 'x y', 'a'.repeat(300)]) expect(eventOpenScript(bad)).toBeNull()
+})
+
+test('a failed script is explained by its error number, and older hosts keep the permission hint', () => {
+  const failure = (code?: number, message?: string) => describeScriptFailure('Contacts', { ok: false, error: code === undefined && message === undefined ? undefined : { code, message } })
+  expect(failure()).toMatchObject({ permission: 'automation', message: expect.stringContaining('control Contacts') })
+  expect(failure(-1743)).toMatchObject({ permission: 'automation' })
+  expect(failure(-1744)).toMatchObject({ permission: 'automation' })
+  expect(failure(-25211)).toMatchObject({ permission: 'accessibility', message: expect.stringContaining('Accessibility') })
+  expect(failure(-1719)).toMatchObject({ permission: 'accessibility' })
+  expect(failure(-128)).toEqual({ message: 'The request was cancelled.' })
+  expect(failure(-600)).toEqual({ message: 'Contacts is not running and could not be opened.' })
+  expect(failure(-1728, "Can't get window 3.")).toEqual({ message: "Contacts could not do that: Can't get window 3." })
+  expect(failure(-1728)).toEqual({ message: 'Contacts could not do that (error -1728).' })
+  expect(failure(undefined, 'only a message')).toMatchObject({ permission: 'automation' })
 })
 
 // Compiling catches syntax errors without running anything or reading any data. It does not validate app terms:

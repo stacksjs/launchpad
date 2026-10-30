@@ -50,7 +50,15 @@ If another launcher owns Command + Space, quit it or reassign its shortcut befor
 | **Applications** | Find and open installed apps with localized macOS names and real icons. New installations are discovered when the palette opens and while it stays visible. |
 | **Search** | Prioritize names and genuine aliases. Favorites and recent use refine relevant results; compact abbreviations such as `vsc` and `sst` still work. |
 | **Quicklinks** | Save websites or search templates such as `https://example.com/?q={query}`, then use a named alias with your search argument. |
-| **Snippets** | Keep reusable text close and copy it with Return. |
+| **Snippets** | Keep reusable text close and copy it with Return. Fill in `{date}`, `{time}`, `{datetime}`, `{weekday}`, `{year}`, `{uuid}` or `{clipboard}` as you use one, and optionally paste it straight into the app you were in. |
+| **Files** | Find files and folders by name through Spotlight's index, in your home folder. Return opens, Command Return reveals in Finder, Shift Command C copies the path. |
+| **System commands** | Sleep, Lock Screen, Restart, Shut Down, Log Out, Empty Trash, Eject, dark mode, mute and every System Settings pane, found by familiar names such as `wifi` or `reboot`. Anything that ends work or deletes data asks first. |
+| **Conversions** | `5 km in miles`, `72 f to c`, `1.5 gb in mb`, `2 hours in minutes`, and currencies such as `100 usd to eur` once you opt in to exchange rates. |
+| **Web search** | Every search ends with a row that searches the web with DuckDuckGo, Google, Bing, Brave Search or Kagi. Choose or turn it off in Settings. |
+| **Emoji** | Type `:rocket` or open the Emoji tab, then press Return to copy. |
+| **Windows** | List and switch between open windows. Needs the Accessibility permission. |
+| **People and Calendar** | Look up contacts and see the next two weeks of events from the Contacts and Calendar apps. They ask for Automation permission, and nothing they find is saved. |
+| **Extensions** | Install packs of quicklinks and snippets from a JSON file in Settings. Extensions are data only: they cannot run code, use the network or read files. |
 | **Calculator** | Calculate locally with parentheses, powers, percentages, `×`, `÷` and thousands separators such as `1,250`, then copy the answer. |
 | **Clipboard History** | Search and preview saved text, with opt-in recording, retention controls and individual deletion. |
 | **GitHub** | Search repositories, issues and pull requests, or check assigned issues, review requests and notifications. |
@@ -95,6 +103,9 @@ Open **Settings → Pantry** and enter the single-use pairing code. Launchpad st
 | <kbd>⌘</kbd> <kbd>D</kbd> | Toggle a favorite |
 | <kbd>⌘</kbd> <kbd>E</kbd> | Edit the selected saved command |
 | <kbd>⌘</kbd> <kbd>G</kbd> | Open GitHub search |
+| <kbd>⌘</kbd> <kbd>]</kbd> / <kbd>⌘</kbd> <kbd>[</kbd> | Next or previous tab |
+| <kbd>⌘</kbd> <kbd>Return</kbd> | Reveal the selected file in Finder |
+| <kbd>⇧</kbd> <kbd>⌘</kbd> <kbd>C</kbd> | Copy a file's path, or a contact's email or phone |
 | <kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>V</kbd> | Open Clipboard History |
 | <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings |
 | <kbd>Escape</kbd> | Dismiss the palette |
@@ -107,6 +118,8 @@ Launchpad works without a Stacks account or hosted API. Its local SQLite databas
 
 - **Clipboard recording is opt-in.** Keep up to 200 text entries with 1, 7 or 30 day retention. Protected pasteboard types are skipped, but unmarked sensitive text can still be captured. Pause recording before copying private material.
 - **Usage stays local.** Inspect, pause or clear it in Settings. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Year-review image export is planned; the current app collects and summarizes the local records.
+- **Files, windows, contacts and events are looked up, not stored.** File names come from Spotlight and are never saved, ranked by use or counted. Windows, contacts and events come from the apps that own them, stay in memory while the tab is open, and never enter usage records. None of it is sent anywhere.
+- **Exchange rates are opt-in.** When you turn them on, Launchpad downloads the European Central Bank's published rates about once a day from `api.frankfurter.dev`. The request carries no search text.
 - **Credentials use Keychain.** GitHub and Pantry connection tokens are separate from the local database.
 - **Connected services use the network.** GitHub receives GitHub searches. Catalog refreshes and logos come from Pantry's public sources; installations contact the registry and upstream providers through Pantry.
 - **No cloud synchronization is enabled.** Local clipboard history and usage history have separate clear controls.

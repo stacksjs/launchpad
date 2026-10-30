@@ -18,6 +18,24 @@ History keeps at most 200 entries and removes entries older than the selected 1,
 
 Local activity records process sessions, palette opens, time the app runs in the background, time the palette is open, successful app and link opens, action types, command categories, application names, timestamps, timezone offsets, app version and command latency. Pantry install receipts additionally retain package identifiers, package types, success or failure, request/start/finish times and job IDs. Recording preference intervals let Launchpad exclude jobs that cross a paused period and prevent cleared jobs from reappearing. Install output, error messages and connection tokens are excluded from usage records. Running and visible time are checkpointed in cumulative daily records, with long sleep or suspension gaps excluded. These records support counts, active days, streaks and a future year review. They exclude search queries, URLs, file paths, clipboard text and snippet contents. They stay on this Mac and are separate from clipboard history. Turn off Record local usage to stop new records, or choose Clear usage history to remove retained events, time totals, install receipts and recording intervals. Command ranking also maintains local favorites and execution counts.
 
+## Files, windows, contacts and calendar
+
+File search asks macOS Spotlight for file names in your home folder and shows the matches. The names are never saved, sent anywhere, ranked by use or recorded in activity. You can turn file search off in Settings.
+
+The Windows, People and Calendar tabs ask the apps that own that information through macOS scripting. Windows uses the Accessibility permission to list and raise windows. Contacts and Calendar use the Automation permission, which macOS asks you to approve the first time. Window titles, contact details and event titles are held in memory while you use the tab and are not written to the local database, sent anywhere or included in usage records. A contact's email address or phone number is copied only when you choose Copy. You can revoke these permissions at any time in System Settings under Privacy & Security.
+
+Pasting a snippet into another app is off until you enable it. It copies the snippet and sends the Command V keystroke to the app that was in front, which needs the Accessibility permission. Snippet placeholders read the clipboard only when a snippet contains `{clipboard}`.
+
+## Exchange rates and web searches
+
+Currency conversion is off until you enable exchange rates in Settings. Once on, Launchpad downloads the European Central Bank's published reference rates about once a day from api.frankfurter.dev. The request contains no search text and no identifier beyond what any web request reveals, such as your IP address, which that service receives. The rates are stored locally. Unit and temperature conversions never use the network.
+
+The Search the web row opens your browser with your search text in the address of the engine you choose in Settings. That site and your browser have their own privacy practices. Nothing is sent until you choose the row.
+
+## Extensions
+
+An extension is a JSON file you paste into Settings. It can add quicklinks and snippets and nothing else: it cannot run code, make network requests or read files, and its manifest is checked strictly before it is saved. Installed manifests are stored in the local database and can be disabled or removed at any time.
+
 ## GitHub and external websites
 
 Using the GitHub category sends GitHub search text, repository scope and selected filters directly to GitHub's API. Connecting an account also sends its token for authentication. The token is stored in macOS Keychain, not the local database. Launchpad displays account and repository information returned by GitHub. Disconnect in Settings to remove the saved token. GitHub processes requests under its [privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement); its service may retain request and account information.

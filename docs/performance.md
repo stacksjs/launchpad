@@ -2,8 +2,9 @@
 
 Launchpad discovers applications in `/Applications`, `/System/Applications` and
 `~/Applications`, up to four folder levels below those roots. It does not walk
-inside app bundles, follow directory symlinks or index document contents. Search
-does not use Spotlight's index.
+inside app bundles, follow directory symlinks or index document contents.
+Application search does not use Spotlight's index. File search asks it (see
+[File search](#file-search)); Launchpad builds no file index of its own.
 
 The palette checks the application list on activation, focus and every five
 seconds while visible. The backend reuses its last snapshot until a filesystem
@@ -218,9 +219,10 @@ asynchronous. These browser observations are not timing guarantees on every Mac.
 
 Suggested wording:
 
-> Launchpad keeps a small app and command index rather than indexing your files.
-> It caches discovery, reuses prepared search data and pauses discovery polling
-> when hidden. That keeps its indexing work limited. We haven't run a controlled
+> Launchpad keeps a small app and command index and builds no index of your files:
+> file search asks the Spotlight index macOS already maintains. It caches discovery,
+> reuses prepared search data and pauses discovery polling when hidden. That keeps
+> its own indexing work limited. We haven't run a controlled
 > comparison with Spotlight, so I wouldn't claim a specific CPU advantage yet.
 
 [Apple describes Spotlight](https://support.apple.com/en-us/102321) as system-wide
@@ -230,3 +232,65 @@ CPU usage. A comparison needs the same Mac, idle and active-search workloads,
 fresh and steady-state indexing, all related processes, and the same optional
 clipboard, integration and usage settings. Launchpad does not turn off macOS's
 own Spotlight indexing.
+
+## File search
+
+File names are searched through `mdfind` and Spotlight's existing index, restricted
+to your home folder. The measurements below come from a developer Mac with a very
+large index (millions of files under `~/Code`); a typical Mac answers faster.
+
+What costs time is Spotlight evaluating the query: about 300 ms for a selective
+name and 0.7 to 1.5 s for very common words such as `report` or `readme`. Starting
+`mdfind` costs about 2 ms and examining 90 results about 13 ms cold, so the work is
+arranged to ask Spotlight as rarely as possible:
+
+- **One query per search.** An earlier design asked for names that start with the
+  first word and names that contain every word, in parallel. Measured, the two
+  contend for the same index and finish later than either alone, so only the
+  contains query runs. Case and accent folding (`cd`) costs nothing noticeable.
+- **A line limit of 1000.** `mdfind` prints nothing until the query is evaluated, so
+  stopping early does not save time, and most of the first 300 lines are caches,
+  dependencies and other files Launchpad hides. A 1000 line limit costs the same
+  time and returns two to five times more usable candidates.
+- **Answers are remembered.** A finished answer is kept for 30 seconds. Typing more
+  letters (`budg` to `budget`), adding a word or backspacing derives the new answer
+  by filtering the remembered file names: no process starts. A repeated search is
+  answered in about 5 ms, and a narrowing keystroke in about 4 ms. Only an answer
+  that finished completely is used for a longer search; one that hit the line limit
+  is repeated but never trusted to be complete, and a timed out or cancelled one is
+  never kept.
+- **Names are scored first.** Quality of the name match needs no disk access, so
+  every candidate is scored, and only the best ninety are examined for date and type.
+- **Stale answers are narrowed on screen.** While the next search runs, the results
+  already shown are filtered to the letters now typed, so what you see is always
+  correct for what you typed.
+- **A short query waits.** Inline file results in All start at three letters, the Files
+  tab at two. Shorter queries match too much to answer quickly.
+- **Nothing runs twice or too long.** Identical searches in flight share one query,
+  a new keystroke cancels the previous `mdfind` and kills it, and a query that takes
+  more than 2.5 seconds is stopped. The preference that turns file search off is
+  read at most once a second.
+
+`bun scripts/benchmark-files.ts word ...` types each word one letter at a time
+against your own index and reports every step, marking those answered from memory.
+
+## Windows, contacts and calendar
+
+These ask the apps that own the data through AppleScript, which cannot be cancelled.
+Each source therefore runs one script at a time: a newer request replaces any request
+still waiting and the answer to an older one is dropped. Windows refresh every five
+seconds and Calendar every minute, only while their tab is visible and never while
+the previous refresh is still running. Calendar results are reused for 20 seconds,
+contact searches for 30 seconds, and contact searches wait 300 ms after the last key.
+Craft's AppleScript bridge runs scripts in the host process and `NSAppleScript` is not
+thread safe, so a very slow address book may briefly pause the palette while a search
+runs. Moving that work off the host's thread would take a different mechanism in Craft.
+
+## Everything else on each keystroke
+
+`bun scripts/benchmark-compose.ts` measures the full result pipeline: ranking,
+calculator and conversions, system commands, emoji and the web row. Preparing the
+searchable sets takes about 2 ms each, and a keystroke costs under 0.03 ms at the 95th
+percentile (about 0.6 ms for a cold ranking, as `benchmark-search.ts` reports). Emoji
+are indexed the first time they are searched. Conversion text is rejected by two cheap
+tests before any pattern runs, and the system command list is built once.

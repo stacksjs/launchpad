@@ -2,6 +2,7 @@ import { app, appleScript, clipboard, globalShortcuts, nativeWindow, nativeTray,
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { clipboardDecision } from './clipboard'
+import { describeScriptFailure } from './applescript'
 import { contactOpenScript } from './contacts'
 import { eventOpenScript } from './calendar'
 import { createSources } from './sources'
@@ -74,7 +75,7 @@ const runScript = (source: string) => appleScript.execute(source)
 async function script(source: string | null, refusal: string) {
   if (!source) throw new Error(refusal)
   const outcome = await runScript(source)
-  if (!outcome.ok) throw new Error(`${refusal} Allow Launchpad under System Settings > Privacy & Security > Automation, then try again.`)
+  if (!outcome.ok) throw new Error(`${refusal} ${describeScriptFailure('that app', outcome).message}`)
 }
 
 /** Type Command V into the app that regains focus when the palette hides. Needs the Accessibility permission. */

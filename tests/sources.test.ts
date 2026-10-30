@@ -136,3 +136,13 @@ test('repeated contact searches are answered from memory until they expire', asy
   await sources.contacts('ada')
   expect(fake.scripts).toHaveLength(3)
 })
+
+test('the failure reported by newer hosts decides what the person is told', async () => {
+  const sources = (code: number, message?: string) => createSources(ports({ appleScript: async () => ({ ok: false, error: { code, message } }) }).value)
+  expect((await sources(-1743).contacts('ada').catch(reason => reason)).permission).toBe('automation')
+  const accessibility = await sources(-25211).windows().catch(reason => reason)
+  expect(accessibility.permission).toBe('accessibility')
+  const broken = await sources(-1728, 'Bad thing').events().catch(reason => reason)
+  expect(broken.message).toBe('Calendar could not do that: Bad thing')
+  expect(broken.permission).toBeUndefined()
+})

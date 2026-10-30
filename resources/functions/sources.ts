@@ -1,3 +1,5 @@
+import { describeScriptFailure } from './applescript'
+import type { ScriptOutcome } from './applescript'
 import { contactResults, contactSearchScript, parseContacts } from './contacts'
 import { eventResults, parseEvents, upcomingEventsScript } from './calendar'
 import { parseWindows, windowListScript, windowResults } from './windows'
@@ -9,13 +11,16 @@ export class SourceError extends Error {
 }
 
 export interface SourcePorts {
-  appleScript: (source: string) => Promise<{ ok: boolean, result?: string }>
+  appleScript: (source: string) => Promise<ScriptOutcome>
   /** Accessibility permission as reported by macOS. */
   accessibility: () => Promise<string>
   requestAccessibility?: () => Promise<unknown>
 }
 
-const automation = (app: string) => new SourceError(`Allow Launchpad to control ${app} under System Settings > Privacy & Security > Automation, then search again.`, 'automation')
+function failure(app: string, outcome: ScriptOutcome): SourceError {
+  const { message, permission } = describeScriptFailure(app, outcome)
+  return new SourceError(message, permission)
+}
 
 /** Live views of other apps. Nothing here is stored: each call asks the app and returns fresh rows. */
 export function createSources(ports: SourcePorts, options: { now?: () => number, cacheMs?: number } = {}) {
@@ -29,7 +34,7 @@ export function createSources(ports: SourcePorts, options: { now?: () => number,
         throw new SourceError('Allow Launchpad under System Settings > Privacy & Security > Accessibility to list and switch windows.', 'accessibility')
       }
       const outcome = await ports.appleScript(windowListScript)
-      if (!outcome.ok) throw automation('System Events')
+      if (!outcome.ok) throw failure('System Events', outcome)
       return windowResults(parseWindows(outcome.result ?? ''))
     },
     async contacts(query: string): Promise<Result[]> {
@@ -40,7 +45,7 @@ export function createSources(ports: SourcePorts, options: { now?: () => number,
       const previous = found.get(key)
       if (previous && now() - previous.at < cacheMs) return previous.results
       const outcome = await ports.appleScript(contactSearchScript(text))
-      if (!outcome.ok) throw automation('Contacts')
+      if (!outcome.ok) throw failure('Contacts', outcome)
       const results = contactResults(parseContacts(outcome.result ?? ''))
       found.delete(key)
       found.set(key, { at: now(), results })
@@ -49,7 +54,7 @@ export function createSources(ports: SourcePorts, options: { now?: () => number,
     },
     async events(now = new Date()): Promise<Result[]> {
       const outcome = await ports.appleScript(upcomingEventsScript)
-      if (!outcome.ok) throw automation('Calendar')
+      if (!outcome.ok) throw failure('Calendar', outcome)
       return eventResults(parseEvents(outcome.result ?? ''), now)
     },
   }
