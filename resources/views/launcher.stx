@@ -13,7 +13,7 @@ import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
 import { parseApplicationAliases } from '../functions/search-text'
 import { historyPreference as readHistoryPreference, parsePreference } from '../functions/preferences'
-import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow } from '../functions/result-list'
+import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
@@ -670,9 +670,10 @@ function key(event) {
   if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
   if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
   if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
-  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+  const move = selectionTarget(event, selected(), results().length)
+  if (move !== null) {
     event.preventDefault()
-    const index = Math.max(0, Math.min(results().length - 1, selected() + (event.key === 'ArrowDown' ? 1 : -1)))
+    const index = move
     const top = Math.max(0, index * resultRowHeight - 2 * resultRowHeight)
     batch(() => { selected.set(index); resultScrollTop.set(top) })
     void nextTick(() => { if (selected() === index) list.current?.scrollTo({ top }) })

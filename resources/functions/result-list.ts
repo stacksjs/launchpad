@@ -33,3 +33,11 @@ export function createResultSlots(minimum = 13) {
     return slots.slice()
   }
 }
+
+/** The row a navigation key selects, or null when the key is not navigation. Control N and P match macOS text fields. */
+export function selectionTarget(event: { key: string, ctrlKey?: boolean, metaKey?: boolean, altKey?: boolean }, index: number, count: number, page = 8): number | null {
+  const control = event.ctrlKey && !event.metaKey && !event.altKey ? event.key.toLowerCase() : ''
+  const step = event.key === 'ArrowDown' || control === 'n' ? 1 : event.key === 'ArrowUp' || control === 'p' ? -1 : event.key === 'PageDown' ? page : event.key === 'PageUp' ? -page : 0
+  if (!step) return null
+  return Math.max(0, Math.min(count - 1, index + step))
+}

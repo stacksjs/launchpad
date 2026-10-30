@@ -87,7 +87,8 @@ Open **Settings → Pantry** and enter the single-use pairing code. Launchpad st
 | Shortcut | Action |
 | --- | --- |
 | <kbd>⌘</kbd> <kbd>Space</kbd> | Open Launchpad and focus search |
-| <kbd>↑</kbd> / <kbd>↓</kbd> | Move through results |
+| <kbd>↑</kbd> / <kbd>↓</kbd>, <kbd>Ctrl</kbd> <kbd>P</kbd> / <kbd>Ctrl</kbd> <kbd>N</kbd> | Move through results |
+| <kbd>Page Up</kbd> / <kbd>Page Down</kbd> | Jump eight results |
 | <kbd>Return</kbd> | Open or copy the selected result |
 | <kbd>⌘</kbd> <kbd>Delete</kbd> | Clear the search |
 | <kbd>⌘</kbd> <kbd>N</kbd> | Create a quicklink or snippet |

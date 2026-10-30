@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { createResultPresentation, createResultSlots, resultWindow } from '../resources/functions/result-list'
+import { createResultPresentation, createResultSlots, resultWindow, selectionTarget } from '../resources/functions/result-list'
 
 test('result windows bound DOM rows and retain the scroll height and absolute positions', () => {
   expect(resultWindow(100, 0, 260)).toEqual({ start: 0, end: 7, top: 0, bottom: 4836 })
@@ -36,4 +36,17 @@ test('unused slots retain their last value across narrow and empty searches with
   expect(slots(apps, 0, 9)).toEqual(broad)
   for (let index = 0; index < 90; index++) expect(slots(apps, index, index + 9)).toHaveLength(13)
   expect(slots(apps, 20, 29).slice(0, 9)).toEqual(apps.slice(20, 29))
+})
+
+test('navigation keys move and clamp the selection', () => {
+  const move = (key: string, index: number, extra: object = {}) => selectionTarget({ key, ...extra }, index, 20)
+  expect(move('ArrowDown', 0)).toBe(1)
+  expect(move('ArrowUp', 0)).toBe(0)
+  expect(move('n', 3, { ctrlKey: true })).toBe(4)
+  expect(move('P', 3, { ctrlKey: true })).toBe(2)
+  expect(move('PageDown', 15)).toBe(19)
+  expect(move('PageUp', 3)).toBe(0)
+  expect(move('n', 3)).toBeNull()
+  expect(move('n', 3, { ctrlKey: true, metaKey: true })).toBeNull()
+  expect(selectionTarget({ key: 'ArrowDown' }, 0, 0)).toBe(0)
 })
