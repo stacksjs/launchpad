@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { quietKinds, systemCommand, systemCommandResults, systemCommands } from '../resources/functions/system-commands'
+import { systemCommand, systemCommandResults, systemCommands } from '../resources/functions/system-commands'
 import { createResultSearch } from '../resources/functions/search'
 
 test('every system command is unique, fixed, and described', () => {
@@ -36,5 +36,4 @@ test('familiar phrases find the right command', () => {
   expect(first('shutdown')).toBe('shut-down')
   expect(first('permissions')).toBe('settings-privacy')
   expect(systemCommandResults().every(item => item.kind === 'system' && item.key === `system:${item.content}`)).toBe(true)
-  expect(quietKinds).toContain('system')
 })

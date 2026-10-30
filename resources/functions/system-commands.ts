@@ -85,9 +85,6 @@ export function systemCommandResults(): Result[] {
   return systemCommands.map(command => ({ key: `system:${command.id}`, title: command.title, subtitle: command.subtitle, kind: 'system', content: command.id, searchAliases: command.aliases }))
 }
 
-/** These help once you search for them, but a dozen power commands do not belong in the idle list. */
-export const quietKinds: readonly string[] = ['system', 'emoji', 'extension']
-
 export interface SystemPorts {
   appleScript: (source: string) => Promise<{ ok: boolean }>
   spawn: (command: string, args: readonly string[]) => Promise<void>

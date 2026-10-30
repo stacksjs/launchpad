@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { createResultPresentation, createResultSlots, resultWindow, selectionTarget } from '../resources/functions/result-list'
+import { createResultPresentation, createResultSlots, idleVisible, resultWindow, selectionTarget } from '../resources/functions/result-list'
 
 test('result windows bound DOM rows and retain the scroll height and absolute positions', () => {
   expect(resultWindow(100, 0, 260)).toEqual({ start: 0, end: 7, top: 0, bottom: 4836 })
@@ -49,4 +49,13 @@ test('navigation keys move and clamp the selection', () => {
   expect(move('n', 3)).toBeNull()
   expect(move('n', 3, { ctrlKey: true, metaKey: true })).toBeNull()
   expect(selectionTarget({ key: 'ArrowDown' }, 0, 0)).toBe(0)
+})
+
+test('quiet result kinds stay out of the idle list but remain searchable', () => {
+  const item = (kind: string, key: string) => ({ kind, key })
+  expect(idleVisible(item('application', '/Applications/Mail.app'))).toBe(true)
+  expect(idleVisible(item('quicklink', 'command:1'))).toBe(true)
+  expect(idleVisible(item('system', 'system:sleep'))).toBe(false)
+  expect(idleVisible(item('emoji', 'emoji:🚀'))).toBe(false)
+  expect(idleVisible(item('snippet', 'extension:Pack:a'))).toBe(false)
 })
