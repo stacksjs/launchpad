@@ -38,3 +38,17 @@ test('history enforces the 200 item cap even when all copies are recent', async 
   }
   finally { database.close() }
 })
+
+test('history prunes entries beyond the newest thousand', async () => {
+  const database = openNativeDatabase({ path: ':memory:', models: { ClipboardEntry, AppPreference, LaunchRecord } })
+  try {
+    const now = Date.now()
+    for (let index = 0; index < 1005; index++) await ClipboardEntry.create({ content: `Test copy ${index}`, capturedAt: now })
+    await pruneClipboardHistory(7, now)
+    const rows = await ClipboardEntry.limit(1300).get()
+    expect(rows).toHaveLength(200)
+    expect(await ClipboardEntry.find(1)).toBeUndefined()
+    expect(await ClipboardEntry.find(1005)).not.toBeUndefined()
+  }
+  finally { database.close() }
+})

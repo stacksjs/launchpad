@@ -12,14 +12,22 @@ export async function pruneClipboardHistory(days?: number, now = Date.now()) {
     }
     catch { days = 7 }
   }
-  const rows = await ClipboardEntry.orderBy('id', 'desc').limit(1000).get()
+  const page = 1000
+  let rows = await ClipboardEntry.orderBy('id', 'desc').limit(page).get()
   for (const [index, row] of rows.entries()) {
     const captured = Number(row.capturedAt ?? row.captured_at ?? 0)
-    if (index >= 200 || (captured > 0 && captured < now - days! * 86400000)) {
-      await ClipboardEntry.destroy(row.id)
-      await LaunchRecord.where('key', `clipboard:${row.id}`).delete()
-    }
+    if (index >= 200 || (captured > 0 && captured < now - days! * 86400000)) await remove(row.id)
   }
+  // Anything older than the newest page is past the 200 entry cap, however it got there.
+  while (rows.length === page) {
+    rows = await ClipboardEntry.where('id', '<', rows.at(-1)!.id).orderBy('id', 'desc').limit(page).get()
+    for (const row of rows) await remove(row.id)
+  }
+}
+
+async function remove(id: number) {
+  await ClipboardEntry.destroy(id)
+  await LaunchRecord.where('key', `clipboard:${id}`).delete()
 }
 
 export async function clearClipboardHistory() {
