@@ -66,3 +66,8 @@ test('literal Pantry descriptions survive when the package name also has a fuzzy
   const results = rankResults(pantryResults(candidates, [], [], 'all', true), 'json', 'pantry')
   expect(results.some(item => item.title === 'jansson')).toBe(true)
 })
+
+test('oversized Pantry requests are refused from their declared length', async () => {
+  const response = await pantryApi(new Request('http://localhost/api/pantry/desktop/pair', { method: 'POST', headers: { 'content-length': '5000' }, body: '{}' }), { fetch: () => { throw new Error('must not reach Pantry') } })
+  expect(response?.status).toBe(413)
+})

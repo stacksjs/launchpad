@@ -36,7 +36,7 @@ Slow usage writes must not hold the palette over the launched application.
 
 - `POST /api/activity-events` validates an event through the generated model API.
   Each event has a UUID, action, kind, timestamp, timezone offset and command
-  latency. Application commands may include the application name. Retrying the
+  latency. Application commands may include the application name; path separators in a name become spaces. Retrying the
   same UUID does not create another event. Session identity, app version and
   receipt time belong to the backend.
 - `GET /api/activity-events` reads retained events through the native model API.

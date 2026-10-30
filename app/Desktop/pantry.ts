@@ -67,6 +67,8 @@ export async function pantryApi(request: Request, options: { fetch?: DesktopFetc
     const authorization = request.headers.get('authorization')
     if (authorization) headers.set('authorization', authorization)
     if (request.method === 'POST') headers.set('content-type', 'application/json')
+    // Refuse an oversized body before reading it, not only after.
+    if (Number(request.headers.get('content-length') || 0) > 4096) return Response.json({ error: 'Pantry request is too large.' }, { status: 413 })
     const body = request.method === 'POST' ? await request.text() : undefined
     if (body && body.length > 4096) return Response.json({ error: 'Pantry request is too large.' }, { status: 413 })
     const response = await (options.fetch ?? fetch)(`http://127.0.0.1:46473${path}`, { method: request.method, headers, body, signal: AbortSignal.timeout(15000), redirect: 'error' })
