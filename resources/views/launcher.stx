@@ -20,7 +20,7 @@ import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execut
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
-import { actionLabelFor, composeResults, fileResults, isRankable, nextCategory, secondaryActions } from '../functions/launcher-results'
+import { actionLabelFor, composeResults, fileResults, fileTabMinimum, inlineFileMinimum, isRankable, nextCategory, secondaryActions } from '../functions/launcher-results'
 import { emojiResults } from '../functions/emoji'
 import { defaultSearchSettings, readSearchSettings, webEngines } from '../functions/search-settings'
 import { systemCommand, systemCommandResults } from '../functions/system-commands'
@@ -146,11 +146,13 @@ const searchPackages = derived(() => {
   return cacheResultQueries(input => input.trim() ? search(input, 'pantry', candidates(input, { kind: filter === 'all' ? undefined : filter, limit: 50000 }).map(item => 'pantry:' + item.domain)) : search('', 'pantry'))
 })
 const githubCommands = derived(() => githubItems().map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
-const searchEmoji = derived(() => createResultSearch(emojiResults(records())))
+// Built the first time emoji are searched, not while typing anything else.
+const emojiIndex = derived(() => createResultSearch(emojiResults(records())))
+const searchEmoji = (input, scope) => emojiIndex()(input, scope)
 const allResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
-  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji: searchEmoji(), files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), rates: ratesState(), settings: searchSettings(), calculate })
+  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), rates: ratesState(), settings: searchSettings(), calculate })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
@@ -566,6 +568,7 @@ pollWhile(pollClipboard, 800, () => preferencesReady() && historyEnabled())
 // Plain flags, not signals: reading a signal here would make the effects below depend on their own results.
 let windowsShown = false
 let eventsShown = false
+let eventsAt = 0
 function sourceFailure(reason) { sourceNote.set(reason.message || String(reason)) }
 const loadFiles = createLatest(async (text, signal) => {
   const response = await fetch('/api/files?q=' + encodeURIComponent(text), { signal, cache: 'no-store' })
@@ -585,21 +588,21 @@ const loadContacts = createLatest((text) => sources.contacts(text), {
   result: (found) => { contactItems.set(found); sourceNote.set(found.length ? '' : 'No contacts match.') },
   error: (reason) => { contactItems.set([]); sourceFailure(reason) },
   done: () => sourceLoading.set(false),
-})
+}, { serial: true })
 const loadWindows = createLatest(() => sources.windows(), {
   start: () => { if (!windowsShown) sourceLoading.set(true) },
   result: (found) => { windowsShown = true; windowItems.set(found); sourceNote.set(found.length ? '' : 'No open windows were found.') },
   error: (reason) => { windowsShown = false; windowItems.set([]); sourceFailure(reason) },
   done: () => sourceLoading.set(false),
-})
+}, { serial: true })
 const loadEvents = createLatest(() => sources.events(), {
   start: () => { if (!eventsShown) sourceLoading.set(true) },
-  result: (found) => { eventsShown = true; eventItems.set(found); sourceNote.set(found.length ? '' : 'Nothing is scheduled in the next two weeks.') },
+  result: (found) => { eventsShown = true; eventsAt = Date.now(); eventItems.set(found); sourceNote.set(found.length ? '' : 'Nothing is scheduled in the next two weeks.') },
   error: (reason) => { eventsShown = false; eventItems.set([]); sourceFailure(reason) },
   done: () => sourceLoading.set(false),
-})
+}, { serial: true })
 const searchFiles = useDebounce((text) => { void loadFiles(text) }, 150)
-const searchContacts = useDebounce((text) => { void loadContacts(text) }, 250)
+const searchContacts = useDebounce((text) => { void loadContacts(text) }, 300)
 const searchableVisible = derived(() => paletteVisible() && !settings() && !editor() && !packageDetail())
 effect(() => {
   const mode = category()
@@ -610,7 +613,7 @@ effect(() => {
   sourceLoading.set(false)
   if (!visible) return
   if (mode === 'file' || mode === 'all') {
-    const wanted = text.length >= 2 && !text.startsWith(':') && calculate(text) === null
+    const wanted = text.length >= (mode === 'file' ? fileTabMinimum : inlineFileMinimum) && !text.startsWith(':') && calculate(text) === null
     if (!wanted || (mode === 'all' && !enabled)) { fileItems.set([]); if (mode === 'file') sourceNote.set(text ? '' : 'Type part of a file name.') ; return }
     searchFiles(text)
   }
@@ -624,11 +627,12 @@ effect(() => {
   const visible = searchableVisible()
   if (!visible) { loadWindows.cancel(); loadEvents.cancel(); return }
   if (mode === 'window') void loadWindows('')
-  else if (mode === 'event') void loadEvents('')
+  else if (mode === 'event') { if (Date.now() - eventsAt > 20000) void loadEvents('') }
   else { loadWindows.cancel(); loadEvents.cancel() }
 })
-pollWhile(() => { void loadWindows('') }, 3000, () => searchableVisible() && category() === 'window')
-pollWhile(() => { void loadEvents('') }, 60000, () => searchableVisible() && category() === 'event')
+// A refresh never starts while the last one is still running, so slow scripts cannot stack up.
+pollWhile(() => { if (!loadWindows.busy()) void loadWindows('') }, 5000, () => searchableVisible() && category() === 'window')
+pollWhile(() => { if (!loadEvents.busy()) void loadEvents('') }, 60000, () => searchableVisible() && category() === 'event')
 
 async function refreshRates() {
   if (!searchSettings().currency) return

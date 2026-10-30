@@ -95,3 +95,11 @@ test('inherited object keys are never treated as units or currencies', () => {
     expect(conversionResult(`5 ${word} in ${word}`, { enabled: true, table: rates })).toBeNull()
   }
 })
+
+test('text that cannot be a conversion is rejected before any pattern runs', () => {
+  for (const text of ['hello world', '5 km', 'in to as', 'x'.repeat(119), '1'.repeat(119), `${'5 '.repeat(50)}in`]) expect(parseConversion(text)).toBeNull()
+  expect(parseConversion('5km=3mi')).toEqual({ amount: 5, from: 'km', to: '3mi' })
+  const started = performance.now()
+  for (let i = 0; i < 2000; i++) parseConversion(`${'a '.repeat(30)}${i} to ${'b '.repeat(20)}`)
+  expect(performance.now() - started).toBeLessThan(500)
+})

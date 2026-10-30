@@ -142,8 +142,12 @@ const number = String.raw`[-+]?(?:\d{1,3}(?:,\d{3})+|\d*)(?:\.\d+)?(?:e[-+]?\d+)
 const separator = String.raw`\s*(?:\s(?:in|to|as|into)\s|=|->|→|=>)\s*`
 const pattern = new RegExp(String.raw`^\s*([$€£¥])?\s*(${number})\s*([^\d\s=→-][^=→]*?)?${separator}(.+?)\s*$`, 'iu')
 
+const hasSeparator = /\s(?:in|to|as|into)\s|=|->|→/i
+
 export function parseConversion(input: string): ParsedConversion | null {
   if (input.length > 120) return null
+  // Almost every keystroke is not a conversion; two cheap tests rule most of them out before the pattern runs.
+  if (!/\d/.test(input) || !hasSeparator.test(input)) return null
   const match = pattern.exec(input.replace(/\bsq\.?\s+/gi, 'sq '))
   if (!match) return null
   const [, symbol, digits, unit, target] = match

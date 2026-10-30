@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { calculate } from '../resources/functions/calculator'
-import { actionLabelFor, categoryOrder, composeResults, fileResults, inlineFiles, isRankable, nextCategory, secondaryActions } from '../resources/functions/launcher-results'
+import { actionLabelFor, categoryOrder, composeResults, fileResults, inlineFiles, isRankable, narrowFiles, nextCategory, secondaryActions } from '../resources/functions/launcher-results'
 import { emojiResults } from '../resources/functions/emoji'
 import { createResultSearch } from '../resources/functions/search'
 import type { Result } from '../resources/functions/search'
@@ -53,7 +53,8 @@ test('settings turn files and the web fallback off', () => {
   const files = [file('mail.txt')]
   const off = compose({ query: 'mail', files, settings: { ...defaultSearchSettings, files: false, web: 'off' } })
   expect(off.some(item => item.kind === 'file' || item.kind === 'web')).toBe(false)
-  expect(compose({ query: 'm', files }).some(item => item.kind === 'file')).toBe(false)
+  expect(compose({ query: 'ma', files: [file('mail.txt')] }).some(item => item.kind === 'file')).toBe(false)
+  expect(compose({ query: 'mai', files: [file('mail.txt')] }).some(item => item.kind === 'file')).toBe(true)
   expect(compose({ query: 'zzzz', settings: { ...defaultSearchSettings, web: 'google' } }).map(item => item.subtitle)).toEqual(['Google · Opens in your browser'])
 })
 
@@ -76,7 +77,7 @@ test('each live tab shows its own list and filters locally where it can', () => 
   expect(compose({ category: 'event', events })).toHaveLength(2)
   expect(titles(compose({ category: 'event', query: 'dent', events }))).toEqual(['Dentist'])
   expect(compose({ category: 'file', query: '', files: [file('a')] })).toEqual([])
-  expect(titles(compose({ category: 'file', query: 'a', files: [file('a')] }))).toEqual(['a'])
+  expect(titles(compose({ category: 'file', query: 'ab', files: [file('abc')] }))).toEqual(['abc'])
 })
 
 test('only stable things earn favorites and launch counts', () => {
@@ -110,4 +111,16 @@ test('category cycling wraps in both directions and recovers from an unknown tab
   for (let step = 0; step < categoryOrder.length; step++) { seen.add(current); current = nextCategory(current, 1) }
   expect(seen.size).toBe(categoryOrder.length)
   expect(current).toBe('all')
+})
+
+test('stale file results are narrowed to what is typed now, and the Files tab starts at two letters', () => {
+  const stale = [file('Annual Report.pdf'), file('Annual Budget.xlsx'), file('Résumé.pdf')]
+  expect(narrowFiles(stale, 'annual').map(item => item.title)).toEqual(['Annual Report.pdf', 'Annual Budget.xlsx'])
+  expect(narrowFiles(stale, 'annual rep').map(item => item.title)).toEqual(['Annual Report.pdf'])
+  expect(narrowFiles(stale, 'resume').map(item => item.title)).toEqual(['Résumé.pdf'])
+  expect(narrowFiles(stale, 'budget report')).toEqual([])
+  expect(narrowFiles(stale, '  ')).toHaveLength(3)
+  expect(compose({ category: 'file', query: 'a', files: stale })).toEqual([])
+  expect(compose({ category: 'file', query: 'annual', files: stale })).toHaveLength(2)
+  expect(compose({ query: 'annual rep', files: stale }).filter(item => item.kind === 'file')).toHaveLength(1)
 })

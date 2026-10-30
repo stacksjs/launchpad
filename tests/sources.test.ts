@@ -81,3 +81,58 @@ test('the newest failure is reported', async () => {
   await latest('x')
   expect(errors).toEqual(['boom'])
 })
+
+test('serial loaders never overlap: the newest request waits its turn and replaces older waiting ones', async () => {
+  const log: string[] = []
+  const applied: string[] = []
+  const releases: Array<() => void> = []
+  let active = 0
+  let peak = 0
+  const latest = createLatest<string>(input => new Promise((resolve) => {
+    active++
+    peak = Math.max(peak, active)
+    log.push(`start:${input}`)
+    releases.push(() => { active--; resolve(input) })
+  }), { result: value => applied.push(value), error: () => {} }, { serial: true })
+  const first = latest('a')
+  expect(latest.busy()).toBe(true)
+  const second = latest('b')
+  const third = latest('c')
+  await Promise.resolve()
+  expect(log).toEqual(['start:a'])
+  releases.shift()!()
+  await new Promise(resolve => setTimeout(resolve, 0))
+  expect(log).toEqual(['start:a', 'start:c'])
+  releases.shift()!()
+  await Promise.all([first, second, third])
+  expect(applied).toEqual(['c'])
+  expect(peak).toBe(1)
+  expect(latest.busy()).toBe(false)
+})
+
+test('cancelling clears the waiting request and settles its caller', async () => {
+  const started: string[] = []
+  let release = () => {}
+  const latest = createLatest<string>(input => new Promise((resolve) => { started.push(input); release = () => resolve(input) }), { result: () => started.push('applied'), error: () => {} }, { serial: true })
+  const running = latest('a')
+  const waiting = latest('b')
+  latest.cancel()
+  await waiting
+  release()
+  await running
+  expect(started).toEqual(['a'])
+})
+
+test('repeated contact searches are answered from memory until they expire', async () => {
+  let clock = 0
+  const fake = ports()
+  const sources = createSources(fake.value, { now: () => clock, cacheMs: 1000 })
+  const first = await sources.contacts('Ada')
+  expect(await sources.contacts(' ada ')).toBe(first)
+  expect(fake.scripts).toHaveLength(1)
+  await sources.contacts('grace')
+  expect(fake.scripts).toHaveLength(2)
+  clock = 1001
+  await sources.contacts('ada')
+  expect(fake.scripts).toHaveLength(3)
+})

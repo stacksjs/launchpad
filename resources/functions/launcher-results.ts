@@ -3,6 +3,7 @@ import type { RatesState } from './convert'
 import { emojiQuery } from './emoji'
 import { idleVisible } from './result-list'
 import { createResultSearch } from './search'
+import { normalizeSearchText } from './search-text'
 import type { Result } from './search'
 import type { SearchSettings } from './search-settings'
 import { webSearchResult } from './web-search'
@@ -27,6 +28,22 @@ export interface ComposeInputs {
 
 /** How many file matches ride along at the end of an ordinary search. The Files tab shows them all. */
 export const inlineFiles = 5
+/** Shorter queries match too much for Spotlight to answer quickly, so they wait for another letter. */
+export const inlineFileMinimum = 3
+export const fileTabMinimum = 2
+
+/**
+ * Keep only files whose name contains every word. Results from the previous keystroke may still be on screen while the next
+ * search runs; narrowing them keeps what is shown correct for what is typed.
+ */
+export function narrowFiles(files: readonly Result[], query: string): Result[] {
+  const words = normalizeSearchText(query).split(/\s+/).filter(Boolean)
+  if (!words.length) return [...files]
+  return files.filter((file) => {
+    const name = normalizeSearchText(file.title)
+    return words.every(word => name.includes(word))
+  })
+}
 
 const calculatorRow = (answer: string): Result => ({ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer })
 
@@ -35,7 +52,7 @@ export function composeResults(input: ComposeInputs): Result[] {
   const { category, query } = input
   const text = query.trim()
   if (category === 'emoji') return input.searchEmoji(query, 'emoji')
-  if (category === 'file') return text ? [...input.files] : []
+  if (category === 'file') return text.length >= fileTabMinimum ? narrowFiles(input.files, query) : []
   if (category === 'contact') return text.length >= 2 ? [...input.contacts] : []
   if (category === 'window') return text ? createResultSearch([...input.windows])(query) : [...input.windows]
   if (category === 'event') return text ? createResultSearch([...input.events])(query) : [...input.events]
@@ -50,7 +67,7 @@ export function composeResults(input: ComposeInputs): Result[] {
   const answer = input.calculate(query)
   const conversion = answer === null ? conversionResult(query, input.rates) : null
   const lead = answer !== null ? [calculatorRow(answer)] : conversion ? [conversion] : []
-  const files = input.settings.files && text.length >= 2 ? input.files.slice(0, inlineFiles) : []
+  const files = input.settings.files && text.length >= inlineFileMinimum ? narrowFiles(input.files, query).slice(0, inlineFiles) : []
   const web = webSearchResult(query, input.settings.web)
   return [...lead, ...found, ...files, ...(web ? [web] : [])]
 }

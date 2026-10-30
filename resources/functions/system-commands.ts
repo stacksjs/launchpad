@@ -81,8 +81,11 @@ export function systemCommand(id: string): SystemCommand | null {
   return byId.get(id) ?? null
 }
 
-export function systemCommandResults(): Result[] {
-  return systemCommands.map(command => ({ key: `system:${command.id}`, title: command.title, subtitle: command.subtitle, kind: 'system', content: command.id, searchAliases: command.aliases }))
+const results: readonly Result[] = systemCommands.map(command => ({ key: `system:${command.id}`, title: command.title, subtitle: command.subtitle, kind: 'system', content: command.id, searchAliases: command.aliases }))
+
+/** Built once: the list never changes, and it is merged into the searchable set whenever rankings change. */
+export function systemCommandResults(): readonly Result[] {
+  return results
 }
 
 export interface SystemPorts {
