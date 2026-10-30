@@ -33,7 +33,11 @@ async function catalog() {
   })
   await seeded
   const rows = await CatalogPackage.orderBy('name').limit(50000).get()
-  return rows.map(row => JSON.parse(row.metadata) as PackageCatalogEntry)
+  // One damaged row must not hide the rest of the catalog; the next refresh rewrites it.
+  return rows.flatMap((row) => {
+    try { return [JSON.parse(row.metadata) as PackageCatalogEntry] }
+    catch { return [] }
+  })
 }
 
 /** Public catalog refreshes never send a search term. The installer stays in Pantry's own process. */
