@@ -19,7 +19,8 @@ export function activityPayload(action: ActivityAction, target: { kind: string, 
   const kind = activityKinds.includes(target.kind as ActivityKind) ? target.kind as ActivityKind : 'launcher'
   return {
     eventId: crypto.randomUUID(), action, kind,
-    applicationName: kind === 'application' ? (target.title || '').slice(0, 120) : '',
+    // The backend refuses path separators, so a name such as "Mac/PC Sync" is recorded as "Mac PC Sync".
+    applicationName: kind === 'application' ? (target.title || '').replace(/[/\\]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) : '',
     occurredAt: Date.now(), timezoneOffset: new Date().getTimezoneOffset(),
     durationMs: Number.isFinite(durationMs) ? Math.min(600000, Math.max(0, Math.round(durationMs))) : 0,
   }
@@ -32,7 +33,9 @@ export function formatUsageTime(milliseconds: number): string {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000)
   if (seconds < 60) return `${seconds}s`
   const minutes = Math.floor(seconds / 60)
-  return minutes < 60 ? `${minutes}m ${seconds % 60}s` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
+  const hours = Math.floor(minutes / 60)
+  return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d ${hours % 24}h`
 }
 
 /** Calendar days use the offset at the event, preserving travel and daylight-saving boundaries. */

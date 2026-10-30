@@ -6,7 +6,7 @@ import LauncherUsageDay from '../app/Models/LauncherUsageDay'
 import UsageRecordingPeriod from '../app/Models/UsageRecordingPeriod'
 import PantryInstallation from '../app/Models/PantryInstallation'
 import { createActivityApi } from '../app/Desktop/activity'
-import { ActivityAccumulator, activityPayload, recordSuccessfulOperation } from '../resources/functions/activity'
+import { ActivityAccumulator, activityPayload, formatUsageTime, recordSuccessfulOperation } from '../resources/functions/activity'
 import { defineModel, MODEL_DEFINITION } from '@stacksjs/orm/define-model'
 import { schema } from '@stacksjs/validation/runtime'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -210,4 +210,16 @@ test('native model upgrades preserve existing activity while adding compact usag
     finally { upgraded.close() }
   }
   finally { rmSync(directory, { recursive: true, force: true }) }
+})
+
+test('application names never carry path separators the backend would reject', () => {
+  expect(activityPayload('command_executed', { kind: 'application', title: 'Mac/PC  Sync\\Tool' }).applicationName).toBe('Mac PC Sync Tool')
+  expect(activityPayload('command_executed', { kind: 'application', title: '/' }).applicationName).toBe('')
+})
+
+test('usage time switches to days once a day has passed', () => {
+  expect(formatUsageTime(59999)).toBe('59s')
+  expect(formatUsageTime(3600000 * 23 + 60000 * 59)).toBe('23h 59m')
+  expect(formatUsageTime(3600000 * 72)).toBe('3d 0h')
+  expect(formatUsageTime(3600000 * 100 + 60000)).toBe('4d 4h')
 })
