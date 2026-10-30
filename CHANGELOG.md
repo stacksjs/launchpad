@@ -1,5 +1,22 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.9...v1.0.10)
+
+## ⚡ Performance Improvements
+
+- dismiss launcher without waiting for usage writes ([221b79e](https://github.com/stacksjs/launchpad/commit/221b79e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- keep rapid searches fast and rank by full launch history ([258bdb0](https://github.com/stacksjs/launchpad/commit/258bdb0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- cache repeated queries and recycle visible result rows ([58584d5](https://github.com/stacksjs/launchpad/commit/58584d5)) _(by Chris Breuer <chris@stacksjs.com>)_
+- reduce launcher indexing and search work ([c32901e](https://github.com/stacksjs/launchpad/commit/c32901e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.0.10 ([380f37d](https://github.com/stacksjs/launchpad/commit/380f37d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.8...v1.0.9)
 
 ## 🐛 Bug Fixes
