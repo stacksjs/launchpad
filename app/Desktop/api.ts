@@ -11,18 +11,21 @@ import LauncherUsageDay from '../Models/LauncherUsageDay'
 import UsageRecordingPeriod from '../Models/UsageRecordingPeriod'
 import PantryInstallation from '../Models/PantryInstallation'
 import CatalogPackage from '../Models/CatalogPackage'
+import ExchangeRate from '../Models/ExchangeRate'
 import { pantryApi } from './pantry'
 import { clearClipboardHistory, pruneClipboardHistory } from './history'
 import { createActivityApi, startActivityRuntime } from './activity'
 import { installedApplications } from './applications'
+import { createRatesApi } from './rates'
 
-const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage }
+const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage, ExchangeRate }
 // Craft/stx owns the authenticated loopback session and backend process.
 openNativeDatabase({ path: join(applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' }), 'launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: pkg.version })
 const activityApi = createActivityApi(modelApi)
 const stopActivity = startActivityRuntime(activityApi)
+const ratesApi = createRatesApi()
 export const shutdown = async () => {
   installedApplications.close()
   await stopActivity()
@@ -41,6 +44,8 @@ export default async function handle(request: Request): Promise<Response | null>
     return new Response(null, { status: 204 })
   }
   if (pathname === '/api/clipboard-entries' && request.method === 'GET') await pruneClipboardHistory()
+  const rates = await ratesApi(request)
+  if (rates) return rates
   const activity = await activityApi(request)
   if (activity) return activity
   const response = await modelApi(request)
