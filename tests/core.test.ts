@@ -143,3 +143,7 @@ test('calculator ignores bare numbers and accepts pasted operator signs', () => 
   expect(calculate('84 ÷ 2')).toBe('42')
   expect(calculate('2 ** 10')).toBe('1024')
 })
+
+test('a quicklink without a full address explains what to enter', () => {
+  expect(() => quicklinkUrl('example.com/?q={query}', 'x')).toThrow('full http or https address')
+})

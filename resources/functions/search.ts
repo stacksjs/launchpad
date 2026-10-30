@@ -171,7 +171,9 @@ export function quicklinkArgument(item: Result, input: string): string | null {
 
 export function quicklinkUrl(template: string, query: string): string {
   const value = template.replaceAll('{query}', encodeURIComponent(query))
-  const url = new URL(value)
+  let url: URL
+  try { url = new URL(value) }
+  catch { throw new Error('Enter a full http or https address for the quicklink, such as https://example.com/?q={query}.') }
   if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Quicklinks must use an http or https URL.')
   return url.href
 }
