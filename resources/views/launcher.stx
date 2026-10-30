@@ -16,10 +16,16 @@ import { historyPreference as readHistoryPreference, parsePreference } from '../
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings } from '../functions/native'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
+import { actionLabelFor, composeResults, fileResults, isRankable, nextCategory, secondaryActions } from '../functions/launcher-results'
+import { emojiResults } from '../functions/emoji'
+import { defaultSearchSettings, readSearchSettings, webEngines } from '../functions/search-settings'
+import { systemCommand, systemCommandResults } from '../functions/system-commands'
+import { extensionResults, parseExtension, sampleManifest } from '../functions/extensions'
+import { createLatest } from '../functions/sources'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -42,6 +48,19 @@ const packageAppPath = derived(() => pantryInstalled().find(item => item.name ==
 const packageBusy = state(false)
 const installRequests: Record<string, string> = {}
 let pollingJob = false
+const searchSettings = state(defaultSearchSettings)
+const fileItems = state<Result[]>([])
+const windowItems = state<Result[]>([])
+const contactItems = state<Result[]>([])
+const eventItems = state<Result[]>([])
+const sourceNote = state('')
+const sourceLoading = state(false)
+const exchangeRates = state<{ rates: Record<string, number>, updatedAt: number } | null>(null)
+const ratesState = derived(() => searchSettings().currency ? { enabled: true as const, table: exchangeRates() } : { enabled: false as const })
+const extensionRows = state<any[]>([])
+const extensionDraft = state('')
+const extensionIssues = state<string[]>([])
+const extensionCommands = derived(() => extensionResults(extensionRows()))
 const query = state('')
 const category = state('all')
 const items = state<Result[]>([])
@@ -118,7 +137,7 @@ let cleanupTray = () => {}
 
 const searchCatalog = derived(() => createPackageCatalogSearch(catalog()))
 const installedPackages = derived(() => pantryResults(installedCatalog(catalog(), pantryInstalled()), items(), pantryInstalled()))
-const localItems = derived(() => [...items(), ...installedPackages()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+const localItems = derived(() => [...items(), ...installedPackages(), ...systemCommandResults(), ...extensionCommands()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const searchLocal = derived(() => createResultSearch(localItems()))
 const searchPackages = derived(() => {
   const filter = pantryFilter()
@@ -127,26 +146,23 @@ const searchPackages = derived(() => {
   return cacheResultQueries(input => input.trim() ? search(input, 'pantry', candidates(input, { kind: filter === 'all' ? undefined : filter, limit: 50000 }).map(item => 'pantry:' + item.domain)) : search('', 'pantry'))
 })
 const githubCommands = derived(() => githubItems().map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+const searchEmoji = derived(() => createResultSearch(emojiResults(records())))
 const allResults = derived(() => {
-  if (category() === 'pantry') {
-    return searchPackages()(query())
-  }
-  const source = category() === 'github' ? githubCommands() : localItems()
-  if (category() === 'github') return source
-  const answer = category() === 'all' ? calculate(query()) : null
-  const found = searchLocal()(query(), category())
-  return answer === null ? found : [{ key: 'calculator', title: answer, subtitle: 'Calculator · Copy result', kind: 'calculator', content: answer }, ...found]
+  if (category() === 'pantry') return searchPackages()(query())
+  if (category() === 'github') return githubCommands()
+  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji: searchEmoji(), files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), rates: ratesState(), settings: searchSettings(), calculate })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
 const viewport = derived(() => resultWindow(results().length, resultScrollTop(), resultViewportHeight()), { equals: (a, b) => a.start === b.start && a.end === b.end && a.bottom === b.bottom })
 const resultSlots = derived(() => {
-  items(); records(); catalog(); pantryInstalled(); githubItems()
+  items(); records(); catalog(); pantryInstalled(); githubItems(); fileItems(); windowItems(); contactItems(); eventItems(); extensionRows(); searchSettings()
   return createResultSlots()
 })
 const renderedResults = derived(() => resultSlots()(results(), viewport().start, viewport().end))
 const active = derived(() => results()[selected()])
-const actionLabel = derived(() => active()?.kind === 'pantry' ? 'Details' : ['application', 'quicklink', 'github'].includes(active()?.kind) ? 'Open' : 'Copy')
+const actionLabel = derived(() => actionLabelFor(active()?.kind))
+const secondary = derived(() => secondaryActions(active()))
 
 function scrollResults(event) {
   batch(() => {
@@ -276,11 +292,12 @@ effect(() => {
 async function reload() {
   loading.set(true)
   try {
-    const [apps, commands, history, launches] = await Promise.all([api('applications'), all('commands'), all('clipboard-entries'), all('launch-records')])
+    const [apps, commands, history, launches, extensions] = await Promise.all([api('applications'), all('commands'), all('clipboard-entries'), all('launch-records'), all('extensions')])
     items.set([...apps,
       ...commands.map(row => ({ key: 'command:' + row.id, id: row.id, title: row.title, subtitle: row.kind === 'snippet' ? 'Snippet · Copy text' : row.content, kind: row.kind, content: row.content, alias: row.alias })),
       ...history.reverse().map(historyResult),
     ])
+    extensionRows.set(extensions)
     records.set(Object.fromEntries(launches.map(row => [row.key, { ...row, lastUsed: row.lastUsed ?? row.last_used }])))
     status.set(plural(apps.length, 'application') + ' · Local commands')
   }
@@ -484,6 +501,7 @@ async function loadPreferences() {
   colorMode.set(theme)
   await nativeWindow.setAppearance(theme)
   if (values.githubScope) githubScope.set(values.githubScope.value)
+  if (values.search) { searchSettings.set(readSearchSettings(values.search.value)); behavior.paste = searchSettings().paste }
   if (values.history) {
     const saved = readHistoryPreference(values.history.value)
     historyEnabled.set(saved.enabled)
@@ -543,17 +561,159 @@ async function saveScope() {
 }
 pollWhile(pollClipboard, 800, () => preferencesReady() && historyEnabled())
 
+// Live sources: files from Spotlight's index, windows, contacts and events from the apps that own them.
+// Only the newest request is applied. Nothing from these sources is stored by Launchpad.
+// Plain flags, not signals: reading a signal here would make the effects below depend on their own results.
+let windowsShown = false
+let eventsShown = false
+function sourceFailure(reason) { sourceNote.set(reason.message || String(reason)) }
+const loadFiles = createLatest(async (text, signal) => {
+  const response = await fetch('/api/files?q=' + encodeURIComponent(text), { signal, cache: 'no-store' })
+  if (!response.ok) throw new Error('File search is unavailable.')
+  return await response.json()
+}, {
+  start: () => sourceLoading.set(true),
+  result: (body) => {
+    fileItems.set(fileResults(body.data))
+    sourceNote.set(!body.enabled ? 'File search is off. Turn it on in Settings > Search.' : !body.available ? 'File search is not available in this build of Launchpad.' : '')
+  },
+  error: (reason) => { fileItems.set([]); sourceFailure(reason) },
+  done: () => sourceLoading.set(false),
+})
+const loadContacts = createLatest((text) => sources.contacts(text), {
+  start: () => sourceLoading.set(true),
+  result: (found) => { contactItems.set(found); sourceNote.set(found.length ? '' : 'No contacts match.') },
+  error: (reason) => { contactItems.set([]); sourceFailure(reason) },
+  done: () => sourceLoading.set(false),
+})
+const loadWindows = createLatest(() => sources.windows(), {
+  start: () => { if (!windowsShown) sourceLoading.set(true) },
+  result: (found) => { windowsShown = true; windowItems.set(found); sourceNote.set(found.length ? '' : 'No open windows were found.') },
+  error: (reason) => { windowsShown = false; windowItems.set([]); sourceFailure(reason) },
+  done: () => sourceLoading.set(false),
+})
+const loadEvents = createLatest(() => sources.events(), {
+  start: () => { if (!eventsShown) sourceLoading.set(true) },
+  result: (found) => { eventsShown = true; eventItems.set(found); sourceNote.set(found.length ? '' : 'Nothing is scheduled in the next two weeks.') },
+  error: (reason) => { eventsShown = false; eventItems.set([]); sourceFailure(reason) },
+  done: () => sourceLoading.set(false),
+})
+const searchFiles = useDebounce((text) => { void loadFiles(text) }, 150)
+const searchContacts = useDebounce((text) => { void loadContacts(text) }, 250)
+const searchableVisible = derived(() => paletteVisible() && !settings() && !editor() && !packageDetail())
+effect(() => {
+  const mode = category()
+  const text = query().trim()
+  const visible = searchableVisible()
+  const enabled = searchSettings().files
+  searchFiles.cancel(); searchContacts.cancel(); loadFiles.cancel(); loadContacts.cancel()
+  sourceLoading.set(false)
+  if (!visible) return
+  if (mode === 'file' || mode === 'all') {
+    const wanted = text.length >= 2 && !text.startsWith(':') && calculate(text) === null
+    if (!wanted || (mode === 'all' && !enabled)) { fileItems.set([]); if (mode === 'file') sourceNote.set(text ? '' : 'Type part of a file name.') ; return }
+    searchFiles(text)
+  }
+  else if (mode === 'contact') {
+    if (text.length < 2) { contactItems.set([]); sourceNote.set('Type a name or company.'); return }
+    searchContacts(text)
+  }
+})
+effect(() => {
+  const mode = category()
+  const visible = searchableVisible()
+  if (!visible) { loadWindows.cancel(); loadEvents.cancel(); return }
+  if (mode === 'window') void loadWindows('')
+  else if (mode === 'event') void loadEvents('')
+  else { loadWindows.cancel(); loadEvents.cancel() }
+})
+pollWhile(() => { void loadWindows('') }, 3000, () => searchableVisible() && category() === 'window')
+pollWhile(() => { void loadEvents('') }, 60000, () => searchableVisible() && category() === 'event')
+
+async function refreshRates() {
+  if (!searchSettings().currency) return
+  try {
+    const rows = await api('exchange-rates/refresh', 'POST')
+    exchangeRates.set(rows)
+  }
+  catch { try { exchangeRates.set(await api('exchange-rates/table')) } catch { /* Conversions keep saying rates are unavailable. */ } }
+}
+pollWhile(refreshRates, 3600000, () => preferencesReady() && searchSettings().currency)
+effect(() => { if (preferencesReady() && searchSettings().currency) void refreshRates() })
+
+async function saveSearch(patch) {
+  try {
+    const next = { ...searchSettings(), ...patch }
+    await preference('search', JSON.stringify(next))
+    searchSettings.set(next)
+    behavior.paste = next.paste
+  }
+  catch (reason) { fail(reason) }
+}
+
+function extensionSummary(row) {
+  const parsed = parseExtension(row.manifest)
+  return parsed.ok ? parsed.manifest.version + ' · ' + plural(parsed.manifest.commands.length, 'command') : 'This manifest is not valid and is ignored.'
+}
+async function installExtension() {
+  const parsed = parseExtension(extensionDraft())
+  if (!parsed.ok) { extensionIssues.set(parsed.errors); return }
+  extensionIssues.set([])
+  try {
+    const existing = extensionRows().find(row => row.name === parsed.manifest.name)
+    const saved = await api('extensions' + (existing ? '/' + existing.id : ''), existing ? 'PATCH' : 'POST', { name: parsed.manifest.name, manifest: extensionDraft(), enabled: true })
+    extensionRows.set(existing ? extensionRows().map(row => row.id === existing.id ? saved : row) : [...extensionRows(), saved])
+    extensionDraft.set('')
+  }
+  catch (reason) { extensionIssues.set([reason.message]) }
+}
+async function toggleExtension(row) {
+  try {
+    const saved = await api('extensions/' + row.id, 'PATCH', { enabled: !row.enabled })
+    extensionRows.set(extensionRows().map(item => item.id === row.id ? saved : item))
+  }
+  catch (reason) { fail(reason) }
+}
+async function removeExtension(row) {
+  if (!await stxConfirm('Remove the extension "' + row.name + '"? Its commands disappear from search.')) return
+  try { await api('extensions/' + row.id, 'DELETE'); extensionRows.set(extensionRows().filter(item => item.id !== row.id)) }
+  catch (reason) { fail(reason) }
+}
+
+async function revealActive() {
+  const item = active()
+  if (!item || item.kind !== 'file') return
+  try { await revealInFinder(item.content); await dismissLauncher() }
+  catch (reason) { fail(reason) }
+}
+async function copySecondary() {
+  const text = secondary().copy
+  if (!text) return
+  try { await clipboard.writeText(text); status.set('Copied'); await dismissLauncher() }
+  catch (reason) { fail(reason) }
+}
+function cycleCategory(step) { chooseCategory(nextCategory(category(), step)); void nextTick(() => document.querySelector('.tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })) }
+
 async function run(item = active()) {
   if (!item || saving()) return
   if (item.kind === 'pantry') {
     packageDetail.set(item)
     return
   }
+  if (item.kind === 'setup') {
+    settingsSection.set(item.content)
+    openSettings()
+    return
+  }
+  if (item.kind === 'system') {
+    const command = systemCommand(item.content)
+    if (command?.confirm && !await stxConfirm(command.confirm)) return
+  }
   error.set('')
   saving.set(true)
   try {
     await execute(item, query(), duration => recordExecution(item, duration))
-    if (item.kind !== 'calculator') {
+    if (isRankable(item.kind)) {
       const record = records()[item.key]
       const data = { key: item.key, favorite: Boolean(record?.favorite), launches: (record?.launches || 0) + 1, lastUsed: Date.now() }
       const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', data)
@@ -566,7 +726,7 @@ async function run(item = active()) {
 
 async function favorite() {
   const item = active()
-  if (!item || item.kind === 'calculator') return
+  if (!item || !isRankable(item.kind)) return
   try {
     const record = records()[item.key]
     const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', { key: item.key, favorite: !record?.favorite })
@@ -665,8 +825,11 @@ function key(event) {
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
   if (event.metaKey && event.key.toLowerCase() === 'n') { event.preventDefault(); newCommand(); return }
   if (editor()) return
+  if (event.metaKey && (event.key === ']' || event.key === '[')) { event.preventDefault(); cycleCategory(event.key === ']' ? 1 : -1); return }
   const target = event.target
   if (target !== search.current && target?.closest?.('button, select, input, textarea, a, [contenteditable="true"]')) return
+  if (event.metaKey && event.key === 'Enter') { event.preventDefault(); void revealActive(); return }
+  if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'c') { event.preventDefault(); void copySecondary(); return }
   if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
   if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
   if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
@@ -719,14 +882,21 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <button type="button" class="escape" @click="dismissLauncher()" aria-label="Hide Launchpad">esc</button>
   </header>
   <nav class="flex gap-1 items-center px-5" aria-label="Search categories">
-    <button type="button" :class="category() === 'all' ? 'tab active' : 'tab'" :aria-pressed="category() === 'all'" @click="chooseCategory('all')">All</button>
-    <button type="button" :class="category() === 'application' ? 'tab active' : 'tab'" :aria-pressed="category() === 'application'" @click="chooseCategory('application')" aria-label="Applications">Apps</button>
-    <button type="button" :class="category() === 'quicklink' ? 'tab active' : 'tab'" :aria-pressed="category() === 'quicklink'" @click="chooseCategory('quicklink')" aria-label="Quicklinks">Links</button>
-    <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" :aria-pressed="category() === 'snippet'" @click="chooseCategory('snippet')">Snippets</button>
-    <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="category() === 'clipboard'" @click="chooseCategory('clipboard')">Clipboard</button>
-    <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" :aria-pressed="category() === 'github'" @click="chooseCategory('github')">GitHub</button>
-    <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="category() === 'pantry'" @click="chooseCategory('pantry')">Pantry</button>
-    <button type="button" class="ml-auto new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
+    <div class="flex flex-1 gap-1 items-center categories">
+      <button type="button" :class="category() === 'all' ? 'tab active' : 'tab'" :aria-pressed="category() === 'all'" @click="chooseCategory('all')">All</button>
+      <button type="button" :class="category() === 'application' ? 'tab active' : 'tab'" :aria-pressed="category() === 'application'" @click="chooseCategory('application')" aria-label="Applications">Apps</button>
+      <button type="button" :class="category() === 'file' ? 'tab active' : 'tab'" :aria-pressed="category() === 'file'" @click="chooseCategory('file')">Files</button>
+      <button type="button" :class="category() === 'quicklink' ? 'tab active' : 'tab'" :aria-pressed="category() === 'quicklink'" @click="chooseCategory('quicklink')" aria-label="Quicklinks">Links</button>
+      <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" :aria-pressed="category() === 'snippet'" @click="chooseCategory('snippet')">Snippets</button>
+      <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="category() === 'clipboard'" @click="chooseCategory('clipboard')">Clipboard</button>
+      <button type="button" :class="category() === 'emoji' ? 'tab active' : 'tab'" :aria-pressed="category() === 'emoji'" @click="chooseCategory('emoji')">Emoji</button>
+      <button type="button" :class="category() === 'window' ? 'tab active' : 'tab'" :aria-pressed="category() === 'window'" @click="chooseCategory('window')">Windows</button>
+      <button type="button" :class="category() === 'contact' ? 'tab active' : 'tab'" :aria-pressed="category() === 'contact'" @click="chooseCategory('contact')" aria-label="Contacts">People</button>
+      <button type="button" :class="category() === 'event' ? 'tab active' : 'tab'" :aria-pressed="category() === 'event'" @click="chooseCategory('event')" aria-label="Calendar events">Calendar</button>
+      <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" :aria-pressed="category() === 'github'" @click="chooseCategory('github')">GitHub</button>
+      <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="category() === 'pantry'" @click="chooseCategory('pantry')">Pantry</button>
+    </div>
+    <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
   <div :if="error()" class="error" role="alert">{{ error() }}</div>
@@ -747,10 +917,10 @@ onDestroy(() => { cleanup(); cleanupTray() })
     </div>
     <div class="result-region">
     <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="scrollResults($event)">
-      <p :if="loading() || (category() === 'github' && githubLoading())" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : 'Finding your applications...' }}</p>
-      <div :if="!loading() && !githubLoading() && results().length === 0" class="empty">
+      <p :if="loading() || (category() === 'github' && githubLoading()) || (sourceLoading() && results().length === 0)" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : loading() ? 'Finding your applications...' : 'Looking...' }}</p>
+      <div :if="!loading() && !githubLoading() && !sourceLoading() && results().length === 0" class="empty">
         <p>{{ category() === 'clipboard' ? 'Keep useful text close.' : 'Nothing here yet.' }}</p>
-        <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
+        <p class="empty-detail">{{ category() === 'clipboard' ? 'Enable Clipboard History in Settings, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : ['file', 'window', 'contact', 'event'].includes(category()) && sourceNote() ? sourceNote() : category() === 'emoji' ? 'Try a word like rocket, party or thumbs up.' : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
       </div>
       <div aria-hidden="true" :style="'height:' + viewport().top + 'px;flex-shrink:0'"></div>
       <!-- Park unused slots so fast typing and backspacing never need to recreate result rows. -->
@@ -764,6 +934,13 @@ onDestroy(() => { cleanup(); cleanupTray() })
           <span :if="item.kind === 'clipboard'" class="i-f7-doc-on-clipboard"></span>
           <span :if="item.kind === 'calculator'" class="i-f7-number"></span>
           <span :if="item.kind === 'github'" class="i-f7-chevron-left-slash-chevron-right"></span>
+          <span :if="item.kind === 'file'" :class="item.subtitle.startsWith('Folder') ? 'i-f7-folder' : 'i-f7-doc'"></span>
+          <span :if="item.kind === 'system' || item.kind === 'setup'" class="i-f7-gear-alt"></span>
+          <span :if="item.kind === 'web'" class="i-f7-globe"></span>
+          <span :if="item.kind === 'window'" class="i-f7-macwindow"></span>
+          <span :if="item.kind === 'contact'" class="i-f7-person-crop-circle"></span>
+          <span :if="item.kind === 'event'" class="i-f7-calendar"></span>
+          <span :if="item.kind === 'emoji'" class="i-f7-smiley"></span>
         </span>
         <span class="result-copy"><span class="result-title" :title="item.title">{{ item.title }}</span><span class="result-subtitle" :title="item.subtitle">{{ item.subtitle }}</span></span>
         <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
@@ -789,7 +966,9 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet', 'clipboard'].includes(active()?.kind)" type="button" class="footer-action" @click="remove()" aria-label="Delete selected saved item">Delete</button>
-    <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active()" title="Favorite (Command D)" :aria-label="active()?.favorite ? 'Remove from favorites' : 'Add to favorites'" :aria-pressed="Boolean(active()?.favorite)">☆ <kbd>⌘ D</kbd></button>
+    <button :if="secondary().reveal" type="button" class="footer-action" @click="revealActive()" aria-label="Reveal in Finder">Reveal <kbd>⌘ ↵</kbd></button>
+    <button :if="secondary().copy" type="button" class="footer-action" @click="copySecondary()" :aria-label="active()?.kind === 'file' ? 'Copy path' : 'Copy contact detail'">{{ active()?.kind === 'file' ? 'Copy path' : 'Copy' }} <kbd>⇧⌘ C</kbd></button>
+    <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active() || !isRankable(active().kind)" title="Favorite (Command D)" :aria-label="active()?.favorite ? 'Remove from favorites' : 'Add to favorites'" :aria-pressed="Boolean(active()?.favorite)">☆ <kbd>⌘ D</kbd></button>
     <button type="button" class="footer-action primary" @click="run()" :disabled="!active() || saving()">{{ actionLabel() }} <kbd>↵</kbd></button>
   </footer>
   </div>
@@ -802,6 +981,8 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'clipboard'" @click="settingsSection.set('clipboard')">Clipboard History</button>
       <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'github'" @click="settingsSection.set('github')">GitHub</button>
       <button type="button" :class="settingsSection() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'pantry'" @click="settingsSection.set('pantry')">Pantry</button>
+      <button type="button" :class="settingsSection() === 'search' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'search'" @click="settingsSection.set('search')">Search</button>
+      <button type="button" :class="settingsSection() === 'extensions' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'extensions'" @click="settingsSection.set('extensions')">Extensions</button>
       <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'usage'" @click="settingsSection.set('usage')">Usage</button>
     </nav>
     <div class="dialog-body">
@@ -853,6 +1034,29 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <div :if="pantryReady()" class="flex gap-3 items-center"><button type="button" class="secondary-button" @click="refreshPackages()" :disabled="packageBusy() || pantryRestoring()">Refresh connection</button><button type="button" class="text-action" @click="disconnectPackages()" :disabled="pantryRestoring()">Disconnect Pantry</button></div>
         <p class="help" role="status">{{ pantryRestoring() ? 'Waiting for macOS to check the saved connection...' : pantryStatus() }}</p>
         <p class="help">The connection token stays in macOS Keychain. Catalog refreshes and original logos load from Pantry's GitHub repository. Package searches stay on this Mac.</p>
+      </section>
+      <section :if="settingsSection() === 'search'">
+        <h2>Find more, faster.</h2>
+        <label class="toggle-row"><input type="checkbox" :checked="searchSettings().files" @change="saveSearch({ files: $event.target.checked })"> Search file names on this Mac</label>
+        <p class="help">Uses Spotlight's index. Library, hidden items, dependencies and app internals are skipped. File names stay on this Mac and are not stored.</p>
+        <label for="web-engine">When you search, offer a web search with</label>
+        <select id="web-engine" :value="searchSettings().web" @change="saveSearch({ web: $event.target.value })"><option value="duckduckgo">DuckDuckGo</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option><option value="kagi">Kagi</option><option value="off">Off</option></select>
+        <label class="toggle-row"><input type="checkbox" :checked="searchSettings().currency" @change="saveSearch({ currency: $event.target.checked })"> Convert currencies</label>
+        <p class="help">Downloads the European Central Bank's reference rates about once a day from api.frankfurter.dev. The request carries no search text. Off until you turn it on. Units and temperatures always work offline.</p>
+        <label class="toggle-row"><input type="checkbox" :checked="searchSettings().paste" @change="saveSearch({ paste: $event.target.checked })"> Paste snippets into the app you were using</label>
+        <p class="help">Snippets are always copied. This also types Command V into the previous app, which needs the Accessibility permission. Snippets can use {date}, {time}, {datetime}, {weekday}, {year}, {uuid} and {clipboard}.</p>
+        <h2 class="mt-5">Windows, contacts and calendar</h2>
+        <p class="help">The Windows, People and Calendar tabs ask macOS for permission the first time. Windows needs Accessibility. Contacts and Calendar use Automation. What they find stays in memory and is never saved or counted in usage.</p>
+        <div class="flex gap-3 items-center"><button type="button" class="text-action" @click="openPrivacySettings('accessibility')">Accessibility settings</button><button type="button" class="text-action" @click="openPrivacySettings('automation')">Automation settings</button></div>
+      </section>
+      <section :if="settingsSection() === 'extensions'">
+        <h2>Extensions</h2>
+        <p class="help">An extension adds quicklinks and snippets from a JSON file. It cannot run code, use the network or read files, so installing one is as safe as pasting text.</p>
+        <div :for="(row, index) in extensionRows()" :key="row.id" class="setting-row"><div><strong>{{ row.name }}</strong><p class="help">{{ extensionSummary(row) }}</p></div><div class="flex gap-3 items-center"><input type="checkbox" :checked="row.enabled" @change="toggleExtension(row)" :aria-label="'Enable ' + row.name"><button type="button" class="text-action" @click="removeExtension(row)">Remove</button></div></div>
+        <label for="extension-manifest">Install from JSON</label>
+        <textarea id="extension-manifest" x-model="extensionDraft" rows="8" spellcheck="false" placeholder="Paste a manifest here"></textarea>
+        <div :if="extensionIssues().length" class="error" role="alert"><div :for="(issue, index) in extensionIssues()" :key="index">{{ issue }}</div></div>
+        <div class="flex gap-3 items-center"><button type="button" class="save-button" @click="installExtension()" :disabled="!extensionDraft().trim()">Install</button><button type="button" class="text-action" @click="extensionDraft.set(sampleManifest)">Use an example</button></div>
       </section>
       <section :if="settingsSection() === 'usage'">
     <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>
@@ -933,7 +1137,9 @@ header input::placeholder { color: var(--muted); }
 input::-webkit-search-cancel-button { display: none; }
 .escape { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
 nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-.tab { padding: 5px 11px; border-radius: 6px; color: var(--muted); font-size: 12px; }
+.categories { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.categories::-webkit-scrollbar { display: none; }
+.tab { padding: 5px 11px; border-radius: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
 .tab:hover { color: var(--ink); background: var(--selected); }
 .tab.active { background: var(--selected); color: var(--ink); }
 .new { color: var(--muted); font-size: 24px; line-height: 24px; width: 28px; }
@@ -990,7 +1196,8 @@ header input:focus-visible { outline: none; }
 .dialog-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-shrink: 0; min-height: 52px; padding: 9px 20px; border-top: 1px solid var(--line); background: var(--footer); }
 .dialog-footer > .help { margin-right: auto; }
 .dialog-body .error { margin: 10px 0 0; }
-.settings-nav { display: flex; align-items: center; gap: 5px; padding: 0 15px; }
+.settings-nav { display: flex; align-items: center; gap: 5px; padding: 0 15px; overflow-x: auto; scrollbar-width: none; }
+.settings-nav::-webkit-scrollbar { display: none; }
 .setting-row, .setting-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .setting-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
 .setting-actions { margin-top: 14px; }

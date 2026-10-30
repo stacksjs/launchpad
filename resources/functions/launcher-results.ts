@@ -75,3 +75,19 @@ export interface SecondaryAction { reveal: boolean, copy: string }
 export function secondaryActions(item: Pick<Result, 'kind' | 'content' | 'detail'> | undefined): SecondaryAction {
   return { reveal: item?.kind === 'file', copy: item?.kind === 'file' ? item.content : item?.kind === 'contact' ? item.detail ?? '' : '' }
 }
+
+export interface FileRow { path: string, name: string, folder: string, directory: boolean }
+
+export function fileResults(files: readonly FileRow[]): Result[] {
+  return files.map(file => ({
+    key: `file:${file.path}`, title: file.name, subtitle: `${file.directory ? 'Folder · ' : ''}${file.folder}`, kind: 'file', content: file.path, detail: file.path,
+  }))
+}
+
+/** Tab order. Command ] and Command [ step through it and wrap around. */
+export const categoryOrder = ['all', 'application', 'file', 'quicklink', 'snippet', 'clipboard', 'emoji', 'window', 'contact', 'event', 'github', 'pantry'] as const
+
+export function nextCategory(current: string, step: 1 | -1): string {
+  const index = categoryOrder.indexOf(current as typeof categoryOrder[number])
+  return categoryOrder[(Math.max(0, index) + step + categoryOrder.length) % categoryOrder.length]!
+}

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { calculate } from '../resources/functions/calculator'
-import { actionLabelFor, composeResults, inlineFiles, isRankable, secondaryActions } from '../resources/functions/launcher-results'
+import { actionLabelFor, categoryOrder, composeResults, fileResults, inlineFiles, isRankable, nextCategory, secondaryActions } from '../resources/functions/launcher-results'
 import { emojiResults } from '../resources/functions/emoji'
 import { createResultSearch } from '../resources/functions/search'
 import type { Result } from '../resources/functions/search'
@@ -92,4 +92,22 @@ test('buttons say what Return does, and secondary actions exist only where they 
   expect(secondaryActions({ kind: 'contact', content: 'id', detail: 'ada@example.com' })).toEqual({ reveal: false, copy: 'ada@example.com' })
   expect(secondaryActions({ kind: 'application', content: '/x' })).toEqual({ reveal: false, copy: '' })
   expect(secondaryActions(undefined)).toEqual({ reveal: false, copy: '' })
+})
+
+test('file rows show their folder, mark directories, and carry the path for Copy', () => {
+  const rows = fileResults([{ path: '/h/Documents/Plan.pdf', name: 'Plan.pdf', folder: '~/Documents', directory: false }, { path: '/h/Documents/Plans', name: 'Plans', folder: '~/Documents', directory: true }])
+  expect(rows[0]).toMatchObject({ key: 'file:/h/Documents/Plan.pdf', title: 'Plan.pdf', subtitle: '~/Documents', kind: 'file', content: '/h/Documents/Plan.pdf', detail: '/h/Documents/Plan.pdf' })
+  expect(rows[1]!.subtitle).toBe('Folder · ~/Documents')
+})
+
+test('category cycling wraps in both directions and recovers from an unknown tab', () => {
+  expect(nextCategory('all', 1)).toBe('application')
+  expect(nextCategory('all', -1)).toBe('pantry')
+  expect(nextCategory('pantry', 1)).toBe('all')
+  expect(nextCategory('nonsense', 1)).toBe('application')
+  let current = 'all'
+  const seen = new Set<string>()
+  for (let step = 0; step < categoryOrder.length; step++) { seen.add(current); current = nextCategory(current, 1) }
+  expect(seen.size).toBe(categoryOrder.length)
+  expect(current).toBe('all')
 })

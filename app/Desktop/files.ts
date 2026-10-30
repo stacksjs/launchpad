@@ -58,7 +58,10 @@ export async function readLines(command: string, args: readonly string[], option
   let process: ReturnType<typeof Bun.spawn>
   try { process = Bun.spawn([command, ...args], { stdout: 'pipe', stderr: 'ignore', stdin: 'ignore' }) }
   catch { return null }
-  const stop = () => { try { process.kill() } catch { /* already finished */ } }
+  const stop = () => {
+    try { process.kill() }
+    catch { /* already finished */ }
+  }
   const timer = setTimeout(stop, options.timeoutMs)
   options.signal?.addEventListener('abort', stop, { once: true })
   if (options.signal?.aborted) stop()

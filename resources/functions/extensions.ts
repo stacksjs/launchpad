@@ -26,6 +26,13 @@ const commandKeys = new Set(['id', 'title', 'type', 'url', 'text', 'alias', 'sub
 
 export type ParsedExtension = { ok: true, manifest: ExtensionManifest } | { ok: false, errors: string[] }
 
+function isHttpAddress(value: string): boolean {
+  try {
+    quicklinkUrl(value, '')
+    return true
+  }
+  catch { return false }
+}
 const isText = (value: unknown, min: number, max: number): value is string => typeof value === 'string' && value.trim().length >= min && value.length <= max
 
 /** Strict validation: unknown fields, wrong types and unsafe addresses are all refused with a readable reason. */
@@ -49,7 +56,10 @@ export function parseExtension(source: string): ParsedExtension {
     const seen = new Set<string>()
     root.commands.forEach((entry: unknown, index: number) => {
       const label = `Command ${index + 1}`
-      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) { errors.push(`${label} must be an object.`); return }
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        errors.push(`${label} must be an object.`)
+        return
+      }
       const command = entry as Record<string, unknown>
       for (const key of Object.keys(command)) if (!commandKeys.has(key)) errors.push(`${label}: unknown field "${key}".`)
       if (typeof command.id !== 'string' || !idPattern.test(command.id)) errors.push(`${label}: "id" must be lowercase letters, numbers and dashes, up to 40 characters.`)
@@ -59,7 +69,7 @@ export function parseExtension(source: string): ParsedExtension {
       if (command.type === 'quicklink') {
         if (command.text !== undefined) errors.push(`${label}: a quicklink cannot have "text".`)
         if (typeof command.url !== 'string' || command.url.length > 2000) errors.push(`${label}: "url" must be an http or https address.`)
-        else { try { quicklinkUrl(command.url, '') } catch { errors.push(`${label}: "url" must be an http or https address.`) } }
+        else if (!isHttpAddress(command.url)) errors.push(`${label}: "url" must be an http or https address.`)
       }
       else if (command.type === 'snippet') {
         if (command.url !== undefined) errors.push(`${label}: a snippet cannot have "url".`)
