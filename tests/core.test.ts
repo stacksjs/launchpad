@@ -33,6 +33,19 @@ test('a quicklink alias keeps the command visible while typing its argument', ()
   expect(quicklinkArgument(item, 'web')).toBeNull()
 })
 
+test('normalized quicklink aliases preserve the original Unicode argument and cache semantics', () => {
+  const item = { key: 'cafe', title: 'Café search', kind: 'quicklink', alias: 'café', content: 'https://example.com/?q={query}', subtitle: '' }
+  const search = createResultSearch([item])
+  for (const input of ['cafe résumé 🍀', 'CAFE\u0301 résumé 🍀', 'Café   search résumé 🍀']) {
+    expect(search(input)).toEqual([item])
+    expect(quicklinkArgument(item, input)).toBe('résumé 🍀')
+  }
+  expect(quicklinkUrl(item.content, quicklinkArgument(item, 'cafe résumé 🍀')!)).toBe('https://example.com/?q=r%C3%A9sum%C3%A9%20%F0%9F%8D%80')
+  const literal = cacheResultQueries(input => [{ ...item, title: input }])
+  expect(literal('café')[0]?.title).toBe('café')
+  expect(literal('cafe')[0]?.title).toBe('cafe')
+})
+
 test('identity matches outrank favorites and hide weak fuzzy matches', () => {
   const item = (title: string, extra = {}) => ({ key: title, title, kind: 'application', content: title, subtitle: 'Application', ...extra })
   const things = item('Things3')

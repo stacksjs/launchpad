@@ -11,6 +11,7 @@ import type { NativeUpdateState } from '@stacksjs/desktop'
 import pkg from '../../package.json'
 import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
+import { parseApplicationAliases } from '../functions/search-text'
 import { createResultPresentation, createResultSlots, resultWindow } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
@@ -50,6 +51,10 @@ const loading = state(true)
 const error = state('')
 const status = state('Ready when you are')
 const editor = state(false)
+const aliasApplication = state<Result | null>(null)
+const applicationAliases = state('')
+const aliasInput = useRef('aliasInput')
+const builtInApplicationAliases = derived(() => (aliasApplication()?.searchAliases || []).filter(value => value.split('.').length < 3).slice(0, 10).join(', '))
 const editId = state<number | null>(null)
 const title = state('')
 const kind = state('quicklink')
@@ -343,7 +348,7 @@ async function changeLogin(enabled) {
   catch (reason) { loginStatus.set(reason.message) }
   finally { loginBusy.set(false) }
 }
-function closeEditor() { editor.set(false); void nextTick(() => search.current?.focus()) }
+function closeEditor() { editor.set(false); aliasApplication.set(null); void nextTick(() => search.current?.focus()) }
 function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); paletteVisibility(true); void refreshApplications().catch(fail) }
 function paletteVisibility(visible) { paletteVisible.set(visible); track(visible ? 'palette_opened' : 'palette_dismissed') }
 async function dismissLauncher() { paletteVisibility(false); void flushUsage(); await nativeWindow.hide() }
@@ -554,6 +559,7 @@ async function favorite() {
 }
 
 function newCommand() {
+  aliasApplication.set(null)
   editId.set(null)
   title.set('')
   content.set('')
@@ -564,7 +570,16 @@ function newCommand() {
 }
 function editCommand() {
   const item = active()
+  if (item?.kind === 'application') {
+    aliasApplication.set(item)
+    applicationAliases.set(records()[item.key]?.aliases || '')
+    editor.set(true)
+    error.set('')
+    void nextTick(() => aliasInput.current?.focus())
+    return
+  }
   if (!item?.id || !['quicklink', 'snippet'].includes(item.kind)) return
+  aliasApplication.set(null)
   editId.set(item.id)
   title.set(item.title)
   kind.set(item.kind)
@@ -577,6 +592,18 @@ function editCommand() {
 async function saveCommand() {
   saving.set(true)
   try {
+    const application = aliasApplication()
+    if (application) {
+      const aliases = parseApplicationAliases(applicationAliases())
+      if (aliases.length > 20 || aliases.some(value => value.length > 64)) throw new Error('Use up to 20 aliases, with at most 64 characters each.')
+      const record = records()[application.key]
+      if (record || aliases.length) {
+        const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', { key: application.key, aliases: aliases.join('\n') })
+        records.set({ ...records(), [application.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
+      }
+      closeEditor()
+      return
+    }
     if (kind() === 'quicklink') quicklinkUrl(content(), '')
     await api('commands' + (editId() === null ? '' : '/' + editId()), editId() === null ? 'POST' : 'PATCH', { title: title().trim(), kind: kind(), content: content(), alias: alias().trim() })
     if (editId() === null) track('command_created', { kind: kind() })
@@ -734,6 +761,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
   <footer class="flex gap-3 items-center px-5">
     <span class="wordmark">Launchpad</span>
     <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
+    <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet', 'clipboard'].includes(active()?.kind)" type="button" class="footer-action" @click="remove()" aria-label="Delete selected saved item">Delete</button>
     <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active()" title="Favorite (Command D)">☆ <kbd>⌘ D</kbd></button>
@@ -832,10 +860,19 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <div class="dialog-footer"><button type="button" class="secondary-button" @click="closePackage()">Back</button><button :if="packageAppPath()" type="button" class="secondary-button" @click="openPackageApplication()">Open application</button><button type="button" class="save-button" @click="startInstall()" :disabled="packageBusy() || (installJob() && ['queued', 'running', 'succeeded'].includes(installJob().status))">{{ !pantryReady() ? 'Connect Pantry' : installJob()?.status === 'succeeded' ? 'Installed' : installJob()?.status === 'failed' ? 'Retry installation' : installJob() ? 'Installing...' : 'Install with Pantry' }}</button></div>
   </div>
 
-  <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="editId() === null ? 'New command' : 'Edit command'">
+  <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="aliasApplication() ? 'Application search aliases' : editId() === null ? 'New command' : 'Edit command'">
     <form class="dialog-form" @submit.prevent="saveCommand()">
-      <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ editId() === null ? 'New command' : 'Edit command' }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closeEditor()">esc</button></div>
+      <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ aliasApplication() ? 'Search aliases' : editId() === null ? 'New command' : 'Edit command' }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closeEditor()">esc</button></div>
       <div class="dialog-body">
+      <div :if="aliasApplication()">
+        <h2>{{ aliasApplication().title }}</h2>
+        <p class="help">Add names you naturally use for this app. Built-in names keep working.</p>
+        <p :if="builtInApplicationAliases()" class="help">Built-in aliases: {{ builtInApplicationAliases() }}</p>
+        <label for="application-aliases">Your aliases <span class="muted">(optional)</span></label>
+        <textarea ref="aliasInput" id="application-aliases" x-model="applicationAliases" maxlength="1000" rows="5" placeholder="One per line, or separated by commas"></textarea>
+        <p class="help">Up to 20 aliases. Saved only on this Mac. Clear this field to remove your aliases.</p>
+      </div>
+      <div :if="!aliasApplication()">
       <label for="command-kind">Type</label>
       <select id="command-kind" x-model="kind"><option value="quicklink">Quicklink</option><option value="snippet">Snippet</option></select>
       <label for="command-title">Name</label>
@@ -845,9 +882,10 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <p class="help">{{ kind() === 'quicklink' ? 'Use {query} in the URL to include your search text.' : 'Snippets copy to your clipboard. Paste them wherever you need.' }}</p>
       <label for="command-alias">Search alias <span class="muted">(optional)</span></label>
       <input id="command-alias" x-model="alias" maxlength="40" placeholder="A short name to find this faster">
+      </div>
       <p :if="error()" class="error" role="alert">{{ error() }}</p>
       </div>
-<div class="dialog-footer"><button type="button" class="secondary-button" @click="closeEditor()">Cancel</button><button class="save-button" type="submit" :disabled="saving()">{{ saving() ? 'Saving...' : editId() === null ? 'Create command' : 'Save changes' }}</button></div>
+<div class="dialog-footer"><button type="button" class="secondary-button" @click="closeEditor()">Cancel</button><button class="save-button" type="submit" :disabled="saving()">{{ saving() ? 'Saving...' : aliasApplication() ? 'Save aliases' : editId() === null ? 'Create command' : 'Save changes' }}</button></div>
     </form>
   </div>
 </main>

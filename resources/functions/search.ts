@@ -1,3 +1,5 @@
+import { normalizeSearchText, parseApplicationAliases } from './search-text'
+
 export interface Result {
   key: string
   title: string
@@ -5,6 +7,7 @@ export interface Result {
   kind: string
   content: string
   alias?: string
+  aliases?: string
   searchAliases?: readonly string[]
   searchText?: string
   id?: number
@@ -18,9 +21,9 @@ export interface Result {
 
 const splitWords = (value: string) => value.split(/[^\p{L}\p{N}+#]+/u).filter(Boolean)
 function prepareField(value: string) {
-  const text = value.toLocaleLowerCase()
+  const text = normalizeSearchText(value)
   const parts = text.split(/[\s._/-]+/)
-  return { text, parts, tokens: splitWords(text), initials: parts.map(word => word[0] || '').join('') }
+  return { text, compact: text.replace(/[\s._-]+/gu, ''), parts, tokens: splitWords(text), initials: parts.map(word => word[0] || '').join('') }
 }
 type SearchField = ReturnType<typeof prepareField>
 
@@ -46,8 +49,8 @@ export function cacheResultQueries(search: (input: string, category: string) => 
 export function createResultSearch(items: readonly Result[]) {
   const prepared = items.map((item) => {
     const title = prepareField(item.title)
-    const aliases = [item.alias, ...(item.searchAliases ?? [])].filter((value): value is string => Boolean(value)).map(prepareField)
-    return { item, title, aliases, fields: [title, ...aliases], versionless: withoutVersion(title.text), description: splitWords(item.searchText?.toLocaleLowerCase() || ''), order: 0 }
+    const aliases = [...new Set([item.alias, ...(item.searchAliases ?? []), ...(item.kind === 'application' ? parseApplicationAliases(item.aliases) : [])].filter((value): value is string => Boolean(value)).map(normalizeSearchText))].map(prepareField)
+    return { item, title, aliases, fields: [title, ...aliases], versionless: withoutVersion(title.text), description: splitWords(normalizeSearchText(item.searchText || '')), order: 0 }
   })
   // Explicit favorites lead each relevance tier. Frequency is never capped; recency breaks frequency ties.
   const compare = (a: typeof prepared[number], b: typeof prepared[number]) => Number(Boolean(b.item.favorite)) - Number(Boolean(a.item.favorite)) || (b.item.launches ?? 0) - (a.item.launches ?? 0) || (b.item.lastUsed ?? 0) - (a.item.lastUsed ?? 0) || Number(b.item.kind === 'application') - Number(a.item.kind === 'application') || a.item.title.localeCompare(b.item.title)
@@ -56,13 +59,16 @@ export function createResultSearch(items: readonly Result[]) {
   const byKey = new Map(prepared.map(entry => [entry.item.key, entry]))
   const defaults = new Map<string, Result[]>()
   const search = (input: string, category = 'all', keys?: readonly string[]): Result[] => {
-    const query = input.trim().toLocaleLowerCase()
+    const query = normalizeSearchText(input.trim())
     if (!query && !keys) {
       if (!defaults.has(category)) defaults.set(category, ordered.filter(entry => category === 'all' || entry.item.kind === category).map(entry => entry.item))
       return defaults.get(category)!
     }
     const queryWords = splitWords(query)
-    const compactQuery = query.replace(/\s+/g, '')
+    const compactQuery = query.replace(/\s+/gu, '')
+    const appQuery = query.replace(/\.app$/u, '').trimEnd()
+    const appWords = appQuery === query ? queryWords : splitWords(appQuery)
+    const appCompact = appQuery.replace(/[\s._-]+/gu, '')
     const candidates = keys ? keys.flatMap((key) => {
       const entry = byKey.get(key)
       return entry ? [entry] : []
@@ -73,12 +79,14 @@ export function createResultSearch(items: readonly Result[]) {
       let distance = 0
       if (query) {
         const argument = quicklinkArgument(item, input)
-        const term = argument === null ? query : (item.alias || item.title).toLocaleLowerCase()
-        const words = argument === null ? queryWords : splitWords(term)
-        const compact = argument === null ? compactQuery : term.replace(/\s+/g, '')
+        const application = item.kind === 'application'
+        const term = argument === null ? application ? appQuery : query : normalizeSearchText(item.alias || item.title)
+        const words = argument === null ? application ? appWords : queryWords : splitWords(term)
+        const compact = argument === null ? application ? appCompact : compactQuery : term.replace(/\s+/g, '')
+        if (!term) return []
         let abbreviation: number | null = null
-        if (title.text === term || versionless === term) relevance = 6
-        else if (aliases.some(alias => alias.text === term)) relevance = 5
+        if (title.text === term || versionless === term || (application && title.compact === compact)) relevance = 6
+        else if (aliases.some(alias => alias.text === term || (application && alias.compact === compact))) relevance = 5
         else if (title.text.startsWith(term) || title.parts.some(word => word.startsWith(term))) relevance = 4
         else if (item.kind === 'application' && (abbreviation = fuzzyDistance(title, compact)) !== null && abbreviation <= 2) {
           relevance = 4
@@ -151,8 +159,12 @@ export function quicklinkArgument(item: Result, input: string): string | null {
   const value = input.trim()
   const triggers = ([item.alias, item.title].filter(Boolean) as string[]).sort((a, b) => b.length - a.length)
   for (const trigger of triggers) {
-    if (value.toLocaleLowerCase().startsWith(trigger.toLocaleLowerCase() + ' '))
-      return value.slice(trigger.length).trim()
+    const target = normalizeSearchText(trigger.trim()).replace(/\s+/gu, ' ')
+    for (const boundary of value.matchAll(/\s+/gu)) {
+      const prefix = normalizeSearchText(value.slice(0, boundary.index)).replace(/\s+/gu, ' ')
+      if (prefix === target) return value.slice(boundary.index + boundary[0].length).trim()
+      if (prefix.length > target.length) break
+    }
   }
   return null
 }

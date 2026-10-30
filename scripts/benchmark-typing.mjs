@@ -9,6 +9,7 @@ const browser = await chromium.launch({ headless: true, ...(process.env.LAUNCHPA
 const icon = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34"/>'
 const names = ['Mail', 'Maps', 'Music', 'Messages', 'Microsoft Word', 'Calendar', 'Safari', 'System Settings']
 const apps = Array.from({ length: 112 }, (_, index) => ({ key: `/Applications/App${index}.app`, title: `${names[index % names.length]} ${index}`, kind: 'application', subtitle: 'Application', content: `/Applications/App${index}.app`, searchAliases: [`com.example.app${index}`], icon }))
+apps.push(...['ChatGPT', 'Visual Studio Code'].map(title => ({ key: `/Applications/${title}.app`, title, kind: 'application', subtitle: 'Application', content: `/Applications/${title}.app`, searchAliases: title === 'ChatGPT' ? ['codex', 'openai', 'gpt'] : ['vscode', 'vs code', 'code'], icon })))
 const catalog = bundledPackageCatalog().map(entry => ({ ...entry, logo: { url: icon } }))
 const commands = [
   { key: 'command:web', title: 'Web search', kind: 'quicklink', alias: 'web', subtitle: 'Search the web', content: 'https://example.com/?q={query}' },
@@ -16,8 +17,8 @@ const commands = [
   ...Array.from({ length: 200 }, (_, index) => ({ key: `clipboard:${index}`, title: `Clipboard note ${index} JSON example`, kind: 'clipboard', subtitle: 'Clipboard', content: `Example ${index}` })),
 ]
 const terms = {
-  all: ['mail', 'maps', 'music', 'safari', 'system settings', 'web café & tea', '12 + 3 * 4', 'zzzz-no-result'],
-  application: ['mail', 'maps', 'music', 'safari', 'system settings', 'zzzz-no-result'],
+  all: ['mail', 'maps', 'music', 'safari', 'system settings', 'codex', 'vscode', 'web café & tea', '12 + 3 * 4', 'zzzz-no-result'],
+  application: ['mail', 'maps', 'music', 'safari', 'system settings', 'codex', 'vscode', 'zzzz-no-result'],
   quicklink: ['web café & tea', 'web source code', 'zzzz-no-result'],
   snippet: ['source', 'template', 'zzzz-no-result'],
   clipboard: ['clipboard note', 'json example', 'zzzz-no-result'],

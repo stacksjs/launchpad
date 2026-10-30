@@ -24,9 +24,10 @@ import PantryInstallation from '${app}/app/Models/PantryInstallation.ts'
 import { createActivityApi, startActivityRuntime } from '${app}/app/Desktop/activity.ts'
 import { pantryApi } from '${app}/app/Desktop/pantry.ts'
 import CatalogPackage from '${app}/app/Models/CatalogPackage.ts'
+import LaunchRecord from '${app}/app/Models/LaunchRecord.ts'
 import { PantryDesktopClient } from ${JSON.stringify(Bun.resolveSync('ts-pantry/desktop', app))}
 import { startDesktopBridge, createDesktopPairingCode } from ${JSON.stringify(Bun.resolveSync('ts-pantry/desktop/service', app))}
-const models = { LauncherActivity, LauncherUsageDay, AppPreference, UsageRecordingPeriod, PantryInstallation, CatalogPackage }
+const models = { LauncherActivity, LauncherUsageDay, AppPreference, UsageRecordingPeriod, PantryInstallation, CatalogPackage, LaunchRecord }
 openNativeDatabase({ path: ${JSON.stringify(database)}, models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const api = createActivityApi(modelApi)
@@ -55,13 +56,19 @@ export default async (request: Request) => await updates(request) ?? await pantr
   const login = await fetch(ready, { redirect: 'manual', signal: AbortSignal.timeout(5000) })
   assert.equal(login.status, 303)
   const cookie = login.headers.get('set-cookie')!.split(';')[0]!
-  const request = async (path: string, body?: unknown) => {
-    const response = await fetch(`${origin}/api/${path}`, { signal: AbortSignal.timeout(5000), method: body ? 'POST' : 'GET', headers: { cookie, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
+  const request = async (path: string, body?: unknown, method = body ? 'POST' : 'GET') => {
+    const response = await fetch(`${origin}/api/${path}`, { signal: AbortSignal.timeout(5000), method, headers: { cookie, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
     assert.ok(response.ok, `API status ${response.status}`)
     return response.status === 204 ? null : await response.json()
   }
   assert.equal((await fetch(`${origin}/api/updates`)).status, 403)
   assert.equal((await request('updates')).phase, 'idle')
+  const appRecord = (await request('launch-records', { key: '/Applications/ChatGPT.app', launches: 400, favorite: true, aliases: 'work ai' })).data
+  await request(`launch-records/${appRecord.id}`, { aliases: 'work ai\nassistant' }, 'PATCH')
+  const savedAliases = (await request('launch-records')).data[0]
+  assert.equal(savedAliases.aliases, 'work ai\nassistant')
+  assert.equal(savedAliases.launches, 400)
+  assert.equal(Boolean(savedAliases.favorite), true)
   const event = (action: string, kind = 'launcher') => ({ eventId: crypto.randomUUID(), action, kind, applicationName: kind === 'application' ? 'Calculator' : '', occurredAt: Date.now(), timezoneOffset: new Date().getTimezoneOffset(), durationMs: 0 })
   await request('activity-events', event('palette_opened'))
   await request('activity-events', event('palette_opened'))

@@ -5,6 +5,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Result } from '../../resources/functions/search'
 import { readApplicationMetadata } from '@stacksjs/desktop/application-metadata'
+import { applicationSearchAliases } from '../../resources/functions/application-aliases'
 
 /** Scan application folders without walking inside bundles or following directory symlinks. */
 export function createApplicationDiscovery(roots = ['/Applications', '/System/Applications', join(homedir(), 'Applications')], options: { watch?: boolean, maxAgeMs?: number } = {}) {
@@ -70,7 +71,7 @@ export function createApplicationDiscovery(roots = ['/Applications', '/System/Ap
               if (!metadata.has(path)) metadata.set(path, readApplicationMetadata(path))
               const info = metadata.get(path)
               const title = info?.displayName || filename
-              const searchAliases = [...new Set([filename, info?.bundleName, info?.bundleId].filter((value): value is string => Boolean(value)))].filter(value => value !== title)
+              const searchAliases = applicationSearchAliases({ filename, displayName: title, bundleName: info?.bundleName, bundleId: info?.bundleId })
               apps.set(path, { key: path, title, searchAliases, subtitle: 'Application', kind: 'application', content: path })
             }
             else if (entry.isDirectory() && depth < 4) directories.push({ path, depth: depth + 1 })

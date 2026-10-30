@@ -16,7 +16,7 @@ async function main() {
   process.stdout.write(JSON.stringify({ preparationMs: Number((performance.now() - prepareStart).toFixed(3)) }) + '\n')
   const baselinePath = process.argv[2]
   const baseline: typeof rankResults = baselinePath ? (await import(resolve(baselinePath))).rankResults : rankResults
-  const queries = ['', 't', 'thi', 'things', 'git', 'source code']
+  const queries = ['', 'm', 'ma', 'mai', 'mail', 'mai', 'ma', 'm', 'codex', 'openai', 'preferences', 'email', 'vscode', 'things', 'git', 'source code']
   for (const category of ['all', 'pantry']) {
     for (const mode of [baselinePath ? 'baseline' : 'per-query', 'prepared']) {
       const runSearch = (query: string) => {
