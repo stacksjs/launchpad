@@ -124,7 +124,7 @@ const preview = state('light')
 
   <footer class="flex flex-col gap-5 justify-between sm:flex-row mx-auto px-5 py-8 md:px-10 max-w-[1280px] text-slate-600 text-sm">
     <span>Launchpad. Built with <a href="https://stacksjs.com" class="font-medium text-slate-900">Stacks</a>.</span>
-    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="https://pantry.dev">Pantry</a><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Roadmap</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
+    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="https://pantry.dev">Pantry</a><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Issues</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
   </footer>
 </body>
 </html>
