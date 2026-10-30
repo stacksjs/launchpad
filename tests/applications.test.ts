@@ -161,3 +161,14 @@ test('icon demand follows the visible viewport and excludes icons already loaded
   expect(visibleApplicationPaths(apps, 520, 260)).toEqual(apps.slice(8, 17).map(item => item.content))
   expect(visibleApplicationPaths([{ ...apps[0]!, icon: 'data:icon' }, { ...apps[1]!, kind: 'snippet' }], 0, 260)).toEqual([])
 })
+
+test('a root that is a file does not discard apps from the other roots', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'launchpad-apps-'))
+  try {
+    await mkdir(join(root, 'Things3.app'))
+    await writeFile(join(root, 'not-a-folder'), '')
+    const apps = await createApplicationDiscovery([join(root, 'not-a-folder'), root])()
+    expect(apps.map(app => app.title)).toEqual(['Things3'])
+  }
+  finally { await rm(root, { recursive: true, force: true }) }
+})

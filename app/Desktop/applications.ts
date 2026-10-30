@@ -7,6 +7,12 @@ import type { Result } from '../../resources/functions/search'
 import { readApplicationMetadata } from '@stacksjs/desktop/application-metadata'
 import { applicationSearchAliases } from '../../resources/functions/application-aliases'
 
+/** One unreadable bundle falls back to its filename instead of failing the whole scan. */
+function readMetadata(path: string): ReturnType<typeof readApplicationMetadata> {
+  try { return readApplicationMetadata(path) }
+  catch { return null }
+}
+
 /** Scan application folders without walking inside bundles or following directory symlinks. */
 export function createApplicationDiscovery(roots = ['/Applications', '/System/Applications', join(homedir(), 'Applications')], options: { watch?: boolean, maxAgeMs?: number } = {}) {
   let pending: Promise<Result[]> | undefined
@@ -60,7 +66,8 @@ export function createApplicationDiscovery(roots = ['/Applications', '/System/Ap
           let entries
           try { entries = await readdir(root, { withFileTypes: true }) }
           catch (error) {
-            if (['ENOENT', 'EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code || '')) return
+            // A folder that vanished or became a file mid-scan must not discard every other app.
+            if (['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code || '')) return
             throw error
           }
           for (const entry of entries) {
@@ -68,7 +75,7 @@ export function createApplicationDiscovery(roots = ['/Applications', '/System/Ap
             const path = join(root, entry.name)
             if (/\.app$/i.test(entry.name) && (entry.isDirectory() || entry.isSymbolicLink())) {
               const filename = entry.name.slice(0, -4)
-              if (!metadata.has(path)) metadata.set(path, readApplicationMetadata(path))
+              if (!metadata.has(path)) metadata.set(path, readMetadata(path))
               const info = metadata.get(path)
               const title = info?.displayName || filename
               const searchAliases = applicationSearchAliases({ filename, displayName: title, bundleName: info?.bundleName, bundleId: info?.bundleId })
