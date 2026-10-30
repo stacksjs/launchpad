@@ -13,12 +13,15 @@ interface ExecutionPorts {
 export function createExecutor(ports: ExecutionPorts) {
   return async (result: Result, query: string, recorded: (durationMs: number) => void | Promise<void> = () => {}): Promise<void> => {
     if (result.kind === 'pantry') throw new Error('Open the package details to install with Pantry.')
+    // Queue confirmed activity without letting its persistence hold the window open.
     await recordSuccessfulOperation(async () => {
       if (result.kind === 'application') await ports.openApplication(result.content)
       else if (result.kind === 'github') await ports.openLink(result.content)
       else if (result.kind === 'quicklink') await ports.openLink(quicklinkUrl(result.content, quicklinkArgument(result, query) ?? ''))
       else await ports.copyText(result.content)
-    }, recorded)
-    await ports.dismiss()
+    }, duration => Promise.all([
+      Promise.resolve().then(() => recorded(duration)),
+      Promise.resolve().then(() => ports.dismiss()),
+    ]).then(() => {}))
   }
 }

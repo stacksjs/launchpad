@@ -89,6 +89,31 @@ GitHub debounce timers run only in the visible GitHub category. Changing the
 query, leaving the category or hiding the palette aborts the superseded HTTP
 request and clears its loading state.
 
+## Command dismissal
+
+Once the native operating-system bridge accepts an application, link or copy,
+the dispatcher queues its activity and starts hiding the window without waiting
+for activity persistence. The UI's recording callback only queues events; the
+existing background flush and retry mechanism finishes those writes. Launch
+ranking writes happen after dismissal. Denied launches keep the palette open
+and do not count as successful commands. A recording error cannot prevent a
+confirmed launch from hiding the palette.
+
+`scripts/verify-dismissal.mjs` exercises the built launcher with the desktop
+package's mock bridge and deliberately blocked usage HTTP writes. It verifies
+that normal app launches and Pantry's Open application hide before persistence,
+ranking still saves, denied launches remain visible, and successful commands
+are recorded exactly once. It uses isolated fixture data and never launches a
+real application or contacts the user's backend:
+
+```sh
+./buddy build
+node scripts/verify-dismissal.mjs
+```
+
+The same optional Playwright module and browser executable environment
+variables as the typing fixture apply.
+
 ## Measurements
 
 Measured on this Mac on October 29, 2026 with 1,774 catalog packages, 112

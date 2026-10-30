@@ -294,10 +294,9 @@ function closeEditor() { editor.set(false); void nextTick(() => search.current?.
 function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); paletteVisibility(true); void refreshApplications().catch(fail) }
 function paletteVisibility(visible) { paletteVisible.set(visible); track(visible ? 'palette_opened' : 'palette_dismissed') }
 async function dismissLauncher() { paletteVisibility(false); void flushUsage(); await nativeWindow.hide() }
-async function recordExecution(target, duration) {
+function recordExecution(target, duration) {
   track('command_executed', target, duration)
   paletteVisibility(false)
-  await flushUsage()
 }
 async function openLink(url, kind) {
   try { await recordSuccessfulOperation(() => shell.openExternal(url), async duration => { track('link_opened', { kind }, duration); await flushUsage() }) }

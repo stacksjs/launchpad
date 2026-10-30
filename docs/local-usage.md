@@ -27,6 +27,11 @@ cannot establish whether a destination website finished loading or an applicatio
 subsequently crashed. A failed bridge call does not count. Opening an already
 running application still counts as an application command.
 
+After a successful command, the interface queues the command and visibility
+events and hides the palette without waiting for their HTTP persistence. The
+existing queue retries failed writes with the same UUIDs while Launchpad runs.
+Slow usage writes must not hold the palette over the launched application.
+
 ## API and persistence
 
 - `POST /api/activity-events` validates an event through the generated model API.
