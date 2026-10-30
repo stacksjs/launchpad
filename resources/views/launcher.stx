@@ -695,13 +695,13 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <button type="button" class="escape" @click="dismissLauncher()" aria-label="Hide Launchpad">esc</button>
   </header>
   <nav class="flex gap-1 items-center px-5" aria-label="Search categories">
-    <button type="button" :class="category() === 'all' ? 'tab active' : 'tab'" @click="chooseCategory('all')">All</button>
-    <button type="button" :class="category() === 'application' ? 'tab active' : 'tab'" @click="chooseCategory('application')" aria-label="Applications">Apps</button>
-    <button type="button" :class="category() === 'quicklink' ? 'tab active' : 'tab'" @click="chooseCategory('quicklink')" aria-label="Quicklinks">Links</button>
-    <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" @click="chooseCategory('snippet')">Snippets</button>
-    <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" @click="chooseCategory('clipboard')">Clipboard</button>
-    <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" @click="chooseCategory('github')">GitHub</button>
-    <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" @click="chooseCategory('pantry')">Pantry</button>
+    <button type="button" :class="category() === 'all' ? 'tab active' : 'tab'" :aria-pressed="category() === 'all'" @click="chooseCategory('all')">All</button>
+    <button type="button" :class="category() === 'application' ? 'tab active' : 'tab'" :aria-pressed="category() === 'application'" @click="chooseCategory('application')" aria-label="Applications">Apps</button>
+    <button type="button" :class="category() === 'quicklink' ? 'tab active' : 'tab'" :aria-pressed="category() === 'quicklink'" @click="chooseCategory('quicklink')" aria-label="Quicklinks">Links</button>
+    <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" :aria-pressed="category() === 'snippet'" @click="chooseCategory('snippet')">Snippets</button>
+    <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="category() === 'clipboard'" @click="chooseCategory('clipboard')">Clipboard</button>
+    <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" :aria-pressed="category() === 'github'" @click="chooseCategory('github')">GitHub</button>
+    <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="category() === 'pantry'" @click="chooseCategory('pantry')">Pantry</button>
     <button type="button" class="ml-auto new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
@@ -773,12 +773,12 @@ onDestroy(() => { cleanup(); cleanupTray() })
   <div :if="settings()" class="editor settings" role="dialog" aria-modal="true" aria-label="Launchpad Settings">
     <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1 ref="settingsTitle" tabindex="-1">Settings</h1><button type="button" class="escape" @mousedown.stop="" @click="closeSettings()" aria-label="Close settings">esc</button></div>
     <nav class="settings-nav" aria-label="Settings sections">
-      <button type="button" :class="settingsSection() === 'general' ? 'tab active' : 'tab'" @click="settingsSection.set('general')">General</button>
-      <button type="button" :class="settingsSection() === 'appearance' ? 'tab active' : 'tab'" @click="settingsSection.set('appearance')">Appearance</button>
-      <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" @click="settingsSection.set('clipboard')">Clipboard History</button>
-      <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" @click="settingsSection.set('github')">GitHub</button>
-      <button type="button" :class="settingsSection() === 'pantry' ? 'tab active' : 'tab'" @click="settingsSection.set('pantry')">Pantry</button>
-      <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" @click="settingsSection.set('usage')">Usage</button>
+      <button type="button" :class="settingsSection() === 'general' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'general'" @click="settingsSection.set('general')">General</button>
+      <button type="button" :class="settingsSection() === 'appearance' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'appearance'" @click="settingsSection.set('appearance')">Appearance</button>
+      <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'clipboard'" @click="settingsSection.set('clipboard')">Clipboard History</button>
+      <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'github'" @click="settingsSection.set('github')">GitHub</button>
+      <button type="button" :class="settingsSection() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'pantry'" @click="settingsSection.set('pantry')">Pantry</button>
+      <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'usage'" @click="settingsSection.set('usage')">Usage</button>
     </nav>
     <div class="dialog-body">
       <section :if="settingsSection() === 'general'">
