@@ -68,6 +68,16 @@ const rules: readonly AliasRule[] = [
   { names: 'VLC|IINA', aliases: 'video player|media player' },
   { names: 'Spotify', aliases: 'music|music player' },
   { names: 'Google Drive|Dropbox', aliases: 'file sync|cloud storage' },
+  { names: 'Calculator', ids: 'com.apple.calculator', aliases: 'calc|math|arithmetic' },
+  { names: 'Maps', ids: 'com.apple.Maps', aliases: 'apple maps|directions|navigation' },
+  { names: 'Podcasts', ids: 'com.apple.podcasts', aliases: 'podcast|audio shows' },
+  { names: 'Books', ids: 'com.apple.iBooksX', aliases: 'ibooks|ebooks|reader' },
+  { names: 'Stickies', ids: 'com.apple.Stickies', aliases: 'sticky notes|post it' },
+  { names: 'Time Machine', ids: 'com.apple.backup.launcher', aliases: 'backup|restore' },
+  { names: 'Xcode', ids: 'com.apple.dt.Xcode', aliases: 'ios development|swift|apple ide' },
+  { names: 'Simulator', ids: 'com.apple.iphonesimulator', aliases: 'ios simulator|iphone simulator' },
+  { names: 'Docker|Docker Desktop', ids: 'com.docker.docker', aliases: 'containers|docker desktop' },
+  { names: 'Postman|Insomnia', aliases: 'api client|http client|rest client' },
 ]
 
 const identity = (value: string) => normalizeSearchText(value).replace(/\.app$/u, '').replace(/[^\p{L}\p{N}+#]/gu, '')

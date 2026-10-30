@@ -39,6 +39,8 @@ test.each([
   ['Microsoft Teams', 'msteams'], ['Microsoft Excel', 'spreadsheet'], ['Microsoft PowerPoint', 'ppt'],
   ['GitHub Desktop', 'git client'], ['Zoom Workplace', 'zoom.us'], ['VLC', 'video player'],
   ['Adobe Photoshop 2026', 'ps'], ['Visual Studio Code - Insiders', 'code insiders'],
+  ['Calculator', 'calc'], ['Maps', 'directions'], ['Books', 'ebooks'], ['Stickies', 'sticky notes'], ['Time Machine', 'backup'],
+  ['Xcode', 'swift'], ['Simulator', 'ios simulator'], ['Docker Desktop', 'containers'], ['Postman', 'api client'],
 ])('%s is discoverable by the familiar name %s', (title, alias) => {
   const item = app(title)
   const search = createResultSearch([item])
