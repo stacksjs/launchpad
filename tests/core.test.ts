@@ -147,3 +147,10 @@ test('calculator ignores bare numbers and accepts pasted operator signs', () => 
 test('a quicklink without a full address explains what to enter', () => {
   expect(() => quicklinkUrl('example.com/?q={query}', 'x')).toThrow('full http or https address')
 })
+
+test('calculator reads thousands separators but rejects malformed commas', () => {
+  expect(calculate('1,250 + 50')).toBe('1300')
+  expect(calculate('1,000,000 / 4')).toBe('250000')
+  expect(calculate('1,25 + 1')).toBeNull()
+  expect(calculate('1,2345 + 1')).toBeNull()
+})

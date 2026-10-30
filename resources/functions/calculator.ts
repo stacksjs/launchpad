@@ -2,7 +2,8 @@
 export function calculate(raw: string): string | null {
   if (raw.length > 200 || !/\d/.test(raw)) return null
   // Accept the multiplication and division signs people paste, and ** as a power.
-  const input = raw.replaceAll('×', '*').replaceAll('÷', '/').replaceAll('**', '^')
+  // Well-formed thousands separators such as 1,250 are digits; other commas stay invalid.
+  const input = raw.replace(/\d{1,3}(?:,\d{3})+(?!\d)/g, group => group.replaceAll(',', '')).replaceAll('×', '*').replaceAll('÷', '/').replaceAll('**', '^')
   const tokens = input.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[()+\-*/^%]/gi)
   if (!tokens || tokens.join('') !== input.replace(/\s/g, '')) return null
   // A lone number is a search for that text, not a sum worth answering.

@@ -51,7 +51,7 @@ If another launcher owns Command + Space, quit it or reassign its shortcut befor
 | **Search** | Prioritize names and genuine aliases. Favorites and recent use refine relevant results; compact abbreviations such as `vsc` and `sst` still work. |
 | **Quicklinks** | Save websites or search templates such as `https://example.com/?q={query}`, then use a named alias with your search argument. |
 | **Snippets** | Keep reusable text close and copy it with Return. |
-| **Calculator** | Calculate locally with parentheses, powers and percentages, then copy the answer. |
+| **Calculator** | Calculate locally with parentheses, powers, percentages, `×`, `÷` and thousands separators such as `1,250`, then copy the answer. |
 | **Clipboard History** | Search and preview saved text, with opt-in recording, retention controls and individual deletion. |
 | **GitHub** | Search repositories, issues and pull requests, or check assigned issues, review requests and notifications. |
 | **Pantry** | Browse apps, CLI tools, libraries and fonts, inspect upstream details, and request installs from the Pantry CLI. |
