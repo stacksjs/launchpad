@@ -743,7 +743,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <div class="flex items-center justify-between px-6 section-label">
       <span>{{ category() === 'clipboard' ? 'Clipboard History' : category() === 'github' ? 'GitHub' : category() === 'pantry' ? 'Pantry catalog' : query() ? 'Results' : 'Your launchpad' }}</span>
       <button :if="category() === 'clipboard'" type="button" class="text-action" @click="saveClipboard()">Save current clipboard</button>
-      <span :if="category() !== 'clipboard'">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
+      <span :if="category() !== 'clipboard'" role="status" aria-live="polite">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
     </div>
     <div class="result-region">
     <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="scrollResults($event)">
@@ -765,7 +765,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
           <span :if="item.kind === 'calculator'" class="i-f7-number"></span>
           <span :if="item.kind === 'github'" class="i-f7-chevron-left-slash-chevron-right"></span>
         </span>
-        <span class="result-copy"><span class="result-title">{{ item.title }}</span><span class="result-subtitle">{{ item.subtitle }}</span></span>
+        <span class="result-copy"><span class="result-title" :title="item.title">{{ item.title }}</span><span class="result-subtitle" :title="item.subtitle">{{ item.subtitle }}</span></span>
         <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
         <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
         <span :if="viewport().start + index === selected()" class="return-key" aria-hidden="true">↵</span>
