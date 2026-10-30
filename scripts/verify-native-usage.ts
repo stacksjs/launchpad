@@ -14,7 +14,8 @@ try {
   const database = join(root, 'usage.sqlite')
   const entry = join(root, 'api.ts')
   const packages = ['app', 'cli', 'library', 'font'].map(kind => bundledPackageCatalog().find(item => item.kind === kind)!)
-  await Bun.write(entry, `import { openNativeDatabase, createNativeModelApi } from ${JSON.stringify(Bun.resolveSync('@stacksjs/orm/native', app))}
+  await Bun.write(entry, `import { createNativeUpdateApi } from ${JSON.stringify(Bun.resolveSync('@stacksjs/desktop', app))}
+import { openNativeDatabase, createNativeModelApi } from ${JSON.stringify(Bun.resolveSync('@stacksjs/orm/native', app))}
 import LauncherActivity from '${app}/app/Models/LauncherActivity.ts'
 import LauncherUsageDay from '${app}/app/Models/LauncherUsageDay.ts'
 import AppPreference from '${app}/app/Models/AppPreference.ts'
@@ -29,13 +30,14 @@ const models = { LauncherActivity, LauncherUsageDay, AppPreference, UsageRecordi
 openNativeDatabase({ path: ${JSON.stringify(database)}, models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const api = createActivityApi(modelApi)
+const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: '1.0.10' })
 const stopUsage = startActivityRuntime(api)
 const packages = ${JSON.stringify(packages)}
 const service = startDesktopBridge({ stateDirectory: ${JSON.stringify(join(root, 'pantry'))}, port: 0, catalog: packages, run: async (args) => { await Bun.sleep(20); return args.at(-1) === packages[3].domain ? 7 : 0 } })
 const baseUrl = 'http://127.0.0.1:' + service.server.port
 const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(${JSON.stringify(join(root, 'pantry'))}), 'Usage fixture')
 export const shutdown = async () => { await stopUsage(); await service.close() }
-export default async (request: Request) => await pantryApi(request, { onJobs: api.recordPantryJobs, fetch: (target, init) => {
+export default async (request: Request) => await updates(request) ?? await pantryApi(request, { onJobs: api.recordPantryJobs, fetch: (target, init) => {
   const headers = new Headers(init?.headers)
   headers.set('authorization', 'Bearer ' + token)
   return fetch(baseUrl + new URL(String(target)).pathname, { ...init, headers })
@@ -58,6 +60,8 @@ export default async (request: Request) => await pantryApi(request, { onJobs: ap
     assert.ok(response.ok, `API status ${response.status}`)
     return response.status === 204 ? null : await response.json()
   }
+  assert.equal((await fetch(`${origin}/api/updates`)).status, 403)
+  assert.equal((await request('updates')).phase, 'idle')
   const event = (action: string, kind = 'launcher') => ({ eventId: crypto.randomUUID(), action, kind, applicationName: kind === 'application' ? 'Calculator' : '', occurredAt: Date.now(), timezoneOffset: new Date().getTimezoneOffset(), durationMs: 0 })
   await request('activity-events', event('palette_opened'))
   await request('activity-events', event('palette_opened'))
