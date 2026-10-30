@@ -5,7 +5,7 @@
     "": {
       "name": "launchpad",
       "dependencies": {
-        "@stacksjs/desktop": "0.2.750",
+        "@stacksjs/desktop": "0.2.751",
         "@stacksjs/github": "0.75.323",
         "@stacksjs/image": "0.75.334",
         "@stacksjs/orm": "0.75.324",
@@ -98,7 +98,7 @@
 
     "@stacksjs/datetime": ["@stacksjs/datetime@0.75.334", "", {}, "sha512-LtrvMRaWffh2biH+AOa5x07fGfGaIp2guxQgfz9VCFX7zs6dWGAkh46zX9Q7ms7awo856tEDtph5rvuAOp1j4A=="],
 
-    "@stacksjs/desktop": ["@stacksjs/desktop@0.2.750", "", { "dependencies": { "craft-native": ">=0.0.393" } }, "sha512-8QVCnkm81VpNLfXYgXyOIxacuWWyONsX93wLoLX++m3nl5T6hEzNvb3RfkugT+1iBoDyUb+BMVrrIbFjqW6Dqg=="],
+    "@stacksjs/desktop": ["@stacksjs/desktop@0.2.751", "", { "dependencies": { "craft-native": ">=0.0.393" } }, "sha512-efHLDIbaQaDpcZvMI+22cEA6EAtB4h2EK+TRIY+2YncVJe7lFMz9IXWcH+yjPu+OCDeYsGT19NxrpMy3Wzm5IA=="],
 
     "@stacksjs/desktop-build": ["@stacksjs/desktop-build@0.75.334", "", { "dependencies": { "craft-native": ">=0.0.341" } }, "sha512-D19NlG/97PE+AcZ6eSyLI5FtenUMKkNXQlBHu6Qkd9L5RH1SkWCZxbQ/SBVdjfeXJnDzAq4TXvxG77TGcGjiow=="],
 

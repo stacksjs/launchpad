@@ -25,3 +25,13 @@ Run `bun scripts/verify-updates.mjs` against the built app HTML with an availabl
 Playwright browser to qualify the offline error, retry, download and restart
 controls. `bun run test:usage-native` additionally verifies that the packaged
 updater status endpoint requires the native session cookie.
+
+For local release qualification on a Mac with an existing app container, use an
+isolated profile so the command-line launch check does not open live data:
+
+```sh
+STX_DATA_HOME=/absolute/path/to/a/temporary-profile bun run release:patch
+```
+
+The shared desktop helper appends `Launchpad` to this root. Normal app launches
+continue using the existing model database when the override is unset.
