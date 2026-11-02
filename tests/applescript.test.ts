@@ -91,6 +91,12 @@ test('a failed script is explained by its error number, and older hosts keep the
   expect(failure(-1728, "Can't get window 3.")).toEqual({ message: "Contacts could not do that: Can't get window 3." })
   expect(failure(-1728)).toEqual({ message: 'Contacts could not do that (error -1728).' })
   expect(failure(undefined, 'only a message')).toMatchObject({ permission: 'automation' })
+  // Craft reports a bridge that could not start as `reason`, with no error number. Nothing was refused, so nothing is granted.
+  const unavailable = describeScriptFailure('Finder', { ok: false, reason: 'NSAppleScript unavailable' })
+  expect(unavailable.message).toBe('Launchpad could not run that script: NSAppleScript unavailable. The script never reached Finder, so no permission is missing.')
+  expect(unavailable.permission).toBeUndefined()
+  // An error number still wins, because it describes what the event itself did.
+  expect(describeScriptFailure('Finder', { ok: false, reason: 'whatever', error: { code: -1743 } })).toMatchObject({ permission: 'automation' })
 })
 
 // Compiling catches syntax errors without running anything or reading any data. It does not validate app terms:

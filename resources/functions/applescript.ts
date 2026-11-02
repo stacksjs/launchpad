@@ -18,7 +18,12 @@ export const cleanField = (value: string | undefined) => {
   return text === 'missing value' ? '' : text
 }
 
-export interface ScriptOutcome { ok: boolean, result?: string, error?: { code?: number, message?: string } }
+/**
+ * `error` is what a host that reports AppleScript error numbers returns. `reason` is what the Craft runtime returns
+ * when the bridge itself could not start, such as `NSAppleScript unavailable`: no Apple event is ever sent, so nothing
+ * is refused and nothing appears in the Automation pane. Craft's own `AppleScriptResult` declares neither.
+ */
+export interface ScriptOutcome { ok: boolean, result?: string, reason?: string, error?: { code?: number, message?: string } }
 export interface ScriptFailure { message: string, permission?: 'accessibility' | 'automation' }
 
 /** A failure the person can act on, carrying the privacy pane that settles it when there is one. */
@@ -41,6 +46,9 @@ const automationAdvice = (app: string) => `Launchpad needs your permission to co
 export function describeScriptFailure(app: string, outcome: ScriptOutcome): ScriptFailure {
   const code = typeof outcome.error?.code === 'number' ? outcome.error.code : undefined
   const automation: ScriptFailure = { message: automationAdvice(app), permission: 'automation' }
+  // A script that never ran was never refused, so sending someone to a privacy pane would only waste their time.
+  const reason = outcome.reason?.trim()
+  if (code === undefined && reason) return { message: `Launchpad could not run that script: ${reason}. The script never reached ${app}, so no permission is missing.` }
   if (code === undefined) return automation
   if (code === -1743 || code === -1744) return automation
   if (code === -25211 || code === -1719) return { message: 'Allow Launchpad under System Settings > Privacy & Security > Accessibility, then try again.', permission: 'accessibility' }
