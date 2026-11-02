@@ -1,5 +1,26 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.0...v1.1.1)
+
+## 📝 Documentation
+
+- explain the ICU symbols in the bundled runtime to App Review ([1ba874d](https://github.com/stacksjs/launchpad/commit/1ba874d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- explain the loopback server entitlement to App Review ([41b2da5](https://github.com/stacksjs/launchpad/commit/41b2da5)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.1 ([0ef2f69](https://github.com/stacksjs/launchpad/commit/0ef2f69)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🎉 Miscellaneous
+
+- Merge pull request #16 from stacksjs/claude/app-issues-review-e7f207 ([b255a93](https://github.com/stacksjs/launchpad/commit/b255a93)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#16](https://github.com/stacksjs/launchpad/issues/16))
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.0.12...v1.1.0)
 
 ## ✨ Features
