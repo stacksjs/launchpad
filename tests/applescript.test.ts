@@ -78,13 +78,16 @@ test('events parse local ISO times, sort by start and describe their day', () =>
 
 test('a failed script is explained by its error number, and older hosts keep the permission hint', () => {
   const failure = (code?: number, message?: string) => describeScriptFailure('Contacts', { ok: false, error: code === undefined && message === undefined ? undefined : { code, message } })
-  expect(failure()).toMatchObject({ permission: 'automation', message: expect.stringContaining('control Contacts') })
+  // The Automation pane cannot add an app, so the advice has to name the prompt as well as the switch.
+  expect(failure().message).toBe("Launchpad needs your permission to control Contacts. Choose OK when macOS asks, or, if you answered Don't Allow before, switch Contacts on under Launchpad in System Settings > Privacy & Security > Automation.")
+  expect(failure()).toMatchObject({ permission: 'automation' })
   expect(failure(-1743)).toMatchObject({ permission: 'automation' })
   expect(failure(-1744)).toMatchObject({ permission: 'automation' })
   expect(failure(-25211)).toMatchObject({ permission: 'accessibility', message: expect.stringContaining('Accessibility') })
   expect(failure(-1719)).toMatchObject({ permission: 'accessibility' })
   expect(failure(-128)).toEqual({ message: 'The request was cancelled.' })
   expect(failure(-600)).toEqual({ message: 'Contacts is not running and could not be opened.' })
+  expect(failure(-1712)).toEqual({ message: 'Contacts is waiting for an answer. Switch to Contacts, finish what it is asking, then try again.' })
   expect(failure(-1728, "Can't get window 3.")).toEqual({ message: "Contacts could not do that: Can't get window 3." })
   expect(failure(-1728)).toEqual({ message: 'Contacts could not do that (error -1728).' })
   expect(failure(undefined, 'only a message')).toMatchObject({ permission: 'automation' })

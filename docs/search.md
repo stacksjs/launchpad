@@ -71,6 +71,16 @@ A manifest is strictly validated and cannot run code, reach the network or read 
 and `{clipboard}` are filled in when a snippet is used. `{{date}}` stays literal. The
 clipboard is read only if the snippet asks for it.
 
+**Granting Automation.** The Automation pane has no way to add an app. Launchpad appears
+there only after macOS has asked, and each app it controls (Finder, System Events, Contacts,
+Calendar) is its own switch under the Launchpad row. So the first grant is the prompt itself:
+choose OK. If you chose Don't Allow, open System Settings > Privacy & Security > Automation and
+switch that app on under Launchpad. If Launchpad is not listed at all, nothing has asked yet;
+`tccutil reset AppleEvents com.stacksjs.launchpad` clears the record so the next attempt asks
+again. Emptying the Trash also depends on the Finder warning in Finder > Settings > Advanced:
+leave it on and answer the Finder dialog, or turn it off and let Launchpad's own confirmation
+stand alone.
+
 **Builds.** Direct downloads are hardened and carry the Apple events entitlement, which macOS
 requires before it will even ask for the Automation permission. A sandboxed Mac App Store
 build does not have that entitlement, and the sandbox can also stop Spotlight file search, so
