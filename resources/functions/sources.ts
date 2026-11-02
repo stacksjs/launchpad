@@ -1,4 +1,4 @@
-import { describeScriptFailure } from './applescript'
+import { PermissionError, describeScriptFailure } from './applescript'
 import type { ScriptOutcome } from './applescript'
 import { contactResults, contactSearchScript, parseContacts } from './contacts'
 import { eventResults, parseEvents, upcomingEventsScript } from './calendar'
@@ -6,9 +6,7 @@ import { parseWindows, windowListScript, windowResults } from './windows'
 import type { Result } from './search'
 
 /** A failure the person can act on, with the permission to visit when there is one. */
-export class SourceError extends Error {
-  constructor(message: string, readonly permission?: 'accessibility' | 'automation') { super(message) }
-}
+export class SourceError extends PermissionError {}
 
 export interface SourcePorts {
   appleScript: (source: string) => Promise<ScriptOutcome>

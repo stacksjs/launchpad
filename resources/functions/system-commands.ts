@@ -1,8 +1,11 @@
+import { PermissionError, describeScriptFailure } from './applescript'
+import type { ScriptOutcome } from './applescript'
 import type { Result } from './search'
 
 /** Commands are fixed here. Nothing a user types, and nothing from a result's content, is ever run as code. */
 export type SystemPlan =
-  | { type: 'applescript', source: string }
+  /** `app` is the application the event is addressed to, so a refusal can name the switch that has to be on. */
+  | { type: 'applescript', source: string, app: string }
   | { type: 'spawn', command: string, args: readonly string[] }
   | { type: 'url', url: string }
   | { type: 'path', path: string }
@@ -17,20 +20,20 @@ export interface SystemCommand {
   plan: SystemPlan
 }
 
-const script = (source: string): SystemPlan => ({ type: 'applescript', source })
+const script = (source: string, app: string): SystemPlan => ({ type: 'applescript', source, app })
 const pane = (id: string): SystemPlan => ({ type: 'url', url: `x-apple.systempreferences:${id}` })
 
 const actions: readonly SystemCommand[] = [
   { id: 'sleep', title: 'Sleep', subtitle: 'System · Put this Mac to sleep', aliases: ['suspend', 'nap'], plan: { type: 'spawn', command: '/usr/bin/pmset', args: ['sleepnow'] } },
   { id: 'lock-screen', title: 'Lock Screen', subtitle: 'System · Turn off the display; a password is asked if Lock Screen settings require one', aliases: ['lock', 'lock mac', 'secure'], plan: { type: 'spawn', command: '/usr/bin/pmset', args: ['displaysleepnow'] } },
   { id: 'screen-saver', title: 'Start Screen Saver', subtitle: 'System · Start the screen saver now', aliases: ['screensaver'], plan: { type: 'path', path: '/System/Library/CoreServices/ScreenSaverEngine.app' } },
-  { id: 'restart', title: 'Restart', subtitle: 'System · Restart this Mac', aliases: ['reboot'], confirm: 'Restart this Mac now? Apps with unsaved work will ask to save.', plan: script('tell application "System Events" to restart') },
-  { id: 'shut-down', title: 'Shut Down', subtitle: 'System · Turn off this Mac', aliases: ['power off', 'turn off', 'shutdown'], confirm: 'Shut down this Mac now? Apps with unsaved work will ask to save.', plan: script('tell application "System Events" to shut down') },
-  { id: 'log-out', title: 'Log Out', subtitle: 'System · Sign out of this account', aliases: ['logout', 'sign out'], confirm: 'Log out of this account now? Apps with unsaved work will ask to save.', plan: script('tell application "System Events" to log out') },
-  { id: 'empty-trash', title: 'Empty Trash', subtitle: 'System · Permanently delete everything in the Trash', aliases: ['trash', 'clear trash', 'bin'], confirm: 'Permanently delete everything in the Trash? This cannot be undone.', plan: script('tell application "Finder" to empty trash') },
-  { id: 'eject-disks', title: 'Eject All Disks', subtitle: 'System · Eject every removable disk', aliases: ['eject', 'unmount'], plan: script('tell application "Finder" to eject (every disk whose ejectable is true)') },
-  { id: 'toggle-dark-mode', title: 'Toggle Dark Mode', subtitle: 'System · Switch macOS between light and dark', aliases: ['dark mode', 'light mode', 'appearance'], plan: script('tell application "System Events" to tell appearance preferences to set dark mode to not dark mode') },
-  { id: 'toggle-mute', title: 'Toggle Mute', subtitle: 'System · Mute or unmute sound output', aliases: ['mute', 'unmute', 'silence', 'volume off'], plan: script('set volume output muted (not (output muted of (get volume settings)))') },
+  { id: 'restart', title: 'Restart', subtitle: 'System · Restart this Mac', aliases: ['reboot'], confirm: 'Restart this Mac now? Apps with unsaved work will ask to save.', plan: script('tell application "System Events" to restart', 'System Events') },
+  { id: 'shut-down', title: 'Shut Down', subtitle: 'System · Turn off this Mac', aliases: ['power off', 'turn off', 'shutdown'], confirm: 'Shut down this Mac now? Apps with unsaved work will ask to save.', plan: script('tell application "System Events" to shut down', 'System Events') },
+  { id: 'log-out', title: 'Log Out', subtitle: 'System · Sign out of this account', aliases: ['logout', 'sign out'], confirm: 'Log out of this account now? Apps with unsaved work will ask to save.', plan: script('tell application "System Events" to log out', 'System Events') },
+  { id: 'empty-trash', title: 'Empty Trash', subtitle: 'System · Permanently delete everything in the Trash', aliases: ['trash', 'clear trash', 'bin'], confirm: 'Permanently delete everything in the Trash? This cannot be undone.', plan: script('tell application "Finder" to empty trash', 'Finder') },
+  { id: 'eject-disks', title: 'Eject All Disks', subtitle: 'System · Eject every removable disk', aliases: ['eject', 'unmount'], plan: script('tell application "Finder" to eject (every disk whose ejectable is true)', 'Finder') },
+  { id: 'toggle-dark-mode', title: 'Toggle Dark Mode', subtitle: 'System · Switch macOS between light and dark', aliases: ['dark mode', 'light mode', 'appearance'], plan: script('tell application "System Events" to tell appearance preferences to set dark mode to not dark mode', 'System Events') },
+  { id: 'toggle-mute', title: 'Toggle Mute', subtitle: 'System · Mute or unmute sound output', aliases: ['mute', 'unmute', 'silence', 'volume off'], plan: script('set volume output muted (not (output muted of (get volume settings)))', 'macOS') },
 ]
 
 const panes: readonly [id: string, title: string, aliases: readonly string[], pane: string][] = [
@@ -89,18 +92,24 @@ export function systemCommandResults(): readonly Result[] {
 }
 
 export interface SystemPorts {
-  appleScript: (source: string) => Promise<{ ok: boolean }>
+  appleScript: (source: string) => Promise<ScriptOutcome>
   spawn: (command: string, args: readonly string[]) => Promise<void>
   openUrl: (url: string) => Promise<void>
   openPath: (path: string) => Promise<void>
 }
 
-/** Run one fixed plan. A refused script explains where the permission lives instead of failing silently. */
+/**
+ * Run one fixed plan. A script that does not run is explained by its own error, so a cancelled confirmation, an app
+ * that is waiting on a dialog and a refused permission each say what they are instead of all claiming Automation.
+ */
 export async function runSystemPlan(command: SystemCommand, ports: SystemPorts): Promise<void> {
   const { plan } = command
   if (plan.type === 'applescript') {
     const outcome = await ports.appleScript(plan.source)
-    if (!outcome.ok) throw new Error(`macOS did not run "${command.title}". Allow Launchpad under System Settings > Privacy & Security > Automation, then try again.`)
+    if (!outcome.ok) {
+      const { message, permission } = describeScriptFailure(plan.app, outcome)
+      throw new PermissionError(`Launchpad could not run "${command.title}". ${message}`, permission)
+    }
   }
   else if (plan.type === 'spawn') await ports.spawn(plan.command, plan.args)
   else if (plan.type === 'url') await ports.openUrl(plan.url)

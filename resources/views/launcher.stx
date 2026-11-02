@@ -71,6 +71,8 @@ const resultScrollTop = state(0)
 const resultViewportHeight = state(450)
 const loading = state(true)
 const error = state('')
+/** The privacy pane that would settle the current error, when the failure names one. */
+const errorPermission = state('')
 const status = state('Ready when you are')
 const editor = state(false)
 const aliasApplication = state<Result | null>(null)
@@ -309,10 +311,11 @@ async function reload() {
 
 function focusSearch() { batch(() => { query.set(''); category.set('all'); selected.set(0) }); void nextTick(() => search.current?.focus()) }
 function chooseCategory(value) { batch(() => { query.set(''); category.set(value); selected.set(0) }); void nextTick(() => search.current?.focus()) }
-function fail(reason) { error.set(reason.message || String(reason)) }
+function clearError() { batch(() => { error.set(''); errorPermission.set('') }) }
+function fail(reason) { batch(() => { error.set(reason.message || String(reason)); errorPermission.set(reason.permission || '') }) }
 function openSettings(checkUpdates = false) {
   settings.set(true)
-  error.set('')
+  clearError()
   if (settingsSection() === 'general') {
     void refreshLogin()
     if (checkUpdates === true) void updateLaunchpad()
@@ -544,7 +547,7 @@ effect(() => {
 onDestroy(() => githubRequest?.abort())
 async function connectAccount() {
   saving.set(true)
-  try { githubViewer.set(await connectGitHub(tokenInput())); tokenInput.set(''); error.set(''); void refreshGitHub() }
+  try { githubViewer.set(await connectGitHub(tokenInput())); tokenInput.set(''); clearError(); void refreshGitHub() }
   catch (reason) { fail(reason) }
   finally { saving.set(false) }
 }
@@ -713,7 +716,7 @@ async function run(item = active()) {
     const command = systemCommand(item.content)
     if (command?.confirm && !await stxConfirm(command.confirm)) return
   }
-  error.set('')
+  clearError()
   saving.set(true)
   try {
     await execute(item, query(), duration => recordExecution(item, duration))
@@ -746,7 +749,7 @@ function newCommand() {
   content.set('')
   alias.set('')
   editor.set(true)
-  error.set('')
+  clearError()
   void nextTick(() => commandTitle.current?.focus())
 }
 function editCommand() {
@@ -755,7 +758,7 @@ function editCommand() {
     aliasApplication.set(item)
     applicationAliases.set(records()[item.key]?.aliases || '')
     editor.set(true)
-    error.set('')
+    clearError()
     void nextTick(() => aliasInput.current?.focus())
     return
   }
@@ -767,7 +770,7 @@ function editCommand() {
   content.set(item.content)
   alias.set(item.alias || '')
   editor.set(true)
-  error.set('')
+  clearError()
   void nextTick(() => commandTitle.current?.focus())
 }
 async function saveCommand() {
@@ -903,7 +906,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
-  <div :if="error()" class="error" role="alert">{{ error() }}</div>
+  <div :if="error()" class="error error-banner" role="alert"><span>{{ error() }}</span><button :if="errorPermission()" type="button" class="error-action" @click="openPrivacySettings(errorPermission())">{{ errorPermission() === 'automation' ? 'Open Automation settings' : 'Open Accessibility settings' }}</button></div>
   <div :if="category() === 'github'" class="flex gap-2 items-center px-5 github-tools">
     <select x-model="githubView" aria-label="GitHub view"><option value="repositories">Repositories</option><option value="issues">Issues</option><option value="pulls">Pull requests</option><option value="assigned">Assigned to me</option><option value="reviews">Review requests</option><option value="notifications">Notifications</option></select>
     <input x-model="githubScope" @change="saveScope()" placeholder="owner/repository" aria-label="GitHub repository scope">
@@ -1169,6 +1172,8 @@ kbd { font: 10px -apple-system, system-ui; color: var(--muted); padding: 2px 4px
 .empty-detail { color: var(--muted); font-size: 12px; line-height: 1.6; }
 .text-action { color: var(--accent); font-size: 11px; }
 .error { margin: 6px 20px; padding: 8px 10px; background: var(--error-bg); color: var(--error-ink); border-radius: 5px; font-size: 12px; }
+.error-banner { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.error-action { flex: none; font-size: 11px; color: var(--error-ink); text-decoration: underline; white-space: nowrap; }
 .editor { position: absolute; inset: 0; background: var(--surface); z-index: 10; display: flex; flex-direction: column; min-height: 0; }
 .editor h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.5px; }
 .editor label { display: block; font-size: 12px; margin: 8px 0 4px; color: var(--ink); }

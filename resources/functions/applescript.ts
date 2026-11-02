@@ -18,8 +18,25 @@ export const cleanField = (value: string | undefined) => {
   return text === 'missing value' ? '' : text
 }
 
-export interface ScriptOutcome { ok: boolean, result?: string, error?: { code?: number, message?: string } }
+/**
+ * `error` is what a host that reports AppleScript error numbers returns. `reason` is what the Craft runtime returns
+ * when the bridge itself could not start, such as `NSAppleScript unavailable`: no Apple event is ever sent, so nothing
+ * is refused and nothing appears in the Automation pane. Craft's own `AppleScriptResult` declares neither.
+ */
+export interface ScriptOutcome { ok: boolean, result?: string, reason?: string, error?: { code?: number, message?: string } }
 export interface ScriptFailure { message: string, permission?: 'accessibility' | 'automation' }
+
+/** A failure the person can act on, carrying the privacy pane that settles it when there is one. */
+export class PermissionError extends Error {
+  constructor(message: string, readonly permission?: 'accessibility' | 'automation') { super(message) }
+}
+
+/**
+ * The Automation pane has no way to add an app: a row for Launchpad appears only once macOS has asked, and each app
+ * Launchpad controls is a separate switch underneath it. So the advice names both the prompt and the switch, instead of
+ * sending someone to a pane that may still be empty.
+ */
+const automationAdvice = (app: string) => `Launchpad needs your permission to control ${app}. Choose OK when macOS asks, or, if you answered Don't Allow before, switch ${app} on under Launchpad in System Settings > Privacy & Security > Automation.`
 
 /**
  * What to tell someone when a script did not run. Newer Craft hosts report the AppleScript error number, which separates
@@ -28,12 +45,17 @@ export interface ScriptFailure { message: string, permission?: 'accessibility' |
  */
 export function describeScriptFailure(app: string, outcome: ScriptOutcome): ScriptFailure {
   const code = typeof outcome.error?.code === 'number' ? outcome.error.code : undefined
-  const automation: ScriptFailure = { message: `Allow Launchpad to control ${app} under System Settings > Privacy & Security > Automation, then try again.`, permission: 'automation' }
+  const automation: ScriptFailure = { message: automationAdvice(app), permission: 'automation' }
+  // A script that never ran was never refused, so sending someone to a privacy pane would only waste their time.
+  const reason = outcome.reason?.trim()
+  if (code === undefined && reason) return { message: `Launchpad could not run that script: ${reason}. The script never reached ${app}, so no permission is missing.` }
   if (code === undefined) return automation
   if (code === -1743 || code === -1744) return automation
   if (code === -25211 || code === -1719) return { message: 'Allow Launchpad under System Settings > Privacy & Security > Accessibility, then try again.', permission: 'accessibility' }
   if (code === -128) return { message: 'The request was cancelled.' }
   if (code === -600) return { message: `${app} is not running and could not be opened.` }
+  // A dialog of the app's own, such as the Finder warning before the Trash is emptied, holds the event open until it times out.
+  if (code === -1712) return { message: `${app} is waiting for an answer. Switch to ${app}, finish what it is asking, then try again.` }
   const detail = outcome.error?.message?.trim()
   return { message: detail ? `${app} could not do that: ${detail}` : `${app} could not do that (error ${code}).` }
 }

@@ -2,7 +2,7 @@ import { app, appleScript, clipboard, globalShortcuts, nativeWindow, nativeTray,
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { clipboardDecision } from './clipboard'
-import { describeScriptFailure } from './applescript'
+import { PermissionError, describeScriptFailure } from './applescript'
 import { contactOpenScript } from './contacts'
 import { eventOpenScript } from './calendar'
 import { createSources } from './sources'
@@ -72,10 +72,14 @@ export async function registerLauncher(show: () => void): Promise<() => void> {
 export const behavior = { paste: false }
 
 const runScript = (source: string) => appleScript.execute(source)
-async function script(source: string | null, refusal: string) {
+/** `app` is the application the script talks to, so a refusal names the Automation switch that has to be on. */
+async function script(source: string | null, app: string, refusal: string) {
   if (!source) throw new Error(refusal)
   const outcome = await runScript(source)
-  if (!outcome.ok) throw new Error(`${refusal} ${describeScriptFailure('that app', outcome).message}`)
+  if (!outcome.ok) {
+    const { message, permission } = describeScriptFailure(app, outcome)
+    throw new PermissionError(`${refusal} ${message}`, permission)
+  }
 }
 
 /** Type Command V into the app that regains focus when the palette hides. Needs the Accessibility permission. */
@@ -86,7 +90,7 @@ export async function pasteIntoFrontmost(): Promise<void> {
   }
   // The palette is hiding; wait for macOS to hand focus back before sending the keystroke.
   await new Promise(resolve => setTimeout(resolve, 180))
-  await script('tell application "System Events" to keystroke "v" using command down', 'Launchpad could not paste.')
+  await script('tell application "System Events" to keystroke "v" using command down', 'System Events', 'Launchpad could not paste.')
 }
 
 export const execute = createExecutor({
@@ -98,9 +102,9 @@ export const execute = createExecutor({
     openUrl: url => shell.openExternal(url),
     openPath: path => shell.openPath(path),
   }),
-  focusWindow: token => script(windowFocusScript(token), 'Launchpad could not switch to that window.'),
-  openContact: id => script(contactOpenScript(id), 'Launchpad could not open that contact.'),
-  openEvent: uid => script(eventOpenScript(uid), 'Launchpad could not open that event.'),
+  focusWindow: token => script(windowFocusScript(token), 'System Events', 'Launchpad could not switch to that window.'),
+  openContact: id => script(contactOpenScript(id), 'Contacts', 'Launchpad could not open that contact.'),
+  openEvent: uid => script(eventOpenScript(uid), 'Calendar', 'Launchpad could not open that event.'),
   expandText: text => expandSnippet(text, { now: new Date(), uuid: () => crypto.randomUUID(), clipboard: () => clipboard.readText().then(value => value ?? '') }),
   pasteText: async () => { if (behavior.paste) await pasteIntoFrontmost() },
 })
