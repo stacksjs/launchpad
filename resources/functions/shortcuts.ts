@@ -14,7 +14,7 @@ export const launcherShortcut = 'Cmd+Space'
  * letting one be assigned would quietly stop the matching key working in the palette.
  */
 export const reservedShortcuts: readonly string[] = [
-  launcherShortcut, 'Cmd+N', 'Cmd+D', 'Cmd+E', 'Cmd+G', 'Cmd+,', 'Cmd+Delete', 'Cmd+Return',
+  launcherShortcut, 'Cmd+N', 'Cmd+D', 'Cmd+E', 'Cmd+G', 'Cmd+L', 'Cmd+,', 'Cmd+Delete', 'Cmd+Return',
   'Cmd+Shift+C', 'Cmd+Shift+V', 'Cmd+[', 'Cmd+]',
 ]
 

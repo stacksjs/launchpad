@@ -54,6 +54,8 @@ test('the app\'s own keys cannot be taken', () => {
   for (const reserved of reservedShortcuts) expect(shortcutError(reserved)).toContain("Launchpad's own")
   // The same key written differently is still the same key.
   expect(shortcutError('shift+cmd+v')).toContain("Launchpad's own")
+  // Large type is one of them, so a command shortcut cannot shadow it.
+  expect(shortcutError('Cmd+L')).toContain("Launchpad's own")
 })
 
 test('two commands cannot share a shortcut, but a command keeps its own', () => {
