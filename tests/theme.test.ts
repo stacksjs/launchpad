@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   builtInTheme, defaultFont, defaultFontStack, isBuiltInTheme, isThemeColor, maxFontSize, minFontSize,
-  readFontFamily, readFontSize, readStoredTheme, readTheme, readThemeColors, serializeTheme,
-  themeFontVariables, themeTokens, themeVariables,
+  parseThemeDocument, readFontFamily, readFontSize, readStoredTheme, readTheme, readThemeColors,
+  serializeTheme, themeFontVariables, themeTokens, themeVariables,
 } from '../resources/functions/theme'
 
 test('only plain hex colours are accepted', () => {
@@ -80,6 +80,32 @@ test('the built-in theme is recognised so the app knows it has nothing to apply'
   expect(isBuiltInTheme(builtInTheme)).toBe(true)
   expect(isBuiltInTheme(readTheme({ light: { accent: '#ff0000' } }))).toBe(false)
   expect(isBuiltInTheme(readTheme({ font: { size: 16 } }))).toBe(false)
+})
+
+test('a shared theme is checked rather than quietly corrected', () => {
+  const good = parseThemeDocument(JSON.stringify({ name: 'Midnight', light: { surface: '#111111' } }))
+  expect(good.ok).toBe(true)
+  if (good.ok) {
+    expect(good.theme.name).toBe('Midnight')
+    expect(good.theme.light.surface).toBe('#111111')
+    // What the document does not mention keeps the built-in value instead of being blanked.
+    expect(good.theme.dark).toEqual(builtInTheme.dark)
+  }
+  const errorsFor = (text: string) => {
+    const result = parseThemeDocument(text)
+    return result.ok ? [] : result.errors
+  }
+  expect(errorsFor('')).toEqual(['Paste a theme first.'])
+  expect(errorsFor('   ')).toEqual(['Paste a theme first.'])
+  expect(errorsFor('{nope')).toEqual(['That is not valid JSON.'])
+  expect(errorsFor('[]')).toEqual(['A theme is a JSON object.'])
+  expect(errorsFor('"text"')).toEqual(['A theme is a JSON object.'])
+  expect(errorsFor('{}')).toEqual(['A theme needs light or dark colours.'])
+  expect(errorsFor(JSON.stringify({ light: 'blue' }))).toEqual(['"light" is a set of colours.'])
+  expect(errorsFor(JSON.stringify({ light: { surface: 'red' } }))[0]).toContain('not a hex colour')
+  expect(errorsFor(JSON.stringify({ light: { nonsense: '#fff' } }))[0]).toContain('not a colour this palette uses')
+  // A document full of mistakes reports a readable number of them, not one per token.
+  expect(errorsFor(JSON.stringify({ light: Object.fromEntries(themeTokens.map(token => [token, 'red'])) })).length).toBeLessThanOrEqual(8)
 })
 
 // The built-in values are a copy of what the stylesheet ships. If the stylesheet moves on, a theme would quietly

@@ -121,6 +121,39 @@ export function readStoredTheme(row: { name?: unknown, light?: unknown, dark?: u
   return readTheme({ name: row.name, light: part(row.light), dark: part(row.dark), font: part(row.font) })
 }
 
+/**
+ * A theme someone was given. It is refused rather than quietly corrected, because a theme that silently loses half its
+ * colours looks like the app ignoring it. `readTheme` still fills anything the document simply does not mention.
+ */
+export function parseThemeDocument(text: string): { ok: true, theme: Theme } | { ok: false, errors: string[] } {
+  const trimmed = (text || '').trim()
+  if (!trimmed) return { ok: false, errors: ['Paste a theme first.'] }
+  let parsed: unknown
+  try { parsed = JSON.parse(trimmed) }
+  catch { return { ok: false, errors: ['That is not valid JSON.'] } }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ok: false, errors: ['A theme is a JSON object.'] }
+  const source = parsed as Record<string, unknown>
+  const errors: string[] = []
+  for (const mode of ['light', 'dark'] as const) {
+    const colors = source[mode]
+    if (colors === undefined) continue
+    if (!colors || typeof colors !== 'object' || Array.isArray(colors)) {
+      errors.push(`"${mode}" is a set of colours.`)
+      continue
+    }
+    for (const [token, value] of Object.entries(colors as Record<string, unknown>)) {
+      if (!(themeTokens as readonly string[]).includes(token)) {
+        errors.push(`"${token}" is not a colour this palette uses.`)
+      }
+      else if (!isThemeColor(value)) {
+        errors.push(`"${token}" is not a hex colour such as #245eb7.`)
+      }
+    }
+  }
+  if (source.light === undefined && source.dark === undefined) errors.push('A theme needs light or dark colours.')
+  return errors.length ? { ok: false, errors: errors.slice(0, 8) } : { ok: true, theme: readTheme(source) }
+}
+
 /** True when a theme is the built-in one in every respect, which is how the app knows it has nothing to apply. */
 export function isBuiltInTheme(theme: Theme): boolean {
   return themeTokens.every(token => theme.light[token] === builtInTheme.light[token] && theme.dark[token] === builtInTheme.dark[token])

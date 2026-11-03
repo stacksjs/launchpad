@@ -26,7 +26,7 @@ import { defaultSearchSettings, readSearchSettings, webEngines } from '../functi
 import { systemCommand, systemCommandResults } from '../functions/system-commands'
 import { extensionResults, parseExtension, sampleManifest } from '../functions/extensions'
 import { createLatest } from '../functions/sources'
-import { builtInTheme, readStoredTheme, readThemeFont, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
+import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, serializeTheme, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -143,6 +143,8 @@ const themeEditor = state(false)
 const themeDraft = state(builtInTheme)
 const themeDraftId = state('')
 const themeMode = state('light')
+const themeImport = state('')
+const themeIssues = state([])
 const themeTokenList = [...themeTokens]
 const tokenLabel = token => token.replace(/-/g, ' ').replace(/^./, letter => letter.toUpperCase())
 const currentThemeId = () => preferences().theme?.value || ''
@@ -558,6 +560,23 @@ async function saveTheme() {
   }
   catch (reason) { fail(reason) }
   finally { saving.set(false) }
+}
+async function copyTheme() {
+  try { themeIssues.set([]); await clipboard.writeText(serializeTheme(activeTheme())) }
+  catch (reason) { fail(reason) }
+}
+async function importTheme() {
+  const parsed = parseThemeDocument(themeImport())
+  if (!parsed.ok) { themeIssues.set(parsed.errors); return }
+  themeIssues.set([])
+  try {
+    const theme = parsed.theme
+    const row = await api('themes', 'POST', { name: theme.name, light: JSON.stringify(theme.light), dark: JSON.stringify(theme.dark), font: JSON.stringify(theme.font) })
+    savedThemes.set(await all('themes'))
+    await preference('theme', String(row.id))
+    batch(() => { activeTheme.set(readStoredTheme(row)); themeImport.set('') })
+  }
+  catch (reason) { themeIssues.set([reason.message]) }
 }
 async function deleteTheme(id) {
   if (!await stxConfirm('Delete this theme? This cannot be undone.')) return
@@ -1135,6 +1154,14 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <button :if="currentThemeId()" type="button" class="danger-button" @click="deleteTheme(currentThemeId())">Delete</button>
       </div>
     </div>
+    <details :if="!themeEditor()" class="theme-transfer">
+      <summary>Share a theme</summary>
+      <p class="help">Copy the theme in use to pass it on, or paste one you were given. A pasted theme is checked before it is added, and anything it does not mention keeps the built-in value.</p>
+      <div class="flex gap-3 items-center"><button type="button" class="text-action" @click="copyTheme()">Copy the theme in use</button></div>
+      <textarea x-model="themeImport" rows="3" placeholder="Paste a theme here" spellcheck="false" aria-label="Paste a theme"></textarea>
+      <div class="flex gap-3 items-center"><button type="button" class="save-button" @click="importTheme()" :disabled="!themeImport().trim()">Add theme</button></div>
+      <div :if="themeIssues().length" class="error" role="alert"><div :for="(issue, index) in themeIssues()" :key="index">{{ issue }}</div></div>
+    </details>
     <div :if="themeEditor()" class="theme-editor">
       <label for="theme-name">Name</label>
       <input id="theme-name" :value="themeDraft().name" @input="reviseTheme({ ...themeDraft(), name: $event.target.value })" maxlength="60" spellcheck="false">
@@ -1416,6 +1443,9 @@ header input:focus-visible { outline: none; }
 .theme-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
 .theme-swatch { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
 .theme-swatch input[type=color] { width: 26px; height: 26px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: none; }
+.theme-transfer { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.theme-transfer summary { font-size: 12px; color: var(--muted); cursor: default; }
+.theme-transfer textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 .result-region { display: flex; flex: 1; min-height: 0; }
 .result-region .results { min-width: 0; }
 .clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
