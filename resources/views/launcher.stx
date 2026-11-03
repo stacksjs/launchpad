@@ -26,7 +26,7 @@ import { defaultSearchSettings, readSearchSettings, webEngines } from '../functi
 import { systemCommand, systemCommandResults } from '../functions/system-commands'
 import { extensionResults, parseExtension, sampleManifest } from '../functions/extensions'
 import { createLatest } from '../functions/sources'
-import { builtInTheme, readStoredTheme, themeFontVariables, themeVariables } from '../functions/theme'
+import { builtInTheme, readStoredTheme, readThemeFont, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -139,6 +139,13 @@ const preferencesReady = state(false)
 const themePreference = state('system')
 const activeTheme = state(builtInTheme)
 const savedThemes = state([])
+const themeEditor = state(false)
+const themeDraft = state(builtInTheme)
+const themeDraftId = state('')
+const themeMode = state('light')
+const themeTokenList = [...themeTokens]
+const tokenLabel = token => token.replace(/-/g, ' ').replace(/^./, letter => letter.toUpperCase())
+const currentThemeId = () => preferences().theme?.value || ''
 const colorMode = useColorMode({ initialMode: 'system', storageKey: 'launchpad.appearance' })
 const historyEnabled = state(false)
 const historyDays = state(7)
@@ -512,6 +519,55 @@ const systemAppearance = globalThis.matchMedia?.('(prefers-color-scheme: dark)')
 const reapplyTheme = () => { void nextTick(applyTheme) }
 systemAppearance?.addEventListener('change', reapplyTheme)
 onDestroy(() => systemAppearance?.removeEventListener('change', reapplyTheme))
+/** Editing shows its work: the draft is applied as it changes, so the palette behind Settings is the preview. */
+function startTheme(row) {
+  const base = row ? readStoredTheme(row) : { ...builtInTheme, name: 'My theme' }
+  batch(() => { themeDraftId.set(row ? String(row.id) : ''); themeDraft.set(base); activeTheme.set(base); themeEditor.set(true) })
+}
+function reviseTheme(next) { batch(() => { themeDraft.set(next); activeTheme.set(next) }) }
+function draftColor(token, value) {
+  const draft = themeDraft()
+  reviseTheme({ ...draft, [themeMode()]: { ...draft[themeMode()], [token]: value } })
+}
+function draftFont(part, value) {
+  const draft = themeDraft()
+  reviseTheme({ ...draft, font: readThemeFont({ ...draft.font, [part]: value }) })
+}
+function cancelTheme() {
+  const row = savedThemes().find(item => String(item.id) === currentThemeId())
+  batch(() => { themeEditor.set(false); activeTheme.set(row ? readStoredTheme(row) : builtInTheme) })
+}
+async function chooseTheme(id) {
+  try {
+    await preference('theme', id)
+    const row = savedThemes().find(item => String(item.id) === id)
+    activeTheme.set(row ? readStoredTheme(row) : builtInTheme)
+  }
+  catch (reason) { fail(reason) }
+}
+async function saveTheme() {
+  saving.set(true)
+  try {
+    const draft = themeDraft()
+    const id = themeDraftId()
+    const body = { name: draft.name.trim() || 'Untitled', light: JSON.stringify(draft.light), dark: JSON.stringify(draft.dark), font: JSON.stringify(draft.font) }
+    const row = await api('themes' + (id ? '/' + id : ''), id ? 'PATCH' : 'POST', body)
+    savedThemes.set(await all('themes'))
+    await preference('theme', String(row.id))
+    batch(() => { activeTheme.set(readStoredTheme(row)); themeEditor.set(false) })
+  }
+  catch (reason) { fail(reason) }
+  finally { saving.set(false) }
+}
+async function deleteTheme(id) {
+  if (!await stxConfirm('Delete this theme? This cannot be undone.')) return
+  try {
+    await api('themes/' + id, 'DELETE')
+    savedThemes.set(await all('themes'))
+    if (currentThemeId() === id) await chooseTheme('')
+  }
+  catch (reason) { fail(reason) }
+}
 async function historyPreference(enabled, days = historyDays()) {
   try {
     await preference('history', JSON.stringify({ enabled, days: Number(days) }))
@@ -1067,6 +1123,43 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <button type="button" :class="themePreference() === 'light' ? 'theme-option active' : 'theme-option'" @click="appearance('light')" :aria-pressed="themePreference() === 'light'"><span class="light-preview theme-preview"></span>Light</button>
       <button type="button" :class="themePreference() === 'dark' ? 'theme-option active' : 'theme-option'" @click="appearance('dark')" :aria-pressed="themePreference() === 'dark'"><span class="dark-preview theme-preview"></span>Dark</button>
     </div>
+    <h2>Theme</h2><p class="help">Colours and type for the palette. A theme keeps a light and a dark set, and the appearance above decides which one you see.</p>
+    <div :if="!themeEditor()" class="setting-actions">
+      <select aria-label="Theme" :value="currentThemeId()" @change="chooseTheme($event.target.value)">
+        <option value="">Launchpad</option>
+        <option :for="(row, index) in savedThemes()" :key="row.id" :value="String(row.id)">{{ row.name }}</option>
+      </select>
+      <div class="flex gap-3 items-center">
+        <button type="button" class="text-action" @click="startTheme(null)">New theme</button>
+        <button :if="currentThemeId()" type="button" class="text-action" @click="startTheme(savedThemes().find(row => String(row.id) === currentThemeId()))">Edit</button>
+        <button :if="currentThemeId()" type="button" class="danger-button" @click="deleteTheme(currentThemeId())">Delete</button>
+      </div>
+    </div>
+    <div :if="themeEditor()" class="theme-editor">
+      <label for="theme-name">Name</label>
+      <input id="theme-name" :value="themeDraft().name" @input="reviseTheme({ ...themeDraft(), name: $event.target.value })" maxlength="60" spellcheck="false">
+      <div class="theme-type">
+        <div><label for="theme-font">Font</label><input id="theme-font" :value="themeDraft().font.family" @input="draftFont('family', $event.target.value)" placeholder="System" spellcheck="false"></div>
+        <div><label for="theme-size">Size</label><input id="theme-size" type="number" min="11" max="18" :value="themeDraft().font.size" @input="draftFont('size', $event.target.value)"></div>
+      </div>
+      <div class="theme-modes" role="group" aria-label="Which colours to edit">
+        <button type="button" :class="themeMode() === 'light' ? 'tab active' : 'tab'" :aria-pressed="themeMode() === 'light'" @click="themeMode.set('light')">Light colours</button>
+        <button type="button" :class="themeMode() === 'dark' ? 'tab active' : 'tab'" :aria-pressed="themeMode() === 'dark'" @click="themeMode.set('dark')">Dark colours</button>
+      </div>
+      <div class="theme-swatches">
+        <div :for="(token, index) in themeTokenList" :key="token" class="theme-swatch">
+          <input type="color" :id="'swatch-' + token" :value="themeDraft()[themeMode()][token]" @input="draftColor(token, $event.target.value)">
+          <label :for="'swatch-' + token">{{ tokenLabel(token) }}</label>
+        </div>
+      </div>
+      <div class="setting-actions">
+        <span class="help">Changes show in the palette as you make them.</span>
+        <div class="flex gap-3 items-center">
+          <button type="button" class="text-action" @click="cancelTheme()">Cancel</button>
+          <button type="button" class="text-action" :disabled="saving()" @click="saveTheme()">Save theme</button>
+        </div>
+      </div>
+    </div>
       </section>
       <section :if="settingsSection() === 'clipboard'" class="settings-group">
     <h2>Clipboard History</h2>
@@ -1315,6 +1408,14 @@ header input:focus-visible { outline: none; }
 .dark-preview { background: #25282e; box-shadow: inset 0 -12px #3b424f; }
 .system-preview { background: #f7f9fc; border-right: 70px solid #25282e; }
 .danger-button { font-size: 11px; color: var(--error-ink); border: 1px solid var(--border); border-radius: 5px; padding: 6px 10px; }
+.theme-editor { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.theme-type { display: flex; gap: 12px; }
+.theme-type > div:first-child { flex: 1; }
+.theme-type > div:last-child { width: 88px; }
+.theme-modes { display: flex; gap: 6px; }
+.theme-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+.theme-swatch { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.theme-swatch input[type=color] { width: 26px; height: 26px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: none; }
 .result-region { display: flex; flex: 1; min-height: 0; }
 .result-region .results { min-width: 0; }
 .clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
