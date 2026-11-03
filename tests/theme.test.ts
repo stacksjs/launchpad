@@ -2,8 +2,9 @@ import { expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  builtInTheme, defaultFont, isBuiltInTheme, isThemeColor, maxFontSize, minFontSize,
-  readFontFamily, readFontSize, readTheme, readThemeColors, serializeTheme, themeTokens, themeVariables,
+  builtInTheme, defaultFont, defaultFontStack, isBuiltInTheme, isThemeColor, maxFontSize, minFontSize,
+  readFontFamily, readFontSize, readStoredTheme, readTheme, readThemeColors, serializeTheme,
+  themeFontVariables, themeTokens, themeVariables,
 } from '../resources/functions/theme'
 
 test('only plain hex colours are accepted', () => {
@@ -56,6 +57,23 @@ test('variables are named as the stylesheet names them', () => {
   expect(Object.keys(variables)).toHaveLength(themeTokens.length)
   expect(Object.keys(variables).every(name => name.startsWith('--'))).toBe(true)
   expect(themeVariables(builtInTheme, 'light')['--surface']).toBe(builtInTheme.light.surface)
+})
+
+test('type variables fall back to the stylesheet stack and carry a unit', () => {
+  expect(themeFontVariables(builtInTheme)).toEqual({ '--font-family': defaultFontStack, '--font-size': '13px' })
+  const themed = readTheme({ font: { family: 'Menlo', size: 16 } })
+  expect(themeFontVariables(themed)).toEqual({ '--font-family': 'Menlo', '--font-size': '16px' })
+})
+
+test('a stored row is read back with each part parsed from its JSON', () => {
+  const stored = { name: 'Midnight', light: JSON.stringify({ surface: '#111111' }), dark: JSON.stringify({ ink: '#eeeeee' }), font: JSON.stringify({ size: 15 }) }
+  const theme = readStoredTheme(stored)
+  expect(theme.name).toBe('Midnight')
+  expect(theme.light.surface).toBe('#111111')
+  expect(theme.dark.ink).toBe('#eeeeee')
+  expect(theme.font.size).toBe(15)
+  // A row written before a column existed, or holding something unreadable, still produces a usable theme.
+  expect(readStoredTheme({ name: 'Broken', light: 'not json', dark: undefined, font: '' })).toEqual({ ...builtInTheme, name: 'Broken' })
 })
 
 test('the built-in theme is recognised so the app knows it has nothing to apply', () => {

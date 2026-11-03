@@ -19,6 +19,8 @@ export const minFontSize = 11
 export const maxFontSize = 18
 /** An empty family means the stylesheet's own stack, so a theme that says nothing about type changes nothing. */
 export const defaultFont: ThemeFont = { family: '', size: 13 }
+/** What the stylesheet asks for when a theme names no family of its own. */
+export const defaultFontStack = '-apple-system, BlinkMacSystemFont, system-ui, sans-serif'
 
 /** The values the stylesheet ships with. A new theme starts here, and any value a saved theme omits falls back here. */
 export const builtInTheme: Theme = {
@@ -99,6 +101,24 @@ export function themeVariables(theme: Theme, mode: ThemeMode): Record<string, st
   const variables: Record<string, string> = {}
   for (const token of themeTokens) variables[`--${token}`] = colors[token]
   return variables
+}
+
+/**
+ * The type properties. Sizes elsewhere in the palette are expressed against `--font-size`, so setting it moves the
+ * query field, the result titles and their subtitles together instead of each needing a value of its own.
+ */
+export function themeFontVariables(theme: Theme): Record<string, string> {
+  return { '--font-family': theme.font.family || defaultFontStack, '--font-size': `${theme.font.size}px` }
+}
+
+/** A row as the model stores it, where each part is held as JSON text rather than an object. */
+export function readStoredTheme(row: { name?: unknown, light?: unknown, dark?: unknown, font?: unknown }): Theme {
+  const part = (value: unknown) => {
+    if (typeof value !== 'string') return value
+    try { return JSON.parse(value) }
+    catch { return {} }
+  }
+  return readTheme({ name: row.name, light: part(row.light), dark: part(row.dark), font: part(row.font) })
 }
 
 /** True when a theme is the built-in one in every respect, which is how the app knows it has nothing to apply. */

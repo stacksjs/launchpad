@@ -26,6 +26,7 @@ import { defaultSearchSettings, readSearchSettings, webEngines } from '../functi
 import { systemCommand, systemCommandResults } from '../functions/system-commands'
 import { extensionResults, parseExtension, sampleManifest } from '../functions/extensions'
 import { createLatest } from '../functions/sources'
+import { builtInTheme, readStoredTheme, themeFontVariables, themeVariables } from '../functions/theme'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -136,6 +137,8 @@ const icons = state<Record<string, string>>({})
 const preferences = state<Record<string, any>>({})
 const preferencesReady = state(false)
 const themePreference = state('system')
+const activeTheme = state(builtInTheme)
+const savedThemes = state([])
 const colorMode = useColorMode({ initialMode: 'system', storageKey: 'launchpad.appearance' })
 const historyEnabled = state(false)
 const historyDays = state(7)
@@ -493,6 +496,22 @@ async function appearance(value) {
   }
   catch (reason) { fail(reason) }
 }
+/**
+ * Colours and type are custom properties on the root element, so applying a theme is setting them there. The mode is
+ * read from the element rather than from the preference, because `system` is resolved into a class by the colour mode.
+ */
+function applyTheme() {
+  const root = document.documentElement
+  const theme = activeTheme()
+  const variables = { ...themeVariables(theme, root.classList.contains('dark') ? 'dark' : 'light'), ...themeFontVariables(theme) }
+  for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value)
+}
+// A different theme, a different appearance, and the Mac changing appearance while `system` is chosen all re-apply.
+effect(() => { activeTheme(); themePreference(); void nextTick(applyTheme) })
+const systemAppearance = globalThis.matchMedia?.('(prefers-color-scheme: dark)')
+const reapplyTheme = () => { void nextTick(applyTheme) }
+systemAppearance?.addEventListener('change', reapplyTheme)
+onDestroy(() => systemAppearance?.removeEventListener('change', reapplyTheme))
 async function historyPreference(enabled, days = historyDays()) {
   try {
     await preference('history', JSON.stringify({ enabled, days: Number(days) }))
@@ -532,6 +551,9 @@ async function loadPreferences() {
   themePreference.set(theme)
   colorMode.set(theme)
   await nativeWindow.setAppearance(theme)
+  savedThemes.set(await all('themes').catch(() => []))
+  const chosen = savedThemes().find(row => String(row.id) === (values.theme?.value || ''))
+  activeTheme.set(chosen ? readStoredTheme(chosen) : builtInTheme)
   if (values.githubScope) githubScope.set(values.githubScope.value)
   if (values.search) { searchSettings.set(readSearchSettings(values.search.value)); behavior.paste = searchSettings().paste }
   if (values.history) {
@@ -1162,10 +1184,11 @@ onDestroy(() => { cleanup(); cleanupTray() })
 </main>
 </body>
 <style>
+:root { --font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; --font-size: 13px; }
 :root { color-scheme: light; --surface: #ffffff; --ink: #202735; --muted: #566173; --line: #d9e0e9; --accent: #245eb7; --selected: #e7edf6; --icon-surface: #e8eef7; --footer: #f3f5f8; --key: #e0e6ee; --field: #ffffff; --border: #8391a5; --outline: #b8c3d3; --selected-border: #b6c9e4; --error-bg: #fde9e9; --error-ink: #922634; }
 :root.dark { color-scheme: dark; --surface: #202226; --ink: #f2f3f5; --muted: #b2b8c4; --line: #35383f; --accent: #a9cbff; --selected: #343943; --icon-surface: #2d323c; --footer: #1c1e22; --key: #32363e; --field: #272a31; --border: #657185; --outline: #525a68; --selected-border: #53627a; --error-bg: #432b2e; --error-ink: #ffccd1; }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color: var(--ink); font: 13px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color: var(--ink); font: var(--font-size)/1.4 var(--font-family); -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; border: 0; background: transparent; }
 button:disabled { opacity: .5; cursor: default; }
@@ -1174,7 +1197,7 @@ main { height: 100dvh; position: relative; overflow: hidden; background: var(--s
 .palette-content { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 header { height: 72px; flex-shrink: 0; }
 .search-icon { width: 22px; height: 22px; color: var(--muted); flex-shrink: 0; }
-header input { width: 100%; min-width: 0; font-size: 21px; letter-spacing: -.5px; background: transparent; border: none; padding: 8px 0; outline: none; }
+header input { width: 100%; min-width: 0; font-size: calc(var(--font-size) * 1.615); letter-spacing: -.5px; background: transparent; border: none; padding: 8px 0; outline: none; }
 header input::placeholder { color: var(--muted); }
 input::-webkit-search-cancel-button { display: none; }
 .escape { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
@@ -1194,8 +1217,8 @@ nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .item-icon { width: 33px; height: 33px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--icon-surface); color: var(--accent); flex-shrink: 0; }
 .item-icon > span { width: 19px; height: 19px; }
 .result-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
-.result-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.result-subtitle { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-title { font-size: var(--font-size); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-subtitle { color: var(--muted); font-size: calc(var(--font-size) - 2px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .star { color: var(--accent); font-size: 11px; }
 .return-key { color: var(--muted); font-size: 17px; }
 footer { height: 44px; flex-shrink: 0; border-top: 1px solid var(--line); background: var(--footer); }
