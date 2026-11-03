@@ -11,6 +11,8 @@ try {
   const page = await browser.newPage({ viewport: { width: 720, height: 450 } })
   const errors = []
   const actions = []
+  const preferenceWrites = []
+  let savedPreference
   let state = { currentVersion: '1.0.10', phase: 'idle' }
   let offline = true
   let releaseStatus = () => {}
@@ -35,6 +37,14 @@ try {
         if (action === 'install') state = { ...state, phase: 'installed' }
       }
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify(state) })
+    }
+    if (url.pathname.startsWith('/api/preferences')) {
+      const method = route.request().method()
+      preferenceWrites.push(method)
+      if (method === 'POST' && savedPreference) return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'AppPreference already exists' }) })
+      savedPreference = { id: 1, ...route.request().postDataJSON() }
+      await new Promise(resolve => setTimeout(resolve, 30))
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: savedPreference }) })
     }
     return route.abort()
   })
@@ -70,6 +80,10 @@ try {
   await page.getByText('No settings found.', { exact: true }).waitFor()
   await page.getByRole('searchbox', { name: 'Search settings' }).fill('')
   assert.equal(await page.locator('.settings-item').count(), 9)
+  await page.evaluate(() => Promise.all([window.__launcher.changeAutomaticUpdates(false), window.__launcher.changeAutomaticUpdates(true)]))
+  assert.deepEqual(preferenceWrites, ['POST', 'PATCH'], 'Rapid changes must reuse the first saved preference row.')
+  assert.equal(JSON.parse(savedPreference.value).enabled, true)
+  assert.equal(await page.getByText('AppPreference already exists', { exact: true }).count(), 0)
   assert.deepEqual(errors, [])
   process.stdout.write(JSON.stringify({ offlineCheckDoesNotClaimCurrent: true, retryDownloadInstallControls: true, frameworkEndpoint: true }) + '\n')
 }

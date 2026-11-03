@@ -35,11 +35,13 @@ With [Pantry](https://pantry.dev) 0.11.142 or later:
 pantry install launchpad
 ```
 
-Or [download the latest release](https://github.com/stacksjs/launchpad/releases/latest), open the disk image, and install Launchpad. Public direct-download builds are signed and notarized.
+Or [download the latest release](https://github.com/stacksjs/launchpad/releases/latest), unzip the download, open the disk image, and drag Launchpad into Applications. Public direct-download builds are signed and notarized.
 
 Open Launchpad once, then press **Command + Space** from another app to start typing. Use the arrow keys to select a result and Return to open or copy it. Escape or clicking outside dismisses the palette.
 
 Launchpad lives in the menu bar with no Dock or app-switcher icon. First launch opens General settings, where you can opt into **Launch at login**. Later starts stay hidden until you open the palette. Click the Command symbol to open it, or right-click for Open, Settings and Quit.
+
+Software Update in Settings checks for and downloads verified updates automatically. You choose when to install and restart. Automatic Updates can be turned off on this Mac.
 
 If another launcher owns Command + Space, quit it or reassign its shortcut before opening Launchpad.
 

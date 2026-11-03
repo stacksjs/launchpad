@@ -473,10 +473,16 @@ async function reloadHistory() {
   const rows = await all('clipboard-entries')
   items.set([...items().filter(item => item.kind !== 'clipboard'), ...rows.reverse().map(historyResult)])
 }
-async function preference(key, value) {
-  const previous = preferences()[key]
-  const row = await api('preferences' + (previous ? '/' + previous.id : ''), previous ? 'PATCH' : 'POST', { key, value })
-  preferences.set({ ...preferences(), [key]: row })
+let preferenceTask = Promise.resolve()
+function preference(key, value) {
+  const save = async () => {
+    const previous = preferences()[key]
+    const row = await api('preferences' + (previous ? '/' + previous.id : ''), previous ? 'PATCH' : 'POST', { key, value })
+    preferences.set({ ...preferences(), [key]: row })
+  }
+  const task = preferenceTask.then(save)
+  preferenceTask = task.catch(() => {})
+  return task
 }
 async function appearance(value) {
   try {
