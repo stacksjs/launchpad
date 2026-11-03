@@ -29,7 +29,7 @@ export function createExecutor(ports: ExecutionPorts) {
     // Queue confirmed activity without letting its persistence hold the window open.
     await recordSuccessfulOperation(async () => {
       if (result.kind === 'application') await ports.openApplication(result.content)
-      else if (result.kind === 'github') await ports.openLink(result.content)
+      else if (result.kind === 'github' || result.kind === 'bookmark') await ports.openLink(result.content)
       else if (result.kind === 'quicklink') await ports.openLink(quicklinkUrl(result.content, quicklinkArgument(result, query) ?? ''))
       else if (result.kind === 'web') await ports.openLink(quicklinkUrl(result.content, query.trim()))
       else if (result.kind === 'file') await (ports.openPath ?? ports.openApplication)(result.content)

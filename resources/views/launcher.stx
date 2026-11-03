@@ -16,7 +16,8 @@ import { historyPreference as readHistoryPreference, parsePreference } from '../
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks } from '../functions/native'
+import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
@@ -337,6 +338,7 @@ async function reload() {
     items.set([...apps,
       ...commands.map(row => ({ key: 'command:' + row.id, id: row.id, title: row.title, subtitle: row.kind === 'snippet' ? 'Snippet · Copy text' : row.content, kind: row.kind, content: row.content, alias: row.alias, shortcut: row.shortcut || '' })),
       ...history.reverse().map(historyResult),
+      ...bookmarkResults(await readBookmarks(searchSettings().bookmarks).catch(() => [])),
     ])
     extensionRows.set(extensions)
     void syncCommandShortcuts()
@@ -783,8 +785,10 @@ async function saveSearch(patch) {
   try {
     const next = { ...searchSettings(), ...patch }
     await preference('search', JSON.stringify(next))
+    const reread = next.bookmarks.join() !== searchSettings().bookmarks.join()
     searchSettings.set(next)
     behavior.paste = next.paste
+    if (reread) await reload()
   }
   catch (reason) { fail(reason) }
 }

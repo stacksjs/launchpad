@@ -82,7 +82,7 @@ export function actionLabelFor(kind: string | undefined): string {
   if (kind === 'system') return 'Run'
   if (kind === 'setup') return 'Settings'
   if (kind === 'window') return 'Switch'
-  if (kind && ['application', 'quicklink', 'github', 'web', 'file', 'contact', 'event'].includes(kind)) return 'Open'
+  if (kind && ['application', 'quicklink', 'github', 'web', 'file', 'contact', 'event', 'bookmark'].includes(kind)) return 'Open'
   return 'Copy'
 }
 
@@ -90,7 +90,7 @@ export interface SecondaryAction { reveal: boolean, copy: string }
 
 /** Command Return reveals a file in Finder; Shift Command C copies its path, email address or phone number. */
 export function secondaryActions(item: Pick<Result, 'kind' | 'content' | 'detail'> | undefined): SecondaryAction {
-  return { reveal: item?.kind === 'file', copy: item?.kind === 'file' ? item.content : item?.kind === 'contact' ? item.detail ?? '' : '' }
+  return { reveal: item?.kind === 'file', copy: item?.kind === 'file' ? item.content : item?.kind === 'contact' || item?.kind === 'bookmark' ? item.detail ?? '' : '' }
 }
 
 export interface FileRow { path: string, name: string, folder: string, directory: boolean }
