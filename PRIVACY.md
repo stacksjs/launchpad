@@ -1,8 +1,8 @@
 # Launchpad privacy policy
 
-Effective October 27, 2026.
+Effective November 2, 2026.
 
-Launchpad stores your quicklinks, snippets, favorites, clipboard history and launcher activity in a local SQLite database in its macOS application container. No Stacks account or hosted API is required. Launchpad does not upload this database to Stacks, run advertising or include an external analytics SDK.
+Launchpad stores your quicklinks, snippets, favorites, clipboard history and launcher activity in a local SQLite database on this Mac. No Stacks account or hosted API is required. Launchpad does not upload this database to Stacks, run advertising or include an external analytics SDK.
 
 ## Applications and shortcuts
 
@@ -41,6 +41,12 @@ An extension is a JSON file you paste into Settings. It can add quicklinks and s
 Using the GitHub category sends GitHub search text, repository scope and selected filters directly to GitHub's API. Connecting an account also sends its token for authentication. The token is stored in macOS Keychain, not the local database. Launchpad displays account and repository information returned by GitHub. Disconnect in Settings to remove the saved token. GitHub processes requests under its [privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement); its service may retain request and account information.
 
 Opening a GitHub result or quicklink uses your default browser. Quicklink search arguments become part of the destination URL. That website and your browser have their own privacy practices. Local app, snippet and clipboard searches are not sent to GitHub.
+
+## Software Update
+
+Direct-download copies check Launchpad's GitHub releases and download available updates automatically while the app runs. The first check runs after about one minute, then about every six hours. GitHub and its download hosts receive ordinary network request information, such as your IP address and the requested release asset. Launcher database records and search text are not included.
+
+Turn off Automatic Updates in Software Update settings to check and download manually. Installation waits for Install and Restart. The preference stays in the local database. App Store copies use App Store updates.
 
 ## Storage and deletion
 

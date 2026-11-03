@@ -882,7 +882,7 @@ onMount(() => {
   const resize = new ResizeObserver(entries => resultViewportHeight.set(entries[0]?.contentRect.height || 450))
   if (list.current) resize.observe(list.current)
   const stopBlur = windowEvents.onBlur(() => { void dismissLauncher() })
-  const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshApplications().catch(fail); if (settings() && settingsSection() === 'general') void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
+  const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshUpdate(); void refreshApplications().catch(fail); if (settings() && settingsSection() === 'general') void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
   const stopClose = windowEvents.onClose(() => paletteVisibility(false))
   const stopMinimize = windowEvents.onMinimize(() => paletteVisibility(false))
   onDestroy(() => { resize.disconnect(); paletteVisibility(false); void flushUsage(); stopBlur(); stopFocus(); stopClose(); stopMinimize() })
@@ -1036,7 +1036,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
           <button :if="updateState().phase !== 'unavailable' && updateState().phase !== 'ready' && updateState().phase !== 'installed'" type="button" class="secondary-button" :disabled="updateBusy()" @click="updateLaunchpad(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : 'Check for Updates...' }}</button>
           <button :if="updateState().phase === 'ready'" type="button" class="save-button" @click="updateLaunchpad('install')">Install and Restart</button>
         </div>
-        <div class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
+        <div :if="updateState().phase !== 'unavailable'" class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
       </section>
       <section :if="settingsSection() === 'appearance'" class="settings-group">
     <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>
@@ -1245,7 +1245,7 @@ header input:focus-visible { outline: none; }
 .settings-sidebar { display: flex; flex-direction: column; min-height: 0; background: var(--footer); border-right: 1px solid var(--line); padding: 14px 10px 10px; }
 .settings-search { display: flex !important; align-items: center; gap: 5px; padding: 0 8px; margin: 0 0 14px !important; border: 1px solid var(--line); border-radius: 7px; background: var(--field); color: var(--muted); }
 .settings-search input { border: 0; background: transparent; padding: 6px 0; font-size: 12px; }
-.settings-nav { display: flex; flex-direction: column; gap: 3px; height: auto; min-height: 0; overflow-y: auto; border: 0; }
+.settings-nav { display: flex; flex: 1; flex-direction: column; gap: 3px; height: auto; min-height: 0; overflow-y: auto; border: 0; }
 .settings-item { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 6px 8px; border-radius: 6px; font-size: 12px; flex-shrink: 0; }
 .settings-item:hover { background: var(--selected); }
 .settings-item.active { background: #087ff5; color: #fff; }
