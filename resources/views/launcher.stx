@@ -16,7 +16,7 @@ import { historyPreference as readHistoryPreference, parsePreference } from '../
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory } from '../functions/native'
 import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
@@ -30,6 +30,7 @@ import { createLatest } from '../functions/sources'
 import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, serializeTheme, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
 import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
 import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions/large-type'
+import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -147,6 +148,8 @@ const themeEditor = state(false)
 const themeDraft = state(builtInTheme)
 const themeDraftId = state('')
 const themeMode = state('light')
+const browsePath = state('')
+const homePath = state('')
 const largeTypeValue = state('')
 const largeTypeSize = state(minLargeTypeSize)
 const shortcutRefused = state([])
@@ -195,7 +198,7 @@ const searchEmoji = (input, scope) => emojiIndex()(input, scope)
 const allResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
-  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), rates: ratesState(), settings: searchSettings(), calculate })
+  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
@@ -751,6 +754,7 @@ effect(() => {
   searchFiles.cancel(); searchContacts.cancel(); loadFiles.cancel(); loadContacts.cancel()
   sourceLoading.set(false)
   if (!visible) return
+  if (mode === 'file' && browsePath()) return
   if (mode === 'file' || mode === 'all') {
     const wanted = text.length >= (mode === 'file' ? fileTabMinimum : inlineFileMinimum) && !text.startsWith(':') && calculate(text) === null
     if (!wanted || (mode === 'all' && !enabled)) { fileItems.set([]); if (mode === 'file') sourceNote.set(text ? '' : 'Type part of a file name.') ; return }
@@ -843,6 +847,33 @@ async function copySecondary() {
 }
 function cycleCategory(step) { chooseCategory(nextCategory(category(), step)); void nextTick(() => document.querySelector('.tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })) }
 
+/**
+ * Browsing never leaves the home directory, so a path from a result is checked before it is opened rather than
+ * trusted. A folder that cannot be read lists as empty, which reads as an empty folder and not as a broken tab.
+ */
+async function openFolder(path) {
+  const home = homePath()
+  if (!home || !isWithin(path, home)) return
+  const entries = await readDirectory(path)
+  batch(() => {
+    browsePath.set(normalizePath(path))
+    fileItems.set(browseResults(entries, home))
+    sourceNote.set(entries.length ? '' : 'This folder is empty.')
+    query.set('')
+    selected.set(0)
+  })
+  void nextTick(() => search.current?.focus())
+}
+/** Stepping up from the home directory leaves browsing rather than walking into the system. */
+function leaveFolder() {
+  const current = browsePath()
+  if (!current) return
+  if (normalizePath(current) === normalizePath(homePath())) { stopBrowsing(); return }
+  void openFolder(parentPath(current))
+}
+function stopBrowsing() {
+  batch(() => { browsePath.set(''); fileItems.set([]); selected.set(0); sourceNote.set('Type part of a file name.') })
+}
 /** Sized against the window it fills, so it is measured again when the window changes rather than fixed on opening. */
 function measureLargeType() {
   const text = largeTypeValue()
@@ -907,6 +938,7 @@ async function run(item = active()) {
     openSettings()
     return
   }
+  if (item.kind === 'file' && item.directory) { void openFolder(item.content); return }
   if (item.kind === 'system') {
     const command = systemCommand(item.content)
     if (command?.confirm && !await stxConfirm(command.confirm)) return
@@ -1034,6 +1066,7 @@ function key(event) {
   }
   if (event.metaKey && event.key === ',') { event.preventDefault(); if (settings()) closeSettings(); else openSettings(); return }
   if (settings() || packageDetail()) return
+  if (event.metaKey && event.key === 'ArrowUp' && browsePath()) { event.preventDefault(); leaveFolder(); return }
   if (event.metaKey && event.key.toLowerCase() === 'l') { event.preventDefault(); showLargeType(); return }
   if (event.metaKey && event.key.toLowerCase() === 'g') { event.preventDefault(); chooseCategory('github'); return }
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
@@ -1071,6 +1104,7 @@ onMount(() => {
 })
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
+  homePath.set(await homeDirectory())
   try { cleanupTray = await configureTray(activate, openSettings, checkForUpdates) } catch (reason) { fail(reason) }
   const firstSetup = preferencesReady() && !preferences().loginInitialized
   await refreshLogin(true)
@@ -1087,6 +1121,8 @@ onMount(async () => {
   ])
 })
 const stopCommandShortcuts = onCommandShortcut((commandId) => { void runShortcut(commandId) })
+// An empty File tab showed nothing to do. It now opens on the home folder, which is somewhere to start.
+effect(() => { if (category() === 'file' && !query().trim() && !browsePath() && homePath() && searchableVisible()) void openFolder(homePath()) })
 const onWindowResize = () => measureLargeType()
 globalThis.addEventListener?.('resize', onWindowResize)
 onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.removeEventListener?.('resize', onWindowResize) })
@@ -1123,6 +1159,11 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.r
     <span class="large-type-hint">Escape to close</span>
   </div>
   <div :if="error()" class="error error-banner" role="alert"><span>{{ error() }}</span><button :if="errorPermission()" type="button" class="error-action" @click="openPrivacySettings(errorPermission())">{{ errorPermission() === 'automation' ? 'Open Automation settings' : 'Open Accessibility settings' }}</button></div>
+  <div :if="browsePath()" class="flex gap-2 items-center px-5 github-tools browse-bar">
+    <button type="button" class="text-action" @click="leaveFolder()" aria-label="Enclosing folder">↑ Up</button>
+    <span class="help browse-path">{{ breadcrumb(browsePath(), homePath()) }}</span>
+    <button type="button" class="ml-auto text-action" @click="stopBrowsing()">Search instead</button>
+  </div>
   <div :if="category() === 'github'" class="flex gap-2 items-center px-5 github-tools">
     <select x-model="githubView" aria-label="GitHub view"><option value="repositories">Repositories</option><option value="issues">Issues</option><option value="pulls">Pull requests</option><option value="assigned">Assigned to me</option><option value="reviews">Review requests</option><option value="notifications">Notifications</option></select>
     <input x-model="githubScope" @change="saveScope()" placeholder="owner/repository" aria-label="GitHub repository scope">
@@ -1571,6 +1612,7 @@ header input:focus-visible { outline: none; }
 .large-type-backdrop { position: absolute; inset: 0; background: var(--surface); }
 .large-type-text { position: relative; margin: 0; text-align: center; font-weight: 600; letter-spacing: -.5px; line-height: 1.25; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .large-type-hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--muted); }
+.browse-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
 .result-region { display: flex; flex: 1; min-height: 0; }
 .result-region .results { min-width: 0; }
 .clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
