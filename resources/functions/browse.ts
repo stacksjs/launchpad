@@ -69,5 +69,6 @@ export function browseResults(entries: readonly BrowseEntry[], home: string): Re
     kind: 'file',
     content: entry.path,
     detail: entry.path,
+    directory: entry.isDirectory,
   }))
 }

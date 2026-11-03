@@ -19,6 +19,8 @@ export interface Result {
   icon?: string
   /** What a secondary Copy takes: a file path, an email address or a phone number. */
   detail?: string
+  /** True for a folder, which is stepped into rather than opened. */
+  directory?: boolean
 }
 
 const splitWords = (value: string) => value.split(/[^\p{L}\p{N}+#]+/u).filter(Boolean)

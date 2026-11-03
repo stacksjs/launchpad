@@ -65,6 +65,9 @@ test('rows say which are folders and where they sit', () => {
   const rows = browseResults([entry('Projects', true), entry('notes.md')], '/Users/ada')
   expect(rows[0]).toMatchObject({ kind: 'file', title: 'Projects', content: '/Users/ada/Projects' })
   expect(rows[0]!.subtitle).toBe('Folder · ~')
+  // A folder is stepped into rather than opened, so the row has to say which it is.
+  expect(rows[0]!.directory).toBe(true)
+  expect(rows[1]!.directory).toBe(false)
   expect(rows[1]!.subtitle).toBe('~')
   expect(rows[1]!.detail).toBe('/Users/ada/notes.md')
   // The key matches what file search produces, so the same row cannot appear twice under two keys.

@@ -99,7 +99,7 @@ export interface FileRow { path: string, name: string, folder: string, directory
 
 export function fileResults(files: readonly FileRow[]): Result[] {
   return files.map(file => ({
-    key: `file:${file.path}`, title: file.name, subtitle: `${file.directory ? 'Folder · ' : ''}${file.folder}`, kind: 'file', content: file.path, detail: file.path,
+    key: `file:${file.path}`, title: file.name, subtitle: `${file.directory ? 'Folder · ' : ''}${file.folder}`, kind: 'file', content: file.path, detail: file.path, directory: Boolean(file.directory),
   }))
 }
 
