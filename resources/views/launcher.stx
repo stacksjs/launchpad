@@ -29,6 +29,7 @@ import { extensionResults, parseExtension, sampleManifest } from '../functions/e
 import { createLatest } from '../functions/sources'
 import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, serializeTheme, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
 import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
+import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions/large-type'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -146,6 +147,8 @@ const themeEditor = state(false)
 const themeDraft = state(builtInTheme)
 const themeDraftId = state('')
 const themeMode = state('light')
+const largeTypeValue = state('')
+const largeTypeSize = state(minLargeTypeSize)
 const shortcutRefused = state([])
 const shortcut = state('')
 const recordingShortcut = state(false)
@@ -840,6 +843,19 @@ async function copySecondary() {
 }
 function cycleCategory(step) { chooseCategory(nextCategory(category(), step)); void nextTick(() => document.querySelector('.tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })) }
 
+/** Sized against the window it fills, so it is measured again when the window changes rather than fixed on opening. */
+function measureLargeType() {
+  const text = largeTypeValue()
+  if (!text) return
+  largeTypeSize.set(largeTypeFontSize(text, Math.max(120, (globalThis.innerWidth || 720) - 96), Math.max(80, (globalThis.innerHeight || 450) - 120)))
+}
+function showLargeType() {
+  const text = largeTypeText(active())
+  if (!text) return
+  largeTypeValue.set(text)
+  void nextTick(measureLargeType)
+}
+function hideLargeType() { largeTypeValue.set('') }
 const savedCommands = () => items().filter(item => ['quicklink', 'snippet'].includes(item.kind))
 /**
  * The field records the keys instead of asking for their names. Every press is swallowed while it has focus, so
@@ -1004,6 +1020,13 @@ async function remove() {
 }
 
 function key(event) {
+  if (largeTypeValue()) {
+    if (event.key === 'Escape' || (event.metaKey && event.key.toLowerCase() === 'l')) { event.preventDefault(); hideLargeType(); return }
+    // Command C and the rest still work, because the point is that the text can be taken.
+    if (event.metaKey) return
+    event.preventDefault()
+    return
+  }
   if (event.key === 'Escape') {
     event.preventDefault()
     void dismissLauncher()
@@ -1011,6 +1034,7 @@ function key(event) {
   }
   if (event.metaKey && event.key === ',') { event.preventDefault(); if (settings()) closeSettings(); else openSettings(); return }
   if (settings() || packageDetail()) return
+  if (event.metaKey && event.key.toLowerCase() === 'l') { event.preventDefault(); showLargeType(); return }
   if (event.metaKey && event.key.toLowerCase() === 'g') { event.preventDefault(); chooseCategory('github'); return }
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
   if (event.metaKey && event.key.toLowerCase() === 'n') { event.preventDefault(); newCommand(); return }
@@ -1063,7 +1087,9 @@ onMount(async () => {
   ])
 })
 const stopCommandShortcuts = onCommandShortcut((commandId) => { void runShortcut(commandId) })
-onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts() })
+const onWindowResize = () => measureLargeType()
+globalThis.addEventListener?.('resize', onWindowResize)
+onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.removeEventListener?.('resize', onWindowResize) })
 </script>
 
 <main class="flex flex-col w-full" aria-label="Launchpad">
@@ -1091,6 +1117,11 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts() })
     <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
+  <div :if="largeTypeValue()" class="large-type" role="dialog" aria-modal="true" aria-label="Large type">
+    <div class="large-type-backdrop" @click="hideLargeType()"></div>
+    <p class="large-type-text" :style="'font-size:' + largeTypeSize() + 'px'" @click.stop="">{{ largeTypeValue() }}</p>
+    <span class="large-type-hint">Escape to close</span>
+  </div>
   <div :if="error()" class="error error-banner" role="alert"><span>{{ error() }}</span><button :if="errorPermission()" type="button" class="error-action" @click="openPrivacySettings(errorPermission())">{{ errorPermission() === 'automation' ? 'Open Automation settings' : 'Open Accessibility settings' }}</button></div>
   <div :if="category() === 'github'" class="flex gap-2 items-center px-5 github-tools">
     <select x-model="githubView" aria-label="GitHub view"><option value="repositories">Repositories</option><option value="issues">Issues</option><option value="pulls">Pull requests</option><option value="assigned">Assigned to me</option><option value="reviews">Review requests</option><option value="notifications">Notifications</option></select>
@@ -1536,6 +1567,10 @@ header input:focus-visible { outline: none; }
 .shortcut-field input { flex: 1; min-width: 0; }
 .shortcut-field input:focus { border-color: var(--accent); }
 .bookmark-browsers { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 14px; }
+.large-type { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 28px 48px; }
+.large-type-backdrop { position: absolute; inset: 0; background: var(--surface); }
+.large-type-text { position: relative; margin: 0; text-align: center; font-weight: 600; letter-spacing: -.5px; line-height: 1.25; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.large-type-hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--muted); }
 .result-region { display: flex; flex: 1; min-height: 0; }
 .result-region .results { min-width: 0; }
 .clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
