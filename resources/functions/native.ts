@@ -7,6 +7,8 @@ import { contactOpenScript } from './contacts'
 import { eventOpenScript } from './calendar'
 import { createSources } from './sources'
 import { expandSnippet } from './snippets'
+import { commandIdFromShortcut, shortcutId, shortcutPlan } from './shortcuts'
+import type { ShortcutHolder } from './shortcuts'
 import { runSystemPlan } from './system-commands'
 import { windowFocusScript } from './windows'
 
@@ -67,6 +69,32 @@ export async function registerLauncher(show: () => void): Promise<() => void> {
     throw error
   }
 }
+
+/**
+ * Puts the saved commands' shortcuts in place and reports the ids macOS would not give us. A shortcut another
+ * application already owns is only discovered this way: `register` resolves either way, and the entry comes back
+ * from `list` disabled, which is the same check the launcher's own shortcut makes.
+ */
+export async function applyCommandShortcuts(commands: readonly ShortcutHolder[]): Promise<string[]> {
+  const registered = await globalShortcuts.list().catch(() => [])
+  const { drop, add } = shortcutPlan(commands, registered)
+  for (const id of drop) await globalShortcuts.unregister(id).catch(() => {})
+  for (const entry of add) await globalShortcuts.register(entry.id, entry.accelerator).catch(() => {})
+  if (!add.length) return []
+  const settled = await globalShortcuts.list().catch(() => [])
+  return add.filter(entry => !settled.some(row => row.id === entry.id && row.enabled)).map(entry => entry.id)
+}
+
+/** Fires when a command's own shortcut is pressed, with the command's id. The launcher's own shortcut is not ours. */
+export function onCommandShortcut(run: (commandId: string) => void): () => void {
+  return globalShortcuts.on((event) => {
+    const commandId = commandIdFromShortcut(event.id)
+    if (commandId) run(commandId)
+  })
+}
+
+/** Lets the view name a registration without knowing how ids are built. */
+export const commandShortcutId = shortcutId
 
 /** Settings that change how a launch behaves. The launcher view keeps this in step with the saved preference. */
 export const behavior = { paste: false }

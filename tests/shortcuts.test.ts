@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import {
   commandIdFromShortcut, formatShortcut, launcherShortcut, normalizeShortcut,
-  reservedShortcuts, shortcutError, shortcutFromEvent, shortcutId,
+  reservedShortcuts, shortcutError, shortcutFromEvent, shortcutId, shortcutPlan,
 } from '../resources/functions/shortcuts'
 
 test('a shortcut is stored in one spelling however it was written', () => {
@@ -73,4 +73,41 @@ test('a registration id maps back to the command it belongs to', () => {
   expect(shortcutId(42)).toBe('launchpad.command.42')
   expect(commandIdFromShortcut(shortcutId(42))).toBe('42')
   expect(commandIdFromShortcut('launchpad.toggle')).toBeNull()
+})
+
+test('a shortcut already in place is left alone', () => {
+  const commands = [{ id: 1, title: 'Inbox', shortcut: 'Cmd+Shift+I' }, { id: 2, title: 'Notes', shortcut: 'Cmd+Alt+N' }]
+  const registered = [
+    { id: 'launchpad.toggle', accelerator: 'Cmd+Space', enabled: true },
+    { id: shortcutId(1), accelerator: 'Cmd+Shift+I', enabled: true },
+  ]
+  const plan = shortcutPlan(commands, registered)
+  // Saving an unrelated command must not drop and re-take a shortcut that is already working.
+  expect(plan.drop).toEqual([])
+  expect(plan.add).toEqual([{ id: shortcutId(2), accelerator: 'Cmd+Alt+N' }])
+  // The launcher's own registration is never touched.
+  expect(plan.drop).not.toContain('launchpad.toggle')
+})
+
+test('a changed, removed or refused shortcut is put back in order', () => {
+  const registered = [
+    { id: shortcutId(1), accelerator: 'Cmd+Shift+I', enabled: true },
+    { id: shortcutId(2), accelerator: 'Cmd+Alt+N', enabled: true },
+    { id: shortcutId(3), accelerator: 'Cmd+Alt+J', enabled: false },
+  ]
+  const plan = shortcutPlan([
+    { id: 1, title: 'Inbox', shortcut: 'Cmd+Shift+O' },
+    { id: 2, title: 'Notes', shortcut: '' },
+    { id: 3, title: 'Jump', shortcut: 'Cmd+Alt+J' },
+  ], registered)
+  expect(plan.drop).toEqual([shortcutId(1), shortcutId(2)])
+  expect(plan.add).toContainEqual({ id: shortcutId(1), accelerator: 'Cmd+Shift+O' })
+  // One macOS refused is retried rather than treated as settled.
+  expect(plan.add).toContainEqual({ id: shortcutId(3), accelerator: 'Cmd+Alt+J' })
+  expect(plan.add.some(entry => entry.id === shortcutId(2))).toBe(false)
+})
+
+test('a shortcut written another way is recognised as the one already registered', () => {
+  const plan = shortcutPlan([{ id: 1, title: 'Inbox', shortcut: 'shift+cmd+i' }], [{ id: shortcutId(1), accelerator: 'Cmd+Shift+I', enabled: true }])
+  expect(plan).toEqual({ drop: [], add: [] })
 })

@@ -16,7 +16,7 @@ import { historyPreference as readHistoryPreference, parsePreference } from '../
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId } from '../functions/native'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
@@ -27,6 +27,7 @@ import { systemCommand, systemCommandResults } from '../functions/system-command
 import { extensionResults, parseExtension, sampleManifest } from '../functions/extensions'
 import { createLatest } from '../functions/sources'
 import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, serializeTheme, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
+import { formatShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -143,6 +144,7 @@ const themeEditor = state(false)
 const themeDraft = state(builtInTheme)
 const themeDraftId = state('')
 const themeMode = state('light')
+const shortcutRefused = state([])
 const themeImport = state('')
 const themeIssues = state([])
 const themeTokenList = [...themeTokens]
@@ -330,10 +332,11 @@ async function reload() {
   try {
     const [apps, commands, history, launches, extensions] = await Promise.all([api('applications'), all('commands'), all('clipboard-entries'), all('launch-records'), all('extensions')])
     items.set([...apps,
-      ...commands.map(row => ({ key: 'command:' + row.id, id: row.id, title: row.title, subtitle: row.kind === 'snippet' ? 'Snippet · Copy text' : row.content, kind: row.kind, content: row.content, alias: row.alias })),
+      ...commands.map(row => ({ key: 'command:' + row.id, id: row.id, title: row.title, subtitle: row.kind === 'snippet' ? 'Snippet · Copy text' : row.content, kind: row.kind, content: row.content, alias: row.alias, shortcut: row.shortcut || '' })),
       ...history.reverse().map(historyResult),
     ])
     extensionRows.set(extensions)
+    void syncCommandShortcuts()
     records.set(Object.fromEntries(launches.map(row => [row.key, { ...row, lastUsed: row.lastUsed ?? row.last_used }])))
     status.set(plural(apps.length, 'application') + ' · Local commands')
   }
@@ -826,6 +829,23 @@ async function copySecondary() {
 }
 function cycleCategory(step) { chooseCategory(nextCategory(category(), step)); void nextTick(() => document.querySelector('.tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })) }
 
+const savedCommands = () => items().filter(item => ['quicklink', 'snippet'].includes(item.kind))
+/** Puts the registrations in step with what is saved. Shortcuts are a convenience, so a failure never stops a load. */
+async function syncCommandShortcuts() {
+  const commands = savedCommands()
+  try {
+    const refused = await applyCommandShortcuts(commands)
+    shortcutRefused.set(commands.filter(item => refused.includes(commandShortcutId(item.id))))
+  }
+  catch { shortcutRefused.set([]) }
+}
+/** A command run from its own shortcut leaves the palette closed, because not opening it is the point. */
+async function runShortcut(commandId) {
+  const item = savedCommands().find(entry => String(entry.id) === String(commandId))
+  if (!item) return
+  try { await execute(item, '', duration => recordExecution(item, duration)) }
+  catch (reason) { fail(reason) }
+}
 async function run(item = active()) {
   if (!item || saving()) return
   if (item.kind === 'pantry') {
@@ -1001,7 +1021,8 @@ onMount(async () => {
     (async () => { try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) } })(),
   ])
 })
-onDestroy(() => { cleanup(); cleanupTray() })
+const stopCommandShortcuts = onCommandShortcut((commandId) => { void runShortcut(commandId) })
+onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts() })
 </script>
 
 <main class="flex flex-col w-full" aria-label="Launchpad">

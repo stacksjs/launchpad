@@ -112,6 +112,30 @@ export function shortcutError(value: string, taken: readonly ShortcutHolder[] = 
   return key ? null : 'That is not a shortcut Launchpad can use.'
 }
 
+export interface ShortcutRegistration { id: string, accelerator: string }
+export interface RegisteredShortcut { id: string, accelerator: string, enabled: boolean }
+
+/**
+ * What to unregister and what to register, given what macOS holds now and what the saved commands ask for. Keeping
+ * this apart from the bridge is what makes it checkable: a shortcut that is already in place is left alone, so
+ * saving an unrelated command does not drop and re-take every shortcut the app owns.
+ */
+export function shortcutPlan(
+  commands: readonly ShortcutHolder[],
+  registered: readonly RegisteredShortcut[],
+): { drop: string[], add: ShortcutRegistration[] } {
+  const wanted = new Map<string, string>()
+  for (const command of commands) {
+    const accelerator = normalizeShortcut(command.shortcut)
+    if (accelerator) wanted.set(shortcutId(command.id), accelerator)
+  }
+  const mine = registered.filter(entry => commandIdFromShortcut(entry.id))
+  const drop = mine.filter(entry => wanted.get(entry.id) !== entry.accelerator).map(entry => entry.id)
+  const settled = new Set(mine.filter(entry => wanted.get(entry.id) === entry.accelerator && entry.enabled).map(entry => entry.id))
+  const add = [...wanted].filter(([id]) => !settled.has(id)).map(([id, accelerator]) => ({ id, accelerator }))
+  return { drop, add }
+}
+
 /** The id a command's shortcut is registered under, kept apart from the launcher's own. */
 export function shortcutId(commandId: unknown): string {
   return `launchpad.command.${commandId}`
