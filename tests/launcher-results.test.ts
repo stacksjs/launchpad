@@ -78,6 +78,10 @@ test('each live tab shows its own list and filters locally where it can', () => 
   expect(titles(compose({ category: 'event', query: 'dent', events }))).toEqual(['Dentist'])
   expect(compose({ category: 'file', query: '', files: [file('a')] })).toEqual([])
   expect(titles(compose({ category: 'file', query: 'ab', files: [file('abc')] }))).toEqual(['abc'])
+  // An open folder stands on its own, so its listing shows without anything typed, and typing narrows it.
+  expect(titles(compose({ category: 'file', query: '', files: [file('a')], browsing: true }))).toEqual(['a'])
+  expect(titles(compose({ category: 'file', query: 'ab', files: [file('abc'), file('zz')], browsing: true }))).toEqual(['abc'])
+  expect(compose({ category: 'file', query: 'q', files: [file('abc')], browsing: true })).toEqual([])
 })
 
 test('only stable things earn favorites and launch counts', () => {

@@ -24,6 +24,8 @@ export interface ComposeInputs {
   rates: RatesState
   settings: SearchSettings
   calculate: (input: string) => string | null
+  /** True while a folder is open, when the listing stands on its own and needs no query to be worth showing. */
+  browsing?: boolean
 }
 
 /** How many file matches ride along at the end of an ordinary search. The Files tab shows them all. */
@@ -52,7 +54,7 @@ export function composeResults(input: ComposeInputs): Result[] {
   const { category, query } = input
   const text = query.trim()
   if (category === 'emoji') return input.searchEmoji(query, 'emoji')
-  if (category === 'file') return text.length >= fileTabMinimum ? narrowFiles(input.files, query) : []
+  if (category === 'file') return input.browsing || text.length >= fileTabMinimum ? narrowFiles(input.files, query) : []
   if (category === 'contact') return text.length >= 2 ? [...input.contacts] : []
   if (category === 'window') return text ? createResultSearch([...input.windows])(query) : [...input.windows]
   if (category === 'event') return text ? createResultSearch([...input.events])(query) : [...input.events]

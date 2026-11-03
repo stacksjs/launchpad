@@ -3,6 +3,8 @@ import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { bookmarkBrowsers, bookmarkFile, bookmarkRoot, maxBookmarks, orderProfiles, parseChromiumBookmarks } from './bookmarks'
 import type { Bookmark } from './bookmarks'
+import { browseEntries } from './browse'
+import type { BrowseEntry } from './browse'
 import { clipboardDecision } from './clipboard'
 import { PermissionError, describeScriptFailure } from './applescript'
 import { contactOpenScript } from './contacts'
@@ -120,6 +122,15 @@ export async function readBookmarks(chosen: readonly string[]): Promise<Bookmark
     }
   }
   return found.slice(0, maxBookmarks)
+}
+
+/** Where browsing starts and the furthest up it goes. Empty when macOS will not say, which turns browsing off. */
+export const homeDirectory = (): Promise<string> => fs.homeDir().then(path => path || '').catch(() => '')
+
+/** Lists a folder. One that cannot be read gives an empty listing rather than throwing, as a search would. */
+export async function readDirectory(path: string): Promise<BrowseEntry[]> {
+  const entries = await fs.readDir(path).catch(() => [])
+  return browseEntries(entries.map(entry => ({ name: entry.name, path: entry.path, isDirectory: entry.isDirectory })))
 }
 
 /** Settings that change how a launch behaves. The launcher view keeps this in step with the saved preference. */
