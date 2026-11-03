@@ -1,6 +1,8 @@
-import { app, appleScript, clipboard, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
+import { app, appleScript, clipboard, fs, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
+import { bookmarkBrowsers, bookmarkFile, bookmarkRoot, maxBookmarks, orderProfiles, parseChromiumBookmarks } from './bookmarks'
+import type { Bookmark } from './bookmarks'
 import { clipboardDecision } from './clipboard'
 import { PermissionError, describeScriptFailure } from './applescript'
 import { contactOpenScript } from './contacts'
@@ -95,6 +97,30 @@ export function onCommandShortcut(run: (commandId: string) => void): () => void 
 
 /** Lets the view name a registration without knowing how ids are built. */
 export const commandShortcutId = shortcutId
+
+/**
+ * Reads the chosen browsers' bookmarks. A browser that is not installed, a profile that cannot be read, and a file
+ * the browser happens to be rewriting are each skipped rather than failing the set: one of them must not cost the
+ * others. Nothing is read for a browser that was not chosen.
+ */
+export async function readBookmarks(chosen: readonly string[]): Promise<Bookmark[]> {
+  if (!chosen.length) return []
+  const home = await fs.homeDir().catch(() => '')
+  if (!home) return []
+  const found: Bookmark[] = []
+  for (const browser of bookmarkBrowsers) {
+    if (!chosen.includes(browser.id) || found.length >= maxBookmarks) continue
+    const root = bookmarkRoot(home, browser)
+    const entries = await fs.readDir(root).catch(() => [])
+    const profiles = orderProfiles(entries.filter(entry => entry.isDirectory).map(entry => entry.name))
+    for (const profile of profiles) {
+      if (found.length >= maxBookmarks) break
+      const text = await fs.readFile(bookmarkFile(home, browser, profile)).catch(() => '')
+      if (text) found.push(...parseChromiumBookmarks(text, browser.name))
+    }
+  }
+  return found.slice(0, maxBookmarks)
+}
 
 /** Settings that change how a launch behaves. The launcher view keeps this in step with the saved preference. */
 export const behavior = { paste: false }

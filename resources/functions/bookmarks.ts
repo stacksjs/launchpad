@@ -25,8 +25,31 @@ const maxDepth = 20
 /** The roots a Chromium profile keeps, in the order someone would expect to find them. */
 const roots = ['bookmark_bar', 'other', 'synced'] as const
 
+/** Where a browser keeps its profiles, which is the directory to look in for more than the default one. */
+export function bookmarkRoot(home: string, browser: { support: string }): string {
+  return `${home.replace(/\/$/, '')}/Library/Application Support/${browser.support}`
+}
+
 export function bookmarkFile(home: string, browser: { support: string }, profile = 'Default'): string {
-  return `${home.replace(/\/$/, '')}/Library/Application Support/${browser.support}/${profile}/Bookmarks`
+  return `${bookmarkRoot(home, browser)}/${profile}/Bookmarks`
+}
+
+/**
+ * A profile directory worth reading. Chromium names them `Default` and `Profile 1`, `Profile 2` and so on; anything
+ * else beside them is the browser's own state, not somebody's bookmarks.
+ */
+export function isProfileDirectory(name: string): boolean {
+  return name === 'Default' || /^Profile \d+$/.test(name)
+}
+
+/** Profiles in the order someone would expect, with the default first and the rest by number. */
+export function orderProfiles(names: readonly string[]): string[] {
+  const profiles = names.filter(isProfileDirectory)
+  return profiles.sort((left, right) => {
+    if (left === 'Default') return -1
+    if (right === 'Default') return 1
+    return Number.parseInt(left.slice(8), 10) - Number.parseInt(right.slice(8), 10)
+  })
 }
 
 /**

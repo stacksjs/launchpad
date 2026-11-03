@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import {
-  bookmarkBrowsers, bookmarkDetail, bookmarkFile, bookmarkResults,
-  isOpenableBookmark, maxBookmarks, parseChromiumBookmarks,
+  bookmarkBrowsers, bookmarkDetail, bookmarkFile, bookmarkResults, bookmarkRoot,
+  isOpenableBookmark, isProfileDirectory, maxBookmarks, orderProfiles, parseChromiumBookmarks,
 } from '../resources/functions/bookmarks'
 
 const tree = (children: unknown[]) => JSON.stringify({ roots: { bookmark_bar: { type: 'folder', name: 'Bookmarks bar', children } } })
@@ -93,4 +93,19 @@ test('rows carry the folder and the site, and are searchable by both', () => {
   expect(row!.subtitle).toBe('Bookmark · Chrome · Bar · docs.example.com/intro')
   expect(row!.searchText).toContain('Bar')
   expect(row!.searchText).toContain('docs.example.com')
+})
+
+test('only a profile directory is read, and the default comes first', () => {
+  for (const good of ['Default', 'Profile 1', 'Profile 12']) expect(isProfileDirectory(good)).toBe(true)
+  // Everything else beside them is the browser's own state, not somebody's bookmarks.
+  for (const bad of ['System Profile', 'Guest Profile', 'Crashpad', 'Local State', 'profile 1', 'Profile', 'Profile x'])
+    expect(isProfileDirectory(bad)).toBe(false)
+  expect(orderProfiles(['Profile 10', 'Crashpad', 'Profile 2', 'Default'])).toEqual(['Default', 'Profile 2', 'Profile 10'])
+  expect(orderProfiles(['Crashpad', 'Local State'])).toEqual([])
+})
+
+test('a profile root and file sit where the browser keeps them', () => {
+  const brave = bookmarkBrowsers.find(browser => browser.id === 'brave')!
+  expect(bookmarkRoot('/Users/ada', brave)).toBe('/Users/ada/Library/Application Support/BraveSoftware/Brave-Browser')
+  expect(bookmarkFile('/Users/ada', brave, 'Profile 1')).toBe(`${bookmarkRoot('/Users/ada', brave)}/Profile 1/Bookmarks`)
 })
