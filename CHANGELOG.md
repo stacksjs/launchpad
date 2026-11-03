@@ -1,5 +1,54 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.1...v1.1.2)
+
+## ✨ Features
+
+- browse folders from the File tab ([1d0b9d0](https://github.com/stacksjs/launchpad/commit/1d0b9d0)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- mark which results are folders ([0a49a03](https://github.com/stacksjs/launchpad/commit/0a49a03)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- read a folder for the File tab ([5025283](https://github.com/stacksjs/launchpad/commit/5025283)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- decide what a folder listing shows ([5ab2ade](https://github.com/stacksjs/launchpad/commit/5ab2ade)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- show the selected result in large type ([860bfe5](https://github.com/stacksjs/launchpad/commit/860bfe5)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- decide what large type shows and how big ([7428159](https://github.com/stacksjs/launchpad/commit/7428159)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- choose which browsers' bookmarks to search ([6d81e6f](https://github.com/stacksjs/launchpad/commit/6d81e6f)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- rank bookmarks alongside everything else ([cd8b2c7](https://github.com/stacksjs/launchpad/commit/cd8b2c7)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- find every profile a chosen browser keeps ([32a249e](https://github.com/stacksjs/launchpad/commit/32a249e)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- read bookmarks from a Chromium profile ([f64e413](https://github.com/stacksjs/launchpad/commit/f64e413)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- list every shortcut in one place ([cf9475f](https://github.com/stacksjs/launchpad/commit/cf9475f)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- record a command's shortcut in the editor ([cb32ddf](https://github.com/stacksjs/launchpad/commit/cb32ddf)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- run a command from its own shortcut ([9fbf8f2](https://github.com/stacksjs/launchpad/commit/9fbf8f2)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- hold a shortcut on a saved command ([0447306](https://github.com/stacksjs/launchpad/commit/0447306)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- pass a theme between Macs ([69b681e](https://github.com/stacksjs/launchpad/commit/69b681e)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- edit themes from Appearance settings ([8b83e4e](https://github.com/stacksjs/launchpad/commit/8b83e4e)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- apply the saved theme to the palette ([71f8ff1](https://github.com/stacksjs/launchpad/commit/71f8ff1)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- hold a saved theme in the local model ([6449ccd](https://github.com/stacksjs/launchpad/commit/6449ccd)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- refine settings and add automatic native updates ([ded3110](https://github.com/stacksjs/launchpad/commit/ded3110)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **deps**: install published native installer and update support ([23917b2](https://github.com/stacksjs/launchpad/commit/23917b2)) _(by Chris Breuer <chris@stacksjs.com>)_
+- restore stored update settings when saves fail ([e851e8b](https://github.com/stacksjs/launchpad/commit/e851e8b)) _(by Chris Breuer <chris@stacksjs.com>)_
+- finish software update settings and native publishing integration ([e583537](https://github.com/stacksjs/launchpad/commit/e583537)) _(by Chris Breuer <chris@stacksjs.com>)_
+- serialize settings saves and clarify installer steps ([e794f7f](https://github.com/stacksjs/launchpad/commit/e794f7f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- describe folder browsing and what it leaves out ([f76227f](https://github.com/stacksjs/launchpad/commit/f76227f)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- describe large type and its key ([7ef0e21](https://github.com/stacksjs/launchpad/commit/7ef0e21)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## ✅ Tests
+
+- verify settings search restores every section ([29abf96](https://github.com/stacksjs/launchpad/commit/29abf96)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.2 ([6f87413](https://github.com/stacksjs/launchpad/commit/6f87413)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.0...v1.1.1)
 
 ## 📝 Documentation
