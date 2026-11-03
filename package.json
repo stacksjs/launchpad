@@ -12,11 +12,11 @@
     "better-dx": "^0.2.38"
   },
   "dependencies": {
-    "@stacksjs/desktop": "0.2.794",
+    "@stacksjs/desktop": "0.2.798",
     "@stacksjs/github": "0.75.323",
     "@stacksjs/image": "0.75.334",
     "@stacksjs/orm": "0.75.324",
-    "@stacksjs/stx": "0.2.794",
+    "@stacksjs/stx": "0.2.798",
     "@stacksjs/ts-svg": "0.1.7",
     "@stacksjs/validation": "0.75.323",
     "ts-images": "0.2.32",
