@@ -6,9 +6,14 @@ import { quicklinkUrl } from '../resources/functions/search'
 test('search settings default safely and ignore damaged or unknown values', () => {
   expect(readSearchSettings(undefined)).toEqual(defaultSearchSettings)
   expect(readSearchSettings('{')).toEqual(defaultSearchSettings)
-  expect(readSearchSettings('{"files":false,"currency":true,"web":"google","paste":true}')).toEqual({ files: false, currency: true, web: 'google', paste: true })
+  expect(readSearchSettings('{"files":false,"currency":true,"web":"google","paste":true}')).toEqual({ files: false, currency: true, web: 'google', paste: true, bookmarks: [] })
   expect(readSearchSettings('{"files":"no","currency":"yes","web":"altavista","paste":1}')).toEqual(defaultSearchSettings)
   expect(readSearchSettings('{"web":"off"}').web).toBe('off')
+  // Bookmarks are off until a browser is chosen, and only names survive a damaged list.
+  expect(readSearchSettings('{"bookmarks":["chrome","brave"]}').bookmarks).toEqual(['chrome', 'brave'])
+  expect(readSearchSettings('{"bookmarks":"chrome"}').bookmarks).toEqual([])
+  expect(readSearchSettings('{"bookmarks":["chrome",7,null]}').bookmarks).toEqual(['chrome'])
+  expect(readSearchSettings(`{"bookmarks":${JSON.stringify(Array.from({ length: 40 }, (_, index) => `b${index}`))}}`).bookmarks).toHaveLength(10)
 })
 
 test('the web fallback is a bounded row that every engine can turn into an https address', () => {

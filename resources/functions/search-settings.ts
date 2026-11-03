@@ -18,9 +18,11 @@ export interface SearchSettings {
   web: WebEngine | 'off'
   /** Paste a chosen snippet into the app that was frontmost, not only copy it. */
   paste: boolean
+  /** Read bookmarks from the browsers chosen here. Read only, and off until a browser is picked. */
+  bookmarks: readonly string[]
 }
 
-export const defaultSearchSettings: SearchSettings = { files: true, currency: false, web: 'duckduckgo', paste: false }
+export const defaultSearchSettings: SearchSettings = { files: true, currency: false, web: 'duckduckgo', paste: false, bookmarks: [] }
 
 /** Stored as JSON text on the `search` preference. Unknown or damaged fields fall back to their defaults. */
 export function readSearchSettings(value: string | undefined): SearchSettings {
@@ -30,5 +32,6 @@ export function readSearchSettings(value: string | undefined): SearchSettings {
     currency: saved.currency === true,
     web: saved.web === 'off' || (typeof saved.web === 'string' && Object.hasOwn(webEngines, saved.web)) ? saved.web as SearchSettings['web'] : defaultSearchSettings.web,
     paste: saved.paste === true,
+    bookmarks: Array.isArray(saved.bookmarks) ? saved.bookmarks.filter(value => typeof value === 'string').slice(0, 10) as string[] : defaultSearchSettings.bookmarks,
   }
 }
