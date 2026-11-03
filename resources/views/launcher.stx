@@ -27,7 +27,7 @@ import { systemCommand, systemCommandResults } from '../functions/system-command
 import { extensionResults, parseExtension, sampleManifest } from '../functions/extensions'
 import { createLatest } from '../functions/sources'
 import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, serializeTheme, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
-import { formatShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
+import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
 import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
@@ -105,6 +105,7 @@ const settingsSection = state('general')
 const settingsQuery = state('')
 const settingsSections = [
   { id: 'general', title: 'General', icon: 'M9.5 3h5l.6 2.2 2 .9 2-.6 2.5 4.3-1.5 1.6v2.3l1.5 1.6-2.5 4.3-2-.6-2 .9-.6 2.1h-5l-.6-2.1-2-.9-2 .6L2 15.3l1.5-1.6v-2.3L2 9.8l2.5-4.3 2 .6 2-.9L9.5 3Z M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z', color: '#7d8491', description: 'Startup, keyboard shortcut and background behavior.', keywords: 'login startup shortcut menu bar' },
+  { id: 'shortcuts', title: 'Shortcuts', icon: 'M3 7h18v10H3Z M7 11h.01 M11 11h.01 M15 11h.01 M8 14h8', color: '#4f7d9e', description: 'Keys that reach Launchpad from anywhere.', keywords: 'hotkey global keyboard command shortcut' },
   { id: 'appearance', title: 'Appearance', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 3v18 M15 5v14 M18 7v10', color: '#625f70', description: 'Choose how Launchpad looks on your Mac.', keywords: 'theme dark light system' },
   { id: 'updates', title: 'Software Update', icon: 'M20 7v5h-5 M20 12a8 8 0 1 0-2.3 5.7 M20 12l-3-3', color: '#7d8491', description: 'Keep Launchpad up to date with verified releases.', keywords: 'version download install automatic' },
   { id: 'search', title: 'Search', icon: 'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z M14.5 14.5 21 21', color: '#2585ed', description: 'Choose what to search and how to use your results.', keywords: 'files web currency paste permissions windows contacts calendar' },
@@ -855,6 +856,15 @@ async function syncCommandShortcuts() {
   }
   catch { shortcutRefused.set([]) }
 }
+const shortcutCommands = derived(() => savedCommands().filter(item => item.shortcut))
+/** Removing a shortcut leaves the command alone, so the row is saved back unchanged apart from the empty shortcut. */
+async function removeShortcut(item) {
+  try {
+    await api('commands/' + item.id, 'PATCH', { title: item.title, kind: item.kind, content: item.content, alias: item.alias || '', shortcut: '' })
+    await reload()
+  }
+  catch (reason) { fail(reason) }
+}
 /** A command run from its own shortcut leaves the palette closed, because not opening it is the point. */
 async function runShortcut(commandId) {
   const item = savedCommands().find(entry => String(entry.id) === String(commandId))
@@ -1178,6 +1188,19 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts() })
           <button :if="updateState().phase === 'ready'" type="button" class="save-button" @click="updateLaunchpad('install')">Install and Restart</button>
         </div>
         <div :if="updateState().phase !== 'unavailable'" class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
+      </section>
+      <section :if="settingsSection() === 'shortcuts'" class="settings-group">
+    <h2>Shortcuts</h2>
+    <p class="help">Keys that reach Launchpad wherever you are. A command's shortcut runs it without opening the palette. Add one when you create or edit a command.</p>
+    <div class="setting-row"><div><strong>Open Launchpad</strong><p class="help">Opens the palette and focuses search.</p></div><kbd>{{ formatShortcut(launcherShortcut) }}</kbd></div>
+    <div :for="(item, index) in shortcutCommands()" :key="item.key" class="setting-row">
+      <div><strong>{{ item.title }}</strong><p class="help">{{ item.kind === 'snippet' ? 'Snippet · Copy text' : 'Quicklink' }}</p></div>
+      <div class="flex gap-3 items-center"><kbd>{{ formatShortcut(item.shortcut) }}</kbd><button type="button" class="text-action" @click="removeShortcut(item)">Remove</button></div>
+    </div>
+    <p :if="!shortcutCommands().length" class="help">No command has a shortcut yet.</p>
+    <div :if="shortcutRefused().length" class="error" role="alert">
+      <div :for="(item, index) in shortcutRefused()" :key="item.key">macOS did not give Launchpad {{ formatShortcut(item.shortcut) }} for "{{ item.title }}". Another app is already using it, so choose a different shortcut.</div>
+    </div>
       </section>
       <section :if="settingsSection() === 'appearance'" class="settings-group">
     <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>

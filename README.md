@@ -112,6 +112,9 @@ Open **Settings → Pantry** and enter the single-use pairing code. Launchpad st
 | <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings |
 | <kbd>Escape</kbd> | Dismiss the palette |
 
+A quicklink or snippet can also carry a shortcut of its own, set when you create or edit it. That shortcut runs the
+command from anywhere without opening the palette. Settings > Shortcuts lists every one in a single place.
+
 Saved commands and clipboard entries have a separate Delete control. Command + Delete clears what you typed.
 
 ## Your data

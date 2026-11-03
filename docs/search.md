@@ -71,6 +71,14 @@ A manifest is strictly validated and cannot run code, reach the network or read 
 and `{clipboard}` are filled in when a snippet is used. `{{date}}` stays literal. The
 clipboard is read only if the snippet asks for it.
 
+**Command shortcuts.** A quicklink or snippet can hold a shortcut that runs it wherever you are, with the
+palette left closed. It is recorded by pressing the keys in the editor rather than typing their names, and it
+has to carry Command, Control or Option, because a global shortcut without a modifier would swallow an
+ordinary keystroke in every other app. The palette's own keys are refused for the same reason: a global
+shortcut fires first and would stop the matching key working in the window. One another application already
+owns is only discovered when macOS declines to register it, and Settings > Shortcuts reports that alongside
+every shortcut in use.
+
 **Granting Automation.** The Automation pane has no way to add an app. Launchpad appears
 there only after macOS has asked, and each app it controls (Finder, System Events, Contacts,
 Calendar) is its own switch under the Launchpad row. So the first grant is the prompt itself:
