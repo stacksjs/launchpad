@@ -58,6 +58,7 @@ If another launcher owns Command + Space, quit it or reassign its shortcut befor
 | **Conversions** | `5 km in miles`, `72 f to c`, `1.5 gb in mb`, `2 hours in minutes`, and currencies such as `100 usd to eur` once you opt in to exchange rates. |
 | **Web search** | Every search ends with a row that searches the web with DuckDuckGo, Google, Bing, Brave Search or Kagi. Choose or turn it off in Settings. |
 | **Emoji** | Type `:rocket` or open the Emoji tab, then press Return to copy. |
+| **Bookmarks** | Search the bookmarks already saved in Chrome, Brave, Edge, Vivaldi, Chromium or Arc, across every profile. Choose which browsers in Settings. Read only. |
 | **Windows** | List and switch between open windows. Needs the Accessibility permission. |
 | **People and Calendar** | Look up contacts and see the next two weeks of events from the Contacts and Calendar apps. They ask for Automation permission, and nothing they find is saved. |
 | **Extensions** | Install packs of quicklinks and snippets from a JSON file in Settings. Extensions are data only: they cannot run code, use the network or read files. |

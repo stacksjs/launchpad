@@ -71,6 +71,14 @@ A manifest is strictly validated and cannot run code, reach the network or read 
 and `{clipboard}` are filled in when a snippet is used. `{{date}}` stays literal. The
 clipboard is read only if the snippet asks for it.
 
+**Bookmarks.** Chrome, Brave, Edge, Vivaldi, Chromium and Arc keep their bookmarks as a JSON file
+per profile, and Launchpad reads the ones you choose in Settings, across every profile that browser
+has. They rank alongside apps and commands rather than sitting in a tab, and both the folder and the
+site are searchable. Only `http` and `https` entries are offered, because a bookmark opens through
+the shell. Reading is the whole of it: Launchpad never writes to a browser's bookmarks, and nothing
+is read until a browser is chosen. Return opens in your default browser, not the one the bookmark
+came from. Safari keeps a binary property list instead and is not read.
+
 **Command shortcuts.** A quicklink or snippet can hold a shortcut that runs it wherever you are, with the
 palette left closed. It is recorded by pressing the keys in the editor rather than typing their names, and it
 has to carry Command, Control or Option, because a global shortcut without a modifier would swallow an

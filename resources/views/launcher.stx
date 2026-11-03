@@ -781,6 +781,10 @@ async function refreshRates() {
 pollWhile(refreshRates, 3600000, () => preferencesReady() && searchSettings().currency)
 effect(() => { if (preferencesReady() && searchSettings().currency) void refreshRates() })
 
+function toggleBookmarkBrowser(id, enabled) {
+  const chosen = searchSettings().bookmarks.filter(value => value !== id)
+  void saveSearch({ bookmarks: enabled ? [...chosen, id] : chosen })
+}
 async function saveSearch(patch) {
   try {
     const next = { ...searchSettings(), ...patch }
@@ -1299,6 +1303,11 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts() })
         <p class="help">Downloads the European Central Bank's reference rates about once a day from api.frankfurter.dev. The request carries no search text. Off until you turn it on. Units and temperatures always work offline.</p>
         <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().paste" @change="saveSearch({ paste: $event.target.checked })"> Paste snippets into the app you were using</label>
         <p class="help">Snippets are always copied. This also types Command V into the previous app, which needs the Accessibility permission. Snippets can use {date}, {time}, {datetime}, {weekday}, {year}, {uuid} and {clipboard}.</p>
+        <h2 class="mt-5">Bookmarks</h2>
+        <p class="help">Search the bookmarks you have already saved. Launchpad reads each chosen browser's bookmark file and never writes to it. Every profile of that browser is included. Off until you choose one.</p>
+        <div class="bookmark-browsers">
+          <label :for="(browser, index) in bookmarkBrowsers" :key="browser.id" class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().bookmarks.includes(browser.id)" @change="toggleBookmarkBrowser(browser.id, $event.target.checked)"> {{ browser.name }}</label>
+        </div>
         <h2 class="mt-5">Windows, contacts and calendar</h2>
         <p class="help">The Windows, People and Calendar tabs ask macOS for permission the first time. Windows needs Accessibility. Contacts and Calendar use Automation. Result details stay in memory. Local usage records only the command category.</p>
         <div class="flex gap-3 items-center"><button type="button" class="text-action" @click="openPrivacySettings('accessibility')">Accessibility settings</button><button type="button" class="text-action" @click="openPrivacySettings('automation')">Automation settings</button></div>
@@ -1526,6 +1535,7 @@ header input:focus-visible { outline: none; }
 .shortcut-field { display: flex; gap: 10px; align-items: center; }
 .shortcut-field input { flex: 1; min-width: 0; }
 .shortcut-field input:focus { border-color: var(--accent); }
+.bookmark-browsers { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 14px; }
 .result-region { display: flex; flex: 1; min-height: 0; }
 .result-region .results { min-width: 0; }
 .clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
