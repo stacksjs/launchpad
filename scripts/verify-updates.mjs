@@ -12,6 +12,7 @@ try {
   const errors = []
   const actions = []
   const preferenceWrites = []
+  const preferenceOutcomes = []
   let savedPreference
   let state = { currentVersion: '1.0.10', phase: 'idle' }
   let offline = true
@@ -41,6 +42,7 @@ try {
     if (url.pathname.startsWith('/api/preferences')) {
       const method = route.request().method()
       preferenceWrites.push(method)
+      if (preferenceOutcomes.shift() === 'fail') return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Could not save update settings.' }) })
       if (method === 'POST' && savedPreference) return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'AppPreference already exists' }) })
       savedPreference = { id: 1, ...route.request().postDataJSON() }
       await new Promise(resolve => setTimeout(resolve, 30))
@@ -54,6 +56,9 @@ try {
     const s = window.__launcher
     s.settings.set(true); s.settingsSection.set('updates'); s.paletteVisible.set(true)
   })
+  const automaticUpdates = page.getByRole('switch', { name: 'Automatic Updates', exact: true })
+  assert.equal(await automaticUpdates.isDisabled(), true, 'Wait for saved preferences before allowing changes.')
+  await page.evaluate(() => window.__launcher.preferencesReady.set(true))
   const statusRead = page.waitForRequest(request => new URL(request.url()).pathname === '/api/updates')
   await page.evaluate(() => { window.__pendingStatus = window.__launcher.refreshUpdate() })
   await statusRead
@@ -87,6 +92,17 @@ try {
   assert.deepEqual(preferenceWrites, ['POST', 'PATCH'], 'Rapid changes must reuse the first saved preference row.')
   assert.equal(JSON.parse(savedPreference.value).enabled, true)
   assert.equal(await page.getByText('AppPreference already exists', { exact: true }).count(), 0)
+  preferenceOutcomes.push('fail')
+  await automaticUpdates.click()
+  await page.getByRole('dialog', { name: 'Launchpad Settings' }).getByText('Could not save update settings.', { exact: true }).waitFor()
+  assert.equal(await automaticUpdates.isChecked(), true, 'A failed save restores the stored value.')
+  preferenceOutcomes.push('success', 'fail')
+  await page.evaluate(() => Promise.all([window.__launcher.changeAutomaticUpdates(false), window.__launcher.changeAutomaticUpdates(true)]))
+  assert.equal(await automaticUpdates.isChecked(), false, 'A failed newer save restores the last successful value.')
+  preferenceOutcomes.push('fail', 'fail')
+  await page.evaluate(() => Promise.all([window.__launcher.changeAutomaticUpdates(true), window.__launcher.changeAutomaticUpdates(false)]))
+  assert.equal(await automaticUpdates.isChecked(), false, 'Failed rapid changes restore the stored value, not another pending value.')
+  assert.equal(JSON.parse(savedPreference.value).enabled, false)
   await page.evaluate(() => window.__launcher.updateState.set({ currentVersion: '1.0.10', phase: 'unavailable', error: 'Use the App Store to update this copy.' }))
   await page.getByText('Use the App Store to update this copy.', { exact: true }).waitFor()
   assert.equal(await page.getByRole('switch', { name: 'Automatic Updates', exact: true }).count(), 0)

@@ -121,9 +121,15 @@ const settingsSections = [
 const visibleSettings = derived(() => settingsSections.filter(section => (section.title + ' ' + section.keywords).toLowerCase().includes(settingsQuery().trim().toLowerCase())))
 const currentSettings = derived(() => settingsSections.find(section => section.id === settingsSection()) || settingsSections[0])
 const automaticUpdatesEnabled = state(true)
+let automaticUpdatesRevision = 0
 async function changeAutomaticUpdates(enabled) {
-  try { await preference('updates', JSON.stringify({ enabled })); automaticUpdatesEnabled.set(enabled) }
-  catch (reason) { fail(reason) }
+  const revision = ++automaticUpdatesRevision
+  automaticUpdatesEnabled.set(enabled)
+  try { await preference('updates', JSON.stringify({ enabled })) }
+  catch (reason) {
+    if (revision === automaticUpdatesRevision) automaticUpdatesEnabled.set(parsePreference(preferences().updates?.value).enabled !== false)
+    fail(reason)
+  }
 }
 function chooseSettings(value) { settingsSection.set(value); clearError(); if (value === 'general') void refreshLogin(); if (value === 'updates') void refreshUpdate() }
 const loginEnabled = state(false)
@@ -1159,9 +1165,9 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.r
     <span class="large-type-hint">Escape to close</span>
   </div>
   <div :if="error()" class="error error-banner" role="alert"><span>{{ error() }}</span><button :if="errorPermission()" type="button" class="error-action" @click="openPrivacySettings(errorPermission())">{{ errorPermission() === 'automation' ? 'Open Automation settings' : 'Open Accessibility settings' }}</button></div>
-  <div :if="browsePath()" class="flex gap-2 items-center px-5 github-tools browse-bar">
+    <div :if="browsePath()" class="flex gap-2 items-center px-5 browse-bar github-tools">
     <button type="button" class="text-action" @click="leaveFolder()" aria-label="Enclosing folder">↑ Up</button>
-    <span class="help browse-path">{{ breadcrumb(browsePath(), homePath()) }}</span>
+      <span class="browse-path help">{{ breadcrumb(browsePath(), homePath()) }}</span>
     <button type="button" class="ml-auto text-action" @click="stopBrowsing()">Search instead</button>
   </div>
   <div :if="category() === 'github'" class="flex gap-2 items-center px-5 github-tools">
@@ -1267,7 +1273,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.r
           <button :if="updateState().phase !== 'unavailable' && updateState().phase !== 'ready' && updateState().phase !== 'installed'" type="button" class="secondary-button" :disabled="updateBusy()" @click="updateLaunchpad(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : 'Check for Updates...' }}</button>
           <button :if="updateState().phase === 'ready'" type="button" class="save-button" @click="updateLaunchpad('install')">Install and Restart</button>
         </div>
-        <div :if="updateState().phase !== 'unavailable'" class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
+        <div :if="updateState().phase !== 'unavailable'" class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :disabled="!preferencesReady()" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
       </section>
       <section :if="settingsSection() === 'shortcuts'" class="settings-group">
     <h2>Shortcuts</h2>
