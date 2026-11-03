@@ -53,7 +53,7 @@ If another launcher owns Command + Space, quit it or reassign its shortcut befor
 | **Search** | Prioritize names and genuine aliases. Favorites and recent use refine relevant results; compact abbreviations such as `vsc` and `sst` still work. |
 | **Quicklinks** | Save websites or search templates such as `https://example.com/?q={query}`, then use a named alias with your search argument. |
 | **Snippets** | Keep reusable text close and copy it with Return. Fill in `{date}`, `{time}`, `{datetime}`, `{weekday}`, `{year}`, `{uuid}` or `{clipboard}` as you use one, and optionally paste it straight into the app you were in. |
-| **Files** | Find files and folders by name through Spotlight's index, in your home folder. Return opens, Command Return reveals in Finder, Shift Command C copies the path. |
+| **Files** | Find files and folders by name through Spotlight's index, in your home folder. Return opens, Command Return reveals in Finder, Shift Command C copies the path. The Files tab also opens on your home folder, so you can step into a folder with Return and back out with Command Up. |
 | **System commands** | Sleep, Lock Screen, Restart, Shut Down, Log Out, Empty Trash, Eject, dark mode, mute and every System Settings pane, found by familiar names such as `wifi` or `reboot`. Anything that ends work or deletes data asks first. |
 | **Conversions** | `5 km in miles`, `72 f to c`, `1.5 gb in mb`, `2 hours in minutes`, and currencies such as `100 usd to eur` once you opt in to exchange rates. |
 | **Web search** | Every search ends with a row that searches the web with DuckDuckGo, Google, Bing, Brave Search or Kagi. Choose or turn it off in Settings. |
@@ -108,6 +108,7 @@ Open **Settings → Pantry** and enter the single-use pairing code. Launchpad st
 | <kbd>⌘</kbd> <kbd>E</kbd> | Edit the selected saved command |
 | <kbd>⌘</kbd> <kbd>G</kbd> | Open GitHub search |
 | <kbd>⌘</kbd> <kbd>L</kbd> | Show the selected result in large type |
+| <kbd>⌘</kbd> <kbd>↑</kbd> | Step out to the enclosing folder while browsing |
 | <kbd>⌘</kbd> <kbd>]</kbd> / <kbd>⌘</kbd> <kbd>[</kbd> | Next or previous tab |
 | <kbd>⌘</kbd> <kbd>Return</kbd> | Reveal the selected file in Finder |
 | <kbd>⇧</kbd> <kbd>⌘</kbd> <kbd>C</kbd> | Copy a file's path, or a contact's email or phone |

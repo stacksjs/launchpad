@@ -71,6 +71,17 @@ A manifest is strictly validated and cannot run code, reach the network or read 
 and `{clipboard}` are filled in when a snippet is used. `{{date}}` stays literal. The
 clipboard is read only if the snippet asks for it.
 
+**Browsing folders.** The Files tab opens on your home folder rather than on nothing. Return steps into
+a folder, Command Up steps out, and stepping out of your home folder returns to searching. While a
+folder is open, typing narrows that listing rather than starting a search. Hidden items are skipped,
+folders sort before files, and a listing is capped at 1000 entries. Browsing never leaves your home
+folder: a path is checked before it is opened.
+
+Previewing with Quick Look, and moving, copying or trashing a file, are not included. The Craft bridge
+exposes no Quick Look, and its only delete is permanent, with no move to the Trash. A launcher that
+permanently erases a file where someone expected it to be recoverable is worse than one that does not
+offer to delete at all, so neither is built on what is available today.
+
 **Large type.** Command L fills the window with the selected result, at the largest size that still
 fits. A result whose point is its text — a snippet, a clipboard entry, a calculated answer, an emoji —
 shows that text; everything else shows its title, since its content is a path or an address the title
