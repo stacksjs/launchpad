@@ -145,6 +145,8 @@ const themeDraft = state(builtInTheme)
 const themeDraftId = state('')
 const themeMode = state('light')
 const shortcutRefused = state([])
+const shortcut = state('')
+const recordingShortcut = state(false)
 const themeImport = state('')
 const themeIssues = state([])
 const themeTokenList = [...themeTokens]
@@ -830,6 +832,20 @@ async function copySecondary() {
 function cycleCategory(step) { chooseCategory(nextCategory(category(), step)); void nextTick(() => document.querySelector('.tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })) }
 
 const savedCommands = () => items().filter(item => ['quicklink', 'snippet'].includes(item.kind))
+/**
+ * The field records the keys instead of asking for their names. Every press is swallowed while it has focus, so
+ * Command W does not close the window on the way to becoming a shortcut.
+ */
+function captureShortcut(event) {
+  event.preventDefault()
+  event.stopPropagation()
+  if (event.key === 'Escape') { batch(() => { shortcut.set(''); clearError() }); return }
+  const pressed = shortcutFromEvent(event)
+  if (!pressed) return
+  const problem = shortcutError(pressed, savedCommands(), editId())
+  if (problem) { fail({ message: problem }); return }
+  batch(() => { shortcut.set(pressed); clearError() })
+}
 /** Puts the registrations in step with what is saved. Shortcuts are a convenience, so a failure never stops a load. */
 async function syncCommandShortcuts() {
   const commands = savedCommands()
@@ -890,6 +906,7 @@ function newCommand() {
   title.set('')
   content.set('')
   alias.set('')
+  shortcut.set('')
   editor.set(true)
   clearError()
   void nextTick(() => commandTitle.current?.focus())
@@ -911,6 +928,7 @@ function editCommand() {
   kind.set(item.kind)
   content.set(item.content)
   alias.set(item.alias || '')
+  shortcut.set(item.shortcut || '')
   editor.set(true)
   clearError()
   void nextTick(() => commandTitle.current?.focus())
@@ -935,7 +953,12 @@ async function saveCommand() {
     const text = kind() === 'quicklink' ? content().trim() : content()
     if (!text.trim()) throw new Error(kind() === 'quicklink' ? 'Enter the quicklink address.' : 'Enter the text to copy.')
     if (kind() === 'quicklink') quicklinkUrl(text, '')
-    await api('commands' + (editId() === null ? '' : '/' + editId()), editId() === null ? 'POST' : 'PATCH', { title: name, kind: kind(), content: text, alias: alias().trim() })
+    const chosen = shortcut().trim()
+    if (chosen) {
+      const problem = shortcutError(chosen, savedCommands(), editId())
+      if (problem) throw new Error(problem)
+    }
+    await api('commands' + (editId() === null ? '' : '/' + editId()), editId() === null ? 'POST' : 'PATCH', { title: name, kind: kind(), content: text, alias: alias().trim(), shortcut: chosen ? normalizeShortcut(chosen) : '' })
     if (editId() === null) track('command_created', { kind: kind() })
     editor.set(false)
     await reload()
@@ -1316,6 +1339,12 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts() })
       <p class="help">{{ kind() === 'quicklink' ? 'Use {query} in the URL to include your search text.' : 'Snippets copy to your clipboard. Paste them wherever you need.' }}</p>
       <label for="command-alias">Search alias <span class="muted">(optional)</span></label>
       <input id="command-alias" x-model="alias" maxlength="40" placeholder="A short name to find this faster">
+      <label for="command-shortcut">Shortcut <span class="muted">(optional)</span></label>
+      <div class="shortcut-field">
+        <input id="command-shortcut" type="text" readonly spellcheck="false" :value="shortcut() ? formatShortcut(shortcut()) : ''" :placeholder="recordingShortcut() ? 'Press the keys' : 'Click here, then press the keys'" @focus="recordingShortcut.set(true)" @blur="recordingShortcut.set(false)" @keydown="captureShortcut($event)">
+        <button :if="shortcut()" type="button" class="text-action" @click="shortcut.set('')">Clear</button>
+      </div>
+      <p class="help">Runs this command from anywhere, even when Launchpad is closed. Needs Command, Control or Option. Press Escape while recording to clear it.</p>
       </div>
       <p :if="error()" class="error" role="alert">{{ error() }}</p>
       </div>
@@ -1467,6 +1496,9 @@ header input:focus-visible { outline: none; }
 .theme-transfer { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .theme-transfer summary { font-size: 12px; color: var(--muted); cursor: default; }
 .theme-transfer textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.shortcut-field { display: flex; gap: 10px; align-items: center; }
+.shortcut-field input { flex: 1; min-width: 0; }
+.shortcut-field input:focus { border-color: var(--accent); }
 .result-region { display: flex; flex: 1; min-height: 0; }
 .result-region .results { min-width: 0; }
 .clipboard-preview { flex: 0 0 40%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 12px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11px/1.5 ui-monospace, monospace; color: var(--ink); }
