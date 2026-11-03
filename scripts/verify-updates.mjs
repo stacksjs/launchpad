@@ -42,7 +42,7 @@ try {
   await page.waitForFunction(() => window.__launcher)
   await page.evaluate(() => {
     const s = window.__launcher
-    s.settings.set(true); s.settingsSection.set('general'); s.paletteVisible.set(true)
+    s.settings.set(true); s.settingsSection.set('updates'); s.paletteVisible.set(true)
   })
   const statusRead = page.waitForRequest(request => new URL(request.url()).pathname === '/api/updates')
   await page.evaluate(() => { window.__pendingStatus = window.__launcher.refreshUpdate() })
@@ -60,6 +60,16 @@ try {
   await page.getByRole('button', { name: 'Install and Restart', exact: true }).click()
   await page.getByText('Restarting Launchpad...', { exact: true }).waitFor()
   assert.deepEqual(actions, ['check', 'check', 'download', 'install'])
+  await page.getByRole('button', { name: 'General', exact: true }).click()
+  await page.getByRole('button', { name: 'Software Update', exact: true }).last().waitFor()
+  await page.getByRole('searchbox', { name: 'Search settings' }).fill('download')
+  assert.equal(await page.locator('.settings-item').count(), 1)
+  await page.getByRole('button', { name: 'Software Update', exact: true }).first().click()
+  await page.getByRole('switch', { name: 'Automatic Updates', exact: true }).waitFor()
+  await page.getByRole('searchbox', { name: 'Search settings' }).fill('no matching pane')
+  await page.getByText('No settings found.', { exact: true }).waitFor()
+  await page.getByRole('searchbox', { name: 'Search settings' }).fill('')
+  assert.equal(await page.locator('.settings-item').count(), 9)
   assert.deepEqual(errors, [])
   process.stdout.write(JSON.stringify({ offlineCheckDoesNotClaimCurrent: true, retryDownloadInstallControls: true, frameworkEndpoint: true }) + '\n')
 }

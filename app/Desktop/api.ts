@@ -18,17 +18,24 @@ import { createActivityApi, startActivityRuntime } from './activity'
 import { installedApplications } from './applications'
 import { createRatesApi } from './rates'
 import { createFilesApi } from './files'
+import { createRankingApi } from './ranking'
+import { createAutomaticUpdates } from './updates'
 
 const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage, ExchangeRate }
 // Craft/stx owns the authenticated loopback session and backend process.
 openNativeDatabase({ path: join(applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' }), 'launchpad.sqlite'), models })
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: pkg.version })
+const automaticUpdates = createAutomaticUpdates(updates)
+const updateTimer = setInterval(() => { void automaticUpdates().catch(console.error) }, 60_000)
+updateTimer.unref()
+const rankingApi = createRankingApi(modelApi)
 const activityApi = createActivityApi(modelApi)
 const stopActivity = startActivityRuntime(activityApi)
 const ratesApi = createRatesApi()
 const filesApi = createFilesApi()
 export const shutdown = async () => {
+  clearInterval(updateTimer)
   installedApplications.close()
   await stopActivity()
 }
@@ -50,6 +57,8 @@ export default async function handle(request: Request): Promise<Response | null>
   if (rates) return rates
   const files = await filesApi(request)
   if (files) return files
+  const ranking = await rankingApi(request)
+  if (ranking) return ranking
   const activity = await activityApi(request)
   if (activity) return activity
   const response = await modelApi(request)

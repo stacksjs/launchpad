@@ -3,11 +3,11 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { Database } from 'bun:sqlite'
+import { resolveCraftExecutablePath } from '@stacksjs/desktop'
 import { buildNative } from '@stacksjs/stx/craft'
 import { bundledPackageCatalog } from 'ts-pantry/catalog'
 const app = resolve(import.meta.dir, '..')
-const craftPath = process.env.CRAFT_BIN || Bun.which('craft-webview')
-if (!craftPath) throw new Error('Activate the Pantry Craft runtime or set CRAFT_BIN before native qualification.')
+const craftPath = resolveCraftExecutablePath(process.env.CRAFT_BIN, 'webview')
 const root = mkdtempSync(join(tmpdir(), 'launchpad-usage-qualified-'))
 let child: ReturnType<typeof Bun.spawn> | undefined
 try {

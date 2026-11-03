@@ -82,3 +82,30 @@ test('native model upgrades preserve ranking and persist editable app aliases ac
   }
   finally { db.close(); await rm(root, { recursive: true, force: true }) }
 })
+
+test('simultaneous ranking intents use the persisted row and preserve counts, favorites and aliases', async () => {
+  const { createRankingApi } = await import('../app/Desktop/ranking')
+  const models = { LaunchRecord }
+  const db = openNativeDatabase({ path: ':memory:', models })
+  const rank = createRankingApi(createNativeModelApi({ models, authorize: () => true }))
+  const key = '/Applications/Activity Monitor.app'
+  const send = (action: string, extra = {}) => rank(new Request('http://localhost/api/ranking', { method: 'POST', body: JSON.stringify({ key, action, ...extra }) }))
+  try {
+    await LaunchRecord.create({ key, launches: 7, aliases: 'monitor' })
+    const results = await Promise.all([send('launch'), send('favorite'), send('aliases', { aliases: 'cpu\nmemory' }), send('launch')])
+    expect(results.every(response => response?.ok)).toBe(true)
+    const row = await LaunchRecord.where('key', key).first()
+    expect(row?.launches).toBe(9)
+    expect(Boolean(row?.favorite)).toBe(true)
+    expect(row?.aliases).toBe('cpu\nmemory')
+    expect(await LaunchRecord.count()).toBe(1)
+    expect((await send('aliases', { aliases: 'x'.repeat(1001) }))?.status).toBe(422)
+    expect((await send('aliases'))?.status).toBe(422)
+    expect((await send('launch'))?.ok).toBe(true)
+    const newKey = '/Applications/Mail.app'
+    const create = () => rank(new Request('http://localhost/api/ranking', { method: 'POST', body: JSON.stringify({ key: newKey, action: 'launch' }) }))
+    expect((await Promise.all([create(), create()])).every(response => response?.ok)).toBe(true)
+    expect((await LaunchRecord.where('key', newKey).first())?.launches).toBe(2)
+  }
+  finally { db.close() }
+})

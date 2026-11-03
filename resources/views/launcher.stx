@@ -100,6 +100,26 @@ const updateMessage = derived(() => {
 })
 const settings = state(false)
 const settingsSection = state('general')
+const settingsQuery = state('')
+const settingsSections = [
+  { id: 'general', title: 'General', icon: 'M9.5 3h5l.6 2.2 2 .9 2-.6 2.5 4.3-1.5 1.6v2.3l1.5 1.6-2.5 4.3-2-.6-2 .9-.6 2.1h-5l-.6-2.1-2-.9-2 .6L2 15.3l1.5-1.6v-2.3L2 9.8l2.5-4.3 2 .6 2-.9L9.5 3Z M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z', color: '#7d8491', description: 'Startup, keyboard shortcut and background behavior.', keywords: 'login startup shortcut menu bar' },
+  { id: 'appearance', title: 'Appearance', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 3v18 M15 5v14 M18 7v10', color: '#625f70', description: 'Choose how Launchpad looks on your Mac.', keywords: 'theme dark light system' },
+  { id: 'updates', title: 'Software Update', icon: 'M20 7v5h-5 M20 12a8 8 0 1 0-2.3 5.7 M20 12l-3-3', color: '#7d8491', description: 'Keep Launchpad up to date with verified releases.', keywords: 'version download install automatic' },
+  { id: 'search', title: 'Search', icon: 'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z M14.5 14.5 21 21', color: '#2585ed', description: 'Choose what to search and how to use your results.', keywords: 'files web currency paste permissions windows contacts calendar' },
+  { id: 'clipboard', title: 'Clipboard History', icon: 'M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3 M9 2h6v4H9Z M8 11h8 M8 15h8 M8 19h5', color: '#e39928', description: 'Manage the text history stored on this Mac.', keywords: 'copy retention clear privacy' },
+  { id: 'github', title: 'GitHub', icon: 'M6 3v12a4 4 0 0 0 4 4h4 M18 6v4a4 4 0 0 1-4 4H6 M9 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M21 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M20 19a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z', color: '#6556c8', description: 'Connect your account to search your repositories.', keywords: 'account token private issues pull requests' },
+  { id: 'pantry', title: 'Pantry', icon: 'M3 7l9-5 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10 M7.5 4.5l9 5', color: '#dd7553', description: 'Connect Pantry to install and manage your tools.', keywords: 'packages cli apps libraries fonts' },
+  { id: 'extensions', title: 'Extensions', icon: 'M9 3H4v6a3 3 0 1 1 0 6v5h5a3 3 0 1 1 6 0h5v-5a3 3 0 1 1 0-6V3h-5a3 3 0 1 1-6 0Z', color: '#8b66cf', description: 'Add quicklinks and snippets to Launchpad.', keywords: 'commands manifest json' },
+  { id: 'usage', title: 'Usage', icon: 'M4 20V10h4v10H4Z M10 20V4h4v16h-4Z M16 20V8h4v12h-4Z', color: '#43a96a', description: 'Review your activity, saved only on this Mac.', keywords: 'privacy activity history statistics recording' },
+]
+const visibleSettings = derived(() => settingsSections.filter(section => (section.title + ' ' + section.keywords).toLowerCase().includes(settingsQuery().trim().toLowerCase())))
+const currentSettings = derived(() => settingsSections.find(section => section.id === settingsSection()) || settingsSections[0])
+const automaticUpdatesEnabled = state(true)
+async function changeAutomaticUpdates(enabled) {
+  try { await preference('updates', JSON.stringify({ enabled })); automaticUpdatesEnabled.set(enabled) }
+  catch (reason) { fail(reason) }
+}
+function chooseSettings(value) { settingsSection.set(value); clearError(); if (value === 'general') void refreshLogin(); if (value === 'updates') void refreshUpdate() }
 const loginEnabled = state(false)
 const loginBusy = state(false)
 const loginStatus = state('Checking macOS Login Items...')
@@ -318,9 +338,9 @@ function openSettings(checkUpdates = false) {
   clearError()
   if (settingsSection() === 'general') {
     void refreshLogin()
-    if (checkUpdates === true) void updateLaunchpad()
-    else void refreshUpdate()
+
   }
+  if (settingsSection() === 'updates') { if (checkUpdates === true) void updateLaunchpad(); else void refreshUpdate() }
   void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus()))
 }
 let updateRequest = 0
@@ -350,8 +370,9 @@ async function updateLaunchpad(action = 'check') {
   }
   catch (reason) { updateState.set({ ...updateState(), phase: 'error', error: reason.message }) }
 }
-function checkForUpdates() { settingsSection.set('general'); openSettings(true) }
-pollWhile(refreshUpdate, 500, () => paletteVisible() && settings() && settingsSection() === 'general' && updateBusy())
+function checkForUpdates() { settingsSection.set('updates'); openSettings(true) }
+pollWhile(refreshUpdate, 500, () => paletteVisible() && settings() && settingsSection() === 'updates')
+pollWhile(refreshUpdate, 60000, () => paletteVisible() && !(settings() && settingsSection() === 'updates'))
 function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
 async function refreshLogin(initialize = false) {
   if (loginBusy()) return
@@ -512,6 +533,7 @@ async function loadPreferences() {
     historyEnabled.set(saved.enabled)
     historyDays.set(saved.days)
   }
+  automaticUpdatesEnabled.set(parsePreference(values.updates?.value).enabled !== false)
   if (values.usage) usageEnabled.set(parsePreference(values.usage.value).enabled === true)
   preferencesReady.set(true)
 }
@@ -721,9 +743,7 @@ async function run(item = active()) {
   try {
     await execute(item, query(), duration => recordExecution(item, duration))
     if (isRankable(item.kind)) {
-      const record = records()[item.key]
-      const data = { key: item.key, favorite: Boolean(record?.favorite), launches: (record?.launches || 0) + 1, lastUsed: Date.now() }
-      const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', data)
+      const saved = await api('ranking', 'POST', { key: item.key, action: 'launch' })
       records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
     }
   }
@@ -735,8 +755,7 @@ async function favorite() {
   const item = active()
   if (!item || !isRankable(item.kind)) return
   try {
-    const record = records()[item.key]
-    const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', { key: item.key, favorite: !record?.favorite })
+    const saved = await api('ranking', 'POST', { key: item.key, action: 'favorite' })
     records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
   }
   catch (reason) { fail(reason) }
@@ -782,7 +801,7 @@ async function saveCommand() {
       if (aliases.length > 20 || aliases.some(value => value.length > 64)) throw new Error('Use up to 20 aliases, with at most 64 characters each.')
       const record = records()[application.key]
       if (record || aliases.length) {
-        const saved = await api('launch-records' + (record ? '/' + record.id : ''), record ? 'PATCH' : 'POST', { key: application.key, aliases: aliases.join('\n') })
+        const saved = await api('ranking', 'POST', { key: application.key, action: 'aliases', aliases: aliases.join('\n') })
         records.set({ ...records(), [application.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
       }
       closeEditor()
@@ -871,6 +890,7 @@ onMount(async () => {
   await reload()
   try { cleanup = await registerLauncher(activate) }
   catch (reason) { fail(reason) }
+  void refreshUpdate()
   if (paletteVisible() && !settings()) activate()
   await Promise.allSettled([
     (async () => { try { catalog.set(await api('pantry/catalog')) } catch (reason) { pantryStatus.set(reason.message) } })(),
@@ -903,7 +923,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" :aria-pressed="category() === 'github'" @click="chooseCategory('github')">GitHub</button>
       <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="category() === 'pantry'" @click="chooseCategory('pantry')">Pantry</button>
     </div>
-    <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command">+</button>
+    <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
   <div :if="error()" class="error error-banner" role="alert"><span>{{ error() }}</span><button :if="errorPermission()" type="button" class="error-action" @click="openPrivacySettings(errorPermission())">{{ errorPermission() === 'automation' ? 'Open Automation settings' : 'Open Accessibility settings' }}</button></div>
@@ -968,7 +988,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
   <p :if="category() === 'pantry'" class="px-5 github-status" role="status">{{ pantryStatus() }}</p>
   <div :if="allResults().length > results().length" class="flex items-center justify-center history-tools"><button type="button" class="text-action" @click="visibleLimit.set(visibleLimit() + 100)">Show {{ Math.min(100, allResults().length - results().length) }} more</button></div>
   <footer class="flex gap-3 items-center px-5">
-    <span class="wordmark">Launchpad</span>
+    <span class="wordmark">Launchpad</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
     <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
@@ -982,29 +1002,37 @@ onDestroy(() => { cleanup(); cleanupTray() })
 
   <div :if="settings()" class="editor settings" role="dialog" aria-modal="true" aria-label="Launchpad Settings">
     <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1 ref="settingsTitle" tabindex="-1">Settings</h1><button type="button" class="escape" @mousedown.stop="" @click="closeSettings()" aria-label="Close settings">esc</button></div>
-    <nav class="settings-nav" aria-label="Settings sections">
-      <button type="button" :class="settingsSection() === 'general' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'general'" @click="settingsSection.set('general')">General</button>
-      <button type="button" :class="settingsSection() === 'appearance' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'appearance'" @click="settingsSection.set('appearance')">Appearance</button>
-      <button type="button" :class="settingsSection() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'clipboard'" @click="settingsSection.set('clipboard')">Clipboard History</button>
-      <button type="button" :class="settingsSection() === 'github' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'github'" @click="settingsSection.set('github')">GitHub</button>
-      <button type="button" :class="settingsSection() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'pantry'" @click="settingsSection.set('pantry')">Pantry</button>
-      <button type="button" :class="settingsSection() === 'search' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'search'" @click="settingsSection.set('search')">Search</button>
-      <button type="button" :class="settingsSection() === 'extensions' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'extensions'" @click="settingsSection.set('extensions')">Extensions</button>
-      <button type="button" :class="settingsSection() === 'usage' ? 'tab active' : 'tab'" :aria-pressed="settingsSection() === 'usage'" @click="settingsSection.set('usage')">Usage</button>
-    </nav>
-    <div class="dialog-body">
+    <div class="settings-layout">
+    <aside class="settings-sidebar">
+      <label class="settings-search"><span aria-hidden="true">⌕</span><input type="search" x-model="settingsQuery" placeholder="Search" aria-label="Search settings"></label>
+      <nav class="settings-nav" aria-label="Settings sections">
+        <button :for="(section, index) in visibleSettings()" :key="section.id" type="button" :class="settingsSection() === section.id ? 'settings-item active' : 'settings-item'" :aria-pressed="settingsSection() === section.id" @click="chooseSettings(section.id)"><span class="settings-icon" :style="'background:' + section.color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="section.icon" /></svg></span>{{ section.title }}</button>
+      </nav>
+      <p :if="!visibleSettings().length" class="help settings-no-results">No settings found.</p>
+      <div class="settings-sidebar-about"><strong>Launchpad</strong><span>Version {{ updateState().currentVersion }}</span></div>
+    </aside>
+    <div class="dialog-body settings-detail">
+      <div class="settings-heading"><span class="settings-hero-icon" :style="'background:' + currentSettings().color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="currentSettings().icon" /></svg></span><h2>{{ currentSettings().title }}</h2><p class="help">{{ currentSettings().description }}</p></div>
       <section :if="settingsSection() === 'general'">
-        <h2>Ready in the background.</h2>
-        <p class="help">Launchpad lives in your menu bar, without a Dock icon. Press Command + Space or click its menu bar icon to search. Escape and clicking outside hide the palette while Launchpad keeps running.</p>
-        <label class="toggle-row"><input type="checkbox" :checked="loginEnabled()" :disabled="loginBusy()" @change="changeLogin($event.target.checked)"> Launch at login</label>
-        <p class="help" role="status">{{ loginStatus() }}</p>
-        <button type="button" class="text-action" :disabled="loginBusy()" @click="refreshLogin()">Refresh login status</button>
-        <h2 class="mt-5">Launchpad {{ updateState().currentVersion }}</h2>
-        <p class="help" role="status" aria-live="polite">{{ updateMessage() }}</p>
-        <button :if="updateState().phase !== 'unavailable' && updateState().phase !== 'ready' && updateState().phase !== 'installed'" type="button" class="text-action" :disabled="updateBusy()" @click="updateLaunchpad(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : 'Check for Updates...' }}</button>
-        <button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="updateLaunchpad('install')">Install and Restart</button>
+        <div class="settings-group">
+          <label class="toggle-row"><span>Open at Login</span><input type="checkbox" role="switch" :checked="loginEnabled()" :disabled="loginBusy()" @change="changeLogin($event.target.checked)"></label>
+          <p class="help" role="status">{{ loginStatus() }}</p>
+          <button type="button" class="text-action" :disabled="loginBusy()" @click="refreshLogin()">Refresh login status</button>
+        </div>
+        <div class="settings-group"><div class="setting-row"><span>Open Launchpad</span><kbd>⌘ Space</kbd></div><p class="help">Click the menu bar icon or use the shortcut to search. Escape and clicking outside hide the palette while Launchpad keeps running.</p></div>
+        <button type="button" class="settings-group settings-link" @click="chooseSettings('updates')"><span>Software Update</span><span aria-hidden="true">›</span></button>
       </section>
-      <section :if="settingsSection() === 'appearance'">
+      <section :if="settingsSection() === 'updates'">
+        <div class="settings-group">
+          <div class="setting-row"><h2>Launchpad</h2><span class="help">{{ updateState().currentVersion }}</span></div>
+          <p class="help update-status" role="status" aria-live="polite">{{ updateMessage() }}</p>
+          <progress :if="updateState().phase === 'downloading'" max="100" :value="updateState().percent || 0" aria-label="Update download progress"></progress>
+          <button :if="updateState().phase !== 'unavailable' && updateState().phase !== 'ready' && updateState().phase !== 'installed'" type="button" class="secondary-button" :disabled="updateBusy()" @click="updateLaunchpad(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : 'Check for Updates...' }}</button>
+          <button :if="updateState().phase === 'ready'" type="button" class="save-button" @click="updateLaunchpad('install')">Install and Restart</button>
+        </div>
+        <div class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
+      </section>
+      <section :if="settingsSection() === 'appearance'" class="settings-group">
     <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>
     <div class="theme-options" role="group" aria-label="Appearance">
       <button type="button" :class="themePreference() === 'system' ? 'theme-option active' : 'theme-option'" @click="appearance('system')" :aria-pressed="themePreference() === 'system'"><span class="system-preview theme-preview"></span>System</button>
@@ -1012,15 +1040,15 @@ onDestroy(() => { cleanup(); cleanupTray() })
       <button type="button" :class="themePreference() === 'dark' ? 'theme-option active' : 'theme-option'" @click="appearance('dark')" :aria-pressed="themePreference() === 'dark'"><span class="dark-preview theme-preview"></span>Dark</button>
     </div>
       </section>
-      <section :if="settingsSection() === 'clipboard'">
+      <section :if="settingsSection() === 'clipboard'" class="settings-group">
     <h2>Clipboard History</h2>
-    <label class="toggle-row"><input type="checkbox" :checked="historyEnabled()" @change="historyPreference(!historyEnabled())"> Record new clipboard text</label>
+    <label class="toggle-row"><input type="checkbox" role="switch" :checked="historyEnabled()" @change="historyPreference(!historyEnabled())"> Record new clipboard text</label>
     <p class="help">Stored only on this Mac, up to 200 entries. Protected and transient pasteboard types are skipped, with additional checks for known password managers. Unmarked sensitive text can still be captured. Pause before copying anything you want to keep out of history.</p>
     <label for="history-days">Keep history for</label>
     <select id="history-days" :value="historyDays()" @change="historyPreference(historyEnabled(), $event.target.value)"><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select>
     <div class="setting-actions"><span class="help">{{ historyEnabled() ? historyStatus() : 'History is paused' }}</span><button type="button" class="danger-button" @click="clearHistory()">Clear history</button></div>
       </section>
-      <section :if="settingsSection() === 'github'">
+      <section :if="settingsSection() === 'github'" class="settings-group">
     <h2>GitHub {{ githubViewer() ? '· @' + githubViewer().login : '' }}</h2>
     <p class="help">Repository, issue and pull request search works publicly. Connect for private repositories, assigned issues, review requests and notifications. Searches run only in the GitHub tab.</p>
     <form :if="!githubViewer()" @submit.prevent="connectAccount()">
@@ -1031,7 +1059,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
     </form>
     <button :if="githubViewer()" type="button" class="secondary-button" @click="disconnectAccount()">Disconnect GitHub</button>
       </section>
-      <section :if="settingsSection() === 'pantry'">
+      <section :if="settingsSection() === 'pantry'" class="settings-group">
         <h2>Your tools, through Pantry.</h2>
         <p class="help">Search applications, command line tools, libraries and fonts locally. Installation uses the Pantry CLI you install separately, with your user account and its package permissions.</p>
         <p class="help">Run this once in your terminal, then enter the five minute pairing code below.</p>
@@ -1042,31 +1070,31 @@ onDestroy(() => { cleanup(); cleanupTray() })
         <p class="help" role="status">{{ pantryRestoring() ? 'Waiting for macOS to check the saved connection...' : pantryStatus() }}</p>
         <p class="help">The connection token stays in macOS Keychain. Catalog refreshes and original logos load from Pantry's GitHub repository. Package searches stay on this Mac.</p>
       </section>
-      <section :if="settingsSection() === 'search'">
+      <section :if="settingsSection() === 'search'" class="settings-group">
         <h2>Find more, faster.</h2>
-        <label class="toggle-row"><input type="checkbox" :checked="searchSettings().files" @change="saveSearch({ files: $event.target.checked })"> Search file names on this Mac</label>
+        <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().files" @change="saveSearch({ files: $event.target.checked })"> Search file names on this Mac</label>
         <p class="help">Uses Spotlight's index. Library, hidden items, dependencies and app internals are skipped. File names stay on this Mac and are not stored.</p>
         <label for="web-engine">When you search, offer a web search with</label>
         <select id="web-engine" :value="searchSettings().web" @change="saveSearch({ web: $event.target.value })"><option value="duckduckgo">DuckDuckGo</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option><option value="kagi">Kagi</option><option value="off">Off</option></select>
-        <label class="toggle-row"><input type="checkbox" :checked="searchSettings().currency" @change="saveSearch({ currency: $event.target.checked })"> Convert currencies</label>
+        <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().currency" @change="saveSearch({ currency: $event.target.checked })"> Convert currencies</label>
         <p class="help">Downloads the European Central Bank's reference rates about once a day from api.frankfurter.dev. The request carries no search text. Off until you turn it on. Units and temperatures always work offline.</p>
-        <label class="toggle-row"><input type="checkbox" :checked="searchSettings().paste" @change="saveSearch({ paste: $event.target.checked })"> Paste snippets into the app you were using</label>
+        <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().paste" @change="saveSearch({ paste: $event.target.checked })"> Paste snippets into the app you were using</label>
         <p class="help">Snippets are always copied. This also types Command V into the previous app, which needs the Accessibility permission. Snippets can use {date}, {time}, {datetime}, {weekday}, {year}, {uuid} and {clipboard}.</p>
         <h2 class="mt-5">Windows, contacts and calendar</h2>
-        <p class="help">The Windows, People and Calendar tabs ask macOS for permission the first time. Windows needs Accessibility. Contacts and Calendar use Automation. What they find stays in memory and is never saved or counted in usage.</p>
+        <p class="help">The Windows, People and Calendar tabs ask macOS for permission the first time. Windows needs Accessibility. Contacts and Calendar use Automation. Result details stay in memory. Local usage records only the command category.</p>
         <div class="flex gap-3 items-center"><button type="button" class="text-action" @click="openPrivacySettings('accessibility')">Accessibility settings</button><button type="button" class="text-action" @click="openPrivacySettings('automation')">Automation settings</button></div>
       </section>
-      <section :if="settingsSection() === 'extensions'">
+      <section :if="settingsSection() === 'extensions'" class="settings-group">
         <h2>Extensions</h2>
         <p class="help">An extension adds quicklinks and snippets from a JSON file. It cannot run code, use the network or read files, so installing one is as safe as pasting text.</p>
-        <div :for="(row, index) in extensionRows()" :key="row.id" class="setting-row"><div><strong>{{ row.name }}</strong><p class="help">{{ extensionSummary(row) }}</p></div><div class="flex gap-3 items-center"><input type="checkbox" :checked="row.enabled" @change="toggleExtension(row)" :aria-label="'Enable ' + row.name"><button type="button" class="text-action" @click="removeExtension(row)">Remove</button></div></div>
+        <div :for="(row, index) in extensionRows()" :key="row.id" class="setting-row"><div><strong>{{ row.name }}</strong><p class="help">{{ extensionSummary(row) }}</p></div><div class="flex gap-3 items-center"><input type="checkbox" role="switch" :checked="row.enabled" @change="toggleExtension(row)" :aria-label="'Enable ' + row.name"><button type="button" class="text-action" @click="removeExtension(row)">Remove</button></div></div>
         <label for="extension-manifest">Install from JSON</label>
         <textarea id="extension-manifest" x-model="extensionDraft" rows="8" spellcheck="false" placeholder="Paste a manifest here"></textarea>
         <div :if="extensionIssues().length" class="error" role="alert"><div :for="(issue, index) in extensionIssues()" :key="index">{{ issue }}</div></div>
         <div class="flex gap-3 items-center"><button type="button" class="save-button" @click="installExtension()" :disabled="!extensionDraft().trim()">Install</button><button type="button" class="text-action" @click="extensionDraft.set(sampleManifest)">Use an example</button></div>
       </section>
-      <section :if="settingsSection() === 'usage'">
-    <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>
+      <section :if="settingsSection() === 'usage'" class="settings-group">
+    <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" role="switch" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>
     <p class="help">Records app sessions, time running, time the palette is open, app and link launches, action types, application names and command latency through the local API. Search text, file paths, snippet and clipboard contents stay out of usage records. Nothing is sent to Stacks.</p>
     <div :if="usageSummary()" class="usage-stats"><div><strong>{{ usageSummary().sessions }}</strong><span>app sessions</span></div><div><strong>{{ usageSummary().paletteOpens }}</strong><span>palette opens</span></div><div><strong>{{ formatUsageTime(usageSummary().runningMs) }}</strong><span>app running</span></div><div><strong>{{ formatUsageTime(usageSummary().visibleMs) }}</strong><span>palette open</span></div><div><strong>{{ usageSummary().applicationsOpened }}</strong><span>apps opened</span></div><div><strong>{{ usageSummary().linksOpened }}</strong><span>links opened</span></div><div><strong>{{ usageSummary().commands }}</strong><span>commands</span></div><div><strong>{{ usageSummary().activeDays }}</strong><span>active days</span></div><div><strong>{{ usageSummary().longestStreak }}</strong><span>day streak</span></div></div>
     <div :if="usageSummary()?.pantry">
@@ -1079,6 +1107,7 @@ onDestroy(() => { cleanup(); cleanupTray() })
     <p :if="usageIssue()" class="help" role="status">{{ usageIssue() }}</p>
       </section>
       <p :if="error()" class="error" role="alert">{{ error() }}</p>
+    </div>
     </div>
     <div class="dialog-footer"><span class="help">Saved on this Mac</span><button type="button" class="secondary-button" @click="closeSettings()">Done</button></div>
   </div>
@@ -1149,7 +1178,8 @@ nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .tab { padding: 5px 11px; border-radius: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
 .tab:hover { color: var(--ink); background: var(--selected); }
 .tab.active { background: var(--selected); color: var(--ink); }
-.new { color: var(--muted); font-size: 24px; line-height: 24px; width: 28px; }
+.new { color: var(--muted); display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; }
+.new svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .section-label { height: 30px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
 .section-label > span:last-child { color: var(--muted); font-size: 10px; }
 .results { flex: 1; overflow-y: auto; overflow-anchor: none; padding-bottom: 8px; }
@@ -1205,10 +1235,48 @@ header input:focus-visible { outline: none; }
 .dialog-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-shrink: 0; min-height: 52px; padding: 9px 20px; border-top: 1px solid var(--line); background: var(--footer); }
 .dialog-footer > .help { margin-right: auto; }
 .dialog-body .error { margin: 10px 0 0; }
-.settings-nav { display: flex; align-items: center; gap: 5px; padding: 0 15px; overflow-x: auto; scrollbar-width: none; }
-.settings-nav::-webkit-scrollbar { display: none; }
+.settings-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); flex: 1; min-height: 0; }
+.settings-sidebar { display: flex; flex-direction: column; min-height: 0; background: var(--footer); border-right: 1px solid var(--line); padding: 14px 10px 10px; }
+.settings-search { display: flex !important; align-items: center; gap: 5px; padding: 0 8px; margin: 0 0 14px !important; border: 1px solid var(--line); border-radius: 7px; background: var(--field); color: var(--muted); }
+.settings-search input { border: 0; background: transparent; padding: 6px 0; font-size: 12px; }
+.settings-nav { display: flex; flex-direction: column; gap: 3px; height: auto; min-height: 0; overflow-y: auto; border: 0; }
+.settings-item { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 6px 8px; border-radius: 6px; font-size: 12px; flex-shrink: 0; }
+.settings-item:hover { background: var(--selected); }
+.settings-item.active { background: #087ff5; color: #fff; }
+.settings-icon, .settings-hero-icon { display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: inset 0 0 0 1px #ffffff24; }
+.settings-icon svg, .settings-hero-icon svg { width: 70%; height: 70%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.settings-icon { width: 23px; height: 23px; border-radius: 5px; font-size: 18px; flex-shrink: 0; }
+.settings-sidebar-about { margin-top: auto; padding: 16px 8px 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.settings-sidebar-about span { font-size: 10px; color: var(--muted); }
+.settings-no-results { padding: 0 8px; }
+.settings-detail { padding: 20px 22px; background: var(--surface); }
+.settings-heading { text-align: center; margin: 0 0 18px; }
+.settings-hero-icon { width: 44px; height: 44px; border-radius: 11px; margin: 0 auto 10px; font-size: 32px; }
+.settings-heading h2 { font-size: 20px; letter-spacing: -.4px; margin: 0; }
+.settings-heading .help { line-height: 1.45; max-width: 320px; margin: 6px auto 0; }
+.settings-group { display: block; width: 100%; padding: 14px; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--footer); }
+.settings-group .help { line-height: 1.5; }
+.settings-group > .toggle-row:not(:first-child) { padding-top: 12px; border-top: 1px solid var(--line); margin-top: 12px; }
+.settings .toggle-row { justify-content: space-between; margin: 0; min-height: 24px; }
+.settings .toggle-row > input:first-child { order: 1; }
+.settings input[type=checkbox] { appearance: none; position: relative; width: 30px; height: 18px; flex: 0 0 30px; border: 0; border-radius: 12px; padding: 0; background: var(--border); cursor: pointer; }
+.settings input[type=checkbox]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: white; box-shadow: 0 1px 2px #0003; }
+.settings input[type=checkbox]:checked { background: #087ff5; }
+.settings input[type=checkbox]:checked::after { left: 14px; }
+.settings input[type=checkbox]:disabled { opacity: .5; cursor: default; }
+.settings .setting-row input[type=checkbox] { width: 30px; height: 18px; }
+.settings-link { display: flex; align-items: center; justify-content: space-between; text-align: left; font-size: 12px; }
+.settings-link > span:last-child { color: var(--muted); font-size: 20px; line-height: 16px; }
+.settings-link:hover { background: var(--selected); }
+.settings .theme-options { gap: 8px; margin-bottom: 0; }
+.settings .theme-option { padding: 8px; }
+.settings .theme-preview { height: 38px; }
+.settings .system-preview { border-right-width: 35px; }
+.update-status { margin: 10px 0 !important; }
+.settings progress { display: block; width: 100%; margin: 10px 0; accent-color: #087ff5; }
+@media (max-width: 560px) { .settings-layout { grid-template-columns: 155px minmax(0, 1fr); } .settings-detail { padding: 16px 12px; } .settings-item { padding-inline: 4px; font-size: 11px; } }
 .setting-row, .setting-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.setting-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+.setting-row input[type=checkbox] { width: 30px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
 .setting-actions { margin-top: 14px; }
 .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
 .theme-option { display: flex; flex-direction: column; gap: 9px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; }

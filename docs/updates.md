@@ -1,13 +1,22 @@
 # App updates
 
-General settings and the tray menu offer Check for Updates. Checks run only when
-requested. Download update verifies the release archive; Install and Restart
+Software Update settings and the tray menu offer Check for Updates. Automatic
+Updates is on by default: the native backend checks after the first minute and
+every six hours while Launchpad runs, then downloads available updates. Its
+preference is stored by AppPreference on this Mac. Turn it off to check and
+download manually. The launcher shows Update ready when a download completes;
+installation always waits for Install and Restart. Download update verifies the release archive; Install and Restart
 verifies the application and replaces the installed bundle through Craft.
 
 The host uses `createNativeUpdateApi` from `@stacksjs/desktop`, behind stx's
 authenticated loopback session. The browser cannot supply an installer URL, path
 or signing policy. The framework adapts Pantry's release manifest and serializes
 operations. A failed check is shown as an error, never as being up to date.
+
+Releases attach a `.dmg.zip` containing the drag-to-Applications installer,
+with its layout and background supplied by Craft. Pantry signs, notarizes and
+staples the DMG before archiving it; the release manifest hashes the ZIP. Craft
+extracts the ZIP and mounts its disk image before verifying and staging the app.
 
 Direct downloads use Developer ID signing, hardened runtime and notarization.
 They run outside the App Store sandbox so the native updater can replace the app
