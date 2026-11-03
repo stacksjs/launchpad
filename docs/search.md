@@ -71,6 +71,13 @@ A manifest is strictly validated and cannot run code, reach the network or read 
 and `{clipboard}` are filled in when a snippet is used. `{{date}}` stays literal. The
 clipboard is read only if the snippet asks for it.
 
+**Large type.** Command L fills the window with the selected result, at the largest size that still
+fits. A result whose point is its text — a snippet, a clipboard entry, a calculated answer, an emoji —
+shows that text; everything else shows its title, since its content is a path or an address the title
+already stands for. While it is up it holds the keyboard so the list behind cannot move, but Command C
+still copies and the text stays selectable. Escape or a click outside closes it, and resizing the
+window re-fits the text.
+
 **Bookmarks.** Chrome, Brave, Edge, Vivaldi, Chromium and Arc keep their bookmarks as a JSON file
 per profile, and Launchpad reads the ones you choose in Settings, across every profile that browser
 has. They rank alongside apps and commands rather than sitting in a tab, and both the folder and the
