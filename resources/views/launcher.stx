@@ -33,6 +33,7 @@ import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, seria
 import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
 import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions/large-type'
 import { detailFor } from '../functions/detail'
+import { gridColumns, gridScrollTop, gridTarget, gridTileSize, usesGrid } from '../functions/grid'
 import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
@@ -226,7 +227,11 @@ const resultSlots = derived(() => {
   items(); records(); catalog(); pantryInstalled(); githubItems(); fileItems(); windowItems(); contactItems(); eventItems(); extensionRows(); searchSettings()
   return createResultSlots()
 })
-const renderedResults = derived(() => resultSlots()(results(), viewport().start, viewport().end))
+// A grid bypasses the virtualised rows: the categories that use one are bounded by `visibleLimit`, so every tile
+// can be drawn, and the row windowing has nothing useful to say about a layout that wraps.
+const gridMode = derived(() => usesGrid(category()))
+const gridColumnCount = state(gridColumns(0))
+const renderedResults = derived(() => gridMode() ? [] : resultSlots()(results(), viewport().start, viewport().end))
 const active = derived(() => results()[selected()])
 const actionLabel = derived(() => actionLabelFor(active()?.kind))
 const secondary = derived(() => secondaryActions(active()))
@@ -1131,11 +1136,16 @@ function key(event) {
   if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
   if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
   if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
-  const move = selectionTarget(event, selected(), results().length)
+  const move = gridMode()
+    ? gridTarget(event, selected(), results().length, gridColumnCount())
+    : selectionTarget(event, selected(), results().length)
   if (move !== null) {
     event.preventDefault()
     const index = move
-    const top = Math.max(0, index * resultRowHeight - 2 * resultRowHeight)
+    // A grid scrolls by the row a tile sits on; a list scrolls by the row itself, kept two rows off the top edge.
+    const top = gridMode()
+      ? Math.max(0, gridScrollTop(index, gridColumnCount(), gridTileSize) - gridTileSize)
+      : Math.max(0, index * resultRowHeight - 2 * resultRowHeight)
     batch(() => { selected.set(index); resultScrollTop.set(top) })
     void nextTick(() => { if (selected() === index) list.current?.scrollTo({ top }) })
   }
@@ -1181,7 +1191,12 @@ void onSelectionService((selection) => {
 }).then((stop) => { stopSelectionService = stop })
 // An empty File tab showed nothing to do. It now opens on the home folder, which is somewhere to start.
 effect(() => { if (category() === 'file' && !query().trim() && !browsePath() && homePath() && searchableVisible()) void openFolder(homePath()) })
-const onWindowResize = () => measureLargeType()
+function measureGrid() {
+  const width = list.current?.clientWidth || globalThis.innerWidth || 720
+  gridColumnCount.set(gridColumns(width - 24))
+}
+effect(() => { if (gridMode()) void nextTick(measureGrid) })
+const onWindowResize = () => { measureLargeType(); if (gridMode()) measureGrid() }
 globalThis.addEventListener?.('resize', onWindowResize)
 onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectionService(); globalThis.removeEventListener?.('resize', onWindowResize) })
 </script>
@@ -1288,6 +1303,11 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
         <span :if="viewport().start + index === selected()" class="return-key" aria-hidden="true">↵</span>
       </button>
+      <div :if="gridMode()" class="result-grid" :style="'grid-template-columns:repeat(' + gridColumnCount() + ',minmax(0,1fr))'">
+        <button :for="(item, index) in results()" :key="item.key" type="button" role="option" :id="'result-' + index" :aria-posinset="index + 1" :aria-setsize="results().length" :aria-selected="index === selected()" :aria-label="item.subtitle ? item.title + ', ' + item.subtitle : item.title" :title="item.subtitle" :class="index === selected() ? 'tile selected' : 'tile'" @click="selected.set(index); run(item)" @mousemove="selected.set(index)">
+          <span class="tile-glyph" aria-hidden="true">{{ item.title }}</span>
+        </button>
+      </div>
       <div aria-hidden="true" :style="'height:' + viewport().bottom + 'px;flex-shrink:0'"></div>
     </div>
     <pre :if="category() === 'clipboard' && active()" class="clipboard-preview" aria-label="Selected clipboard text">{{ active().content }}</pre>
@@ -1686,6 +1706,10 @@ header input:focus-visible { outline: none; }
 .shortcut-field input { flex: 1; min-width: 0; }
 .shortcut-field input:focus { border-color: var(--accent); }
 .bookmark-browsers { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 14px; }
+.result-grid { display: grid; gap: 4px; padding: 4px 0 8px; }
+.tile { display: flex; align-items: center; justify-content: center; height: 42px; border: 0; border-radius: 8px; background: transparent; cursor: default; }
+.tile.selected { background: var(--selected); }
+.tile-glyph { font-size: 24px; line-height: 1; }
 .detail { position: absolute; inset: 0; z-index: 20; display: flex; align-items: stretch; justify-content: center; padding: 20px 20px 30px; }
 .detail-backdrop { position: absolute; inset: 0; background: var(--surface); }
 .detail-page { position: relative; width: 100%; max-width: 640px; overflow: auto; padding: 4px 8px; color: var(--ink); user-select: text; outline: none; }

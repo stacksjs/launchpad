@@ -82,6 +82,10 @@ exposes no Quick Look, and its only delete is permanent, with no move to the Tra
 permanently erases a file where someone expected it to be recoverable is worse than one that does not
 offer to delete at all, so neither is built on what is available today.
 
+**Emoji as a grid.** The Emoji tab lays its results out as a grid rather than a column, so a screen
+shows forty instead of a dozen. Left and right step one tile and carry across a row end; up and down
+move a whole row. The column count follows the window.
+
 **Full text.** Command Y opens a long clipboard entry or snippet as a page, reading its Markdown as
 headings, lists, quotes, code and images rather than one cramped line. Escape returns to the list. A
 short entry already shows all of itself in its row, so it is not offered one.
