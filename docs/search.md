@@ -82,6 +82,10 @@ exposes no Quick Look, and its only delete is permanent, with no move to the Tra
 permanently erases a file where someone expected it to be recoverable is worse than one that does not
 offer to delete at all, so neither is built on what is available today.
 
+**Full text.** Command Y opens a long clipboard entry or snippet as a page, reading its Markdown as
+headings, lists, quotes, code and images rather than one cramped line. Escape returns to the list. A
+short entry already shows all of itself in its row, so it is not offered one.
+
 **Large type.** Command L fills the window with the selected result, at the largest size that still
 fits. A result whose point is its text — a snippet, a clipboard entry, a calculated answer, an emoji —
 shows that text; everything else shows its title, since its content is a path or an address the title

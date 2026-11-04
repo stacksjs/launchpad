@@ -32,6 +32,7 @@ import { createLatest } from '../functions/sources'
 import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, serializeTheme, themeFontVariables, themeTokens, themeVariables } from '../functions/theme'
 import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
 import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions/large-type'
+import { detailFor } from '../functions/detail'
 import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
@@ -166,6 +167,7 @@ const themeDraftId = state('')
 const themeMode = state('light')
 const browsePath = state('')
 const homePath = state('')
+const detailPage = state(null)
 const largeTypeValue = state('')
 const largeTypeSize = state(minLargeTypeSize)
 const shortcutRefused = state([])
@@ -193,6 +195,7 @@ let githubEpoch = 0
 let githubRequest: AbortController | null = null
 const search = useRef('search')
 const commandTitle = useRef('commandTitle')
+const detailPane = useRef('detailPane')
 const list = useRef('results')
 let cleanup = () => {}
 let cleanupTray = () => {}
@@ -918,6 +921,15 @@ function showLargeType() {
   void nextTick(measureLargeType)
 }
 function hideLargeType() { largeTypeValue.set('') }
+/** A long saved note or clipboard entry says nothing in one line, so it gets the window instead. */
+function showDetail() {
+  const page = detailFor(active())
+  if (!page) return
+  detailPage.set(page)
+  void nextTick(() => detailPane.current?.focus())
+}
+function hideDetail() { detailPage.set(null) }
+const hasDetail = derived(() => Boolean(detailFor(active())))
 const savedCommands = () => items().filter(item => ['quicklink', 'snippet'].includes(item.kind))
 /**
  * The field records the keys instead of asking for their names. Every press is swallowed while it has focus, so
@@ -1083,6 +1095,13 @@ async function remove() {
 }
 
 function key(event) {
+  if (detailPage()) {
+    if (event.key === 'Escape' || (event.metaKey && event.key.toLowerCase() === 'y')) { event.preventDefault(); hideDetail(); return }
+    // The page scrolls with the keys that scroll anything else, and Command C still takes the text.
+    if (event.metaKey || ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    return
+  }
   if (largeTypeValue()) {
     if (event.key === 'Escape' || (event.metaKey && event.key.toLowerCase() === 'l')) { event.preventDefault(); hideLargeType(); return }
     // Command C and the rest still work, because the point is that the text can be taken.
@@ -1099,6 +1118,7 @@ function key(event) {
   if (settings() || packageDetail()) return
   if (event.metaKey && event.key === 'ArrowUp' && browsePath()) { event.preventDefault(); leaveFolder(); return }
   if (event.metaKey && event.key.toLowerCase() === 'l') { event.preventDefault(); showLargeType(); return }
+  if (event.metaKey && event.key.toLowerCase() === 'y') { event.preventDefault(); showDetail(); return }
   if (event.metaKey && event.key.toLowerCase() === 'g') { event.preventDefault(); chooseCategory('github'); return }
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'v') { event.preventDefault(); chooseCategory('clipboard'); return }
   if (event.metaKey && event.key.toLowerCase() === 'n') { event.preventDefault(); newCommand(); return }
@@ -1192,6 +1212,24 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
+  <div :if="detailPage()" class="detail" role="dialog" aria-modal="true" aria-label="Result detail">
+    <div class="detail-backdrop" @click="hideDetail()"></div>
+    <article class="detail-page" ref="detailPane" tabindex="-1" @click.stop="">
+      <h1 class="detail-title">{{ detailPage().title }}</h1>
+      <p class="detail-subtitle">{{ detailPage().subtitle }}</p>
+      <div :for="(block, index) in detailPage().blocks" :key="index">
+        <h2 :if="block.kind === 'heading'" :class="'detail-heading detail-h' + block.level">{{ block.text }}</h2>
+        <p :if="block.kind === 'paragraph'" class="detail-paragraph">{{ block.text }}</p>
+        <pre :if="block.kind === 'code'" class="detail-code">{{ block.text }}</pre>
+        <blockquote :if="block.kind === 'quote'" class="detail-quote">{{ block.text }}</blockquote>
+        <hr :if="block.kind === 'rule'" class="detail-rule" />
+        <img :if="block.kind === 'image'" class="detail-image" :src="block.url" :alt="block.alt" loading="lazy" />
+        <ul :if="block.kind === 'list' && !block.ordered" class="detail-list"><li :for="(item, position) in block.items" :key="position">{{ item }}</li></ul>
+        <ol :if="block.kind === 'list' && block.ordered" class="detail-list"><li :for="(item, position) in block.items" :key="position">{{ item }}</li></ol>
+      </div>
+    </article>
+    <span class="detail-hint">Escape to close</span>
+  </div>
   <div :if="largeTypeValue()" class="large-type" role="dialog" aria-modal="true" aria-label="Large type">
     <div class="large-type-backdrop" @click="hideLargeType()"></div>
     <p class="large-type-text" :style="'font-size:' + largeTypeSize() + 'px'" @click.stop="">{{ largeTypeValue() }}</p>
@@ -1269,6 +1307,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet', 'clipboard'].includes(active()?.kind)" type="button" class="footer-action" @click="remove()" aria-label="Delete selected saved item">Delete</button>
+    <button :if="hasDetail()" type="button" class="footer-action" @click="showDetail()" aria-label="Show the full text">Full text <kbd>⌘ Y</kbd></button>
     <button :if="secondary().reveal" type="button" class="footer-action" @click="revealActive()" aria-label="Reveal in Finder">Reveal <kbd>⌘ ↵</kbd></button>
     <button :if="secondary().copy" type="button" class="footer-action" @click="copySecondary()" :aria-label="active()?.kind === 'file' ? 'Copy path' : 'Copy contact detail'">{{ active()?.kind === 'file' ? 'Copy path' : 'Copy' }} <kbd>⇧⌘ C</kbd></button>
     <button type="button" class="ml-auto footer-action" @click="favorite()" :disabled="!active() || !isRankable(active().kind)" title="Favorite (Command D)" :aria-label="active()?.favorite ? 'Remove from favorites' : 'Add to favorites'" :aria-pressed="Boolean(active()?.favorite)">☆ <kbd>⌘ D</kbd></button>
@@ -1647,6 +1686,20 @@ header input:focus-visible { outline: none; }
 .shortcut-field input { flex: 1; min-width: 0; }
 .shortcut-field input:focus { border-color: var(--accent); }
 .bookmark-browsers { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 14px; }
+.detail { position: absolute; inset: 0; z-index: 20; display: flex; align-items: stretch; justify-content: center; padding: 20px 20px 30px; }
+.detail-backdrop { position: absolute; inset: 0; background: var(--surface); }
+.detail-page { position: relative; width: 100%; max-width: 640px; overflow: auto; padding: 4px 8px; color: var(--ink); user-select: text; outline: none; }
+.detail-title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+.detail-subtitle { margin: 2px 0 14px; font-size: 11px; color: var(--muted); }
+.detail-heading { margin: 16px 0 6px; font-weight: 600; letter-spacing: -.2px; }
+.detail-h1 { font-size: 15px; } .detail-h2 { font-size: 13px; } .detail-h3 { font-size: 12px; color: var(--muted); }
+.detail-paragraph { margin: 0 0 10px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.detail-code { margin: 0 0 10px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; font: 11px/1.5 ui-monospace, monospace; white-space: pre; }
+.detail-quote { margin: 0 0 10px; padding-left: 10px; border-left: 2px solid var(--line); font-size: 12px; line-height: 1.6; color: var(--muted); }
+.detail-rule { margin: 14px 0; border: 0; border-top: 1px solid var(--line); }
+.detail-image { display: block; max-width: 100%; margin: 0 0 10px; border-radius: 6px; }
+.detail-list { margin: 0 0 10px; padding-left: 20px; font-size: 12px; line-height: 1.6; }
+.detail-hint { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--muted); }
 .large-type { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 28px 48px; }
 .large-type-backdrop { position: absolute; inset: 0; background: var(--surface); }
 .large-type-text { position: relative; margin: 0; text-align: center; font-weight: 600; letter-spacing: -.5px; line-height: 1.25; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
