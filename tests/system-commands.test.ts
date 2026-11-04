@@ -7,7 +7,7 @@ test('every system command is unique, fixed, and described', () => {
   expect(new Set(ids).size).toBe(ids.length)
   for (const command of systemCommands) {
     expect(command.title.length).toBeGreaterThan(0)
-    expect(command.subtitle).toMatch(/^(System|System Settings) · /)
+    expect(command.subtitle).toMatch(/^(System|System Settings|Music) · /)
     if (command.plan.type === 'url') expect(command.plan.url).toMatch(/^x-apple\.systempreferences:[\w.-]+$/)
     if (command.plan.type === 'spawn') expect(command.plan.command).toStartWith('/usr/bin/')
     if (command.plan.type === 'path') expect(command.plan.path).toMatch(/^\/System\/.+\.app$/)
@@ -17,7 +17,8 @@ test('every system command is unique, fixed, and described', () => {
 
 test('actions that end work or delete data ask first, and harmless ones do not', () => {
   for (const id of ['restart', 'shut-down', 'log-out', 'empty-trash']) expect(systemCommand(id)?.confirm).toBeTruthy()
-  for (const id of ['sleep', 'lock-screen', 'toggle-dark-mode', 'toggle-mute', 'settings-network']) expect(systemCommand(id)?.confirm).toBeUndefined()
+  // Playback and volume are trivially reversible, so asking first would only be in the way.
+  for (const id of ['sleep', 'lock-screen', 'toggle-dark-mode', 'toggle-mute', 'settings-network', 'volume-up', 'volume-down', 'music-play-pause', 'music-next', 'music-previous']) expect(systemCommand(id)?.confirm).toBeUndefined()
 })
 
 test('unknown identifiers never resolve to a plan', () => {
@@ -35,5 +36,11 @@ test('familiar phrases find the right command', () => {
   expect(first('backup')).toBe('settings-time-machine')
   expect(first('shutdown')).toBe('shut-down')
   expect(first('permissions')).toBe('settings-privacy')
+  expect(first('skip')).toBe('music-next')
+  expect(first('louder')).toBe('volume-up')
+  expect(first('quieter')).toBe('volume-down')
+  // 'play' and 'pause' are the words people reach for, and both mean the one command.
+  expect(first('play')).toBe('music-play-pause')
+  expect(first('pause')).toBe('music-play-pause')
   expect(systemCommandResults().every(item => item.kind === 'system' && item.key === `system:${item.content}`)).toBe(true)
 })

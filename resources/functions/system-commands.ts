@@ -34,6 +34,24 @@ const actions: readonly SystemCommand[] = [
   { id: 'eject-disks', title: 'Eject All Disks', subtitle: 'System · Eject every removable disk', aliases: ['eject', 'unmount'], plan: script('tell application "Finder" to eject (every disk whose ejectable is true)', 'Finder') },
   { id: 'toggle-dark-mode', title: 'Toggle Dark Mode', subtitle: 'System · Switch macOS between light and dark', aliases: ['dark mode', 'light mode', 'appearance'], plan: script('tell application "System Events" to tell appearance preferences to set dark mode to not dark mode', 'System Events') },
   { id: 'toggle-mute', title: 'Toggle Mute', subtitle: 'System · Mute or unmute sound output', aliases: ['mute', 'unmute', 'silence', 'volume off'], plan: script('set volume output muted (not (output muted of (get volume settings)))', 'macOS') },
+  // Output volume runs 0 to 100. The step is clamped here rather than left to the system, which errors on a value outside that range.
+  { id: 'volume-up', title: 'Volume Up', subtitle: 'System · Raise the output volume', aliases: ['louder', 'increase volume', 'turn it up'], plan: script(`set target to (output volume of (get volume settings)) + 10
+if target > 100 then set target to 100
+set volume output volume target`, 'macOS') },
+  { id: 'volume-down', title: 'Volume Down', subtitle: 'System · Lower the output volume', aliases: ['quieter', 'decrease volume', 'turn it down'], plan: script(`set target to (output volume of (get volume settings)) - 10
+if target < 0 then set target to 0
+set volume output volume target`, 'macOS') },
+]
+
+/**
+ * Playback in the system music app. `playpause` is a single AppleScript command, the same thing the key on the keyboard
+ * does, so one row covers starting and stopping. Addressing Music launches it if it is not already open, which is what
+ * someone asking to play something means.
+ */
+const music: readonly SystemCommand[] = [
+  { id: 'music-play-pause', title: 'Play or Pause', subtitle: 'Music · Start or stop what is playing', aliases: ['play', 'pause', 'music', 'resume', 'stop'], plan: script('tell application "Music" to playpause', 'Music') },
+  { id: 'music-next', title: 'Next Track', subtitle: 'Music · Skip to the next track', aliases: ['skip', 'next song', 'forward'], plan: script('tell application "Music" to next track', 'Music') },
+  { id: 'music-previous', title: 'Previous Track', subtitle: 'Music · Go back to the previous track', aliases: ['previous song', 'back a track', 'rewind'], plan: script('tell application "Music" to previous track', 'Music') },
 ]
 
 const panes: readonly [id: string, title: string, aliases: readonly string[], pane: string][] = [
@@ -74,6 +92,7 @@ const panes: readonly [id: string, title: string, aliases: readonly string[], pa
 
 export const systemCommands: readonly SystemCommand[] = [
   ...actions,
+  ...music,
   ...panes.map(([id, title, aliases, target]): SystemCommand => ({ id: `settings-${id}`, title, subtitle: 'System Settings · Open this pane', aliases: ['system settings', 'preferences', ...aliases], plan: pane(target) })),
 ]
 
