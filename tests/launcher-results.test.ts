@@ -128,3 +128,19 @@ test('stale file results are narrowed to what is typed now, and the Files tab st
   expect(compose({ category: 'file', query: 'annual', files: stale })).toHaveLength(2)
   expect(compose({ query: 'annual rep', files: stale }).filter(item => item.kind === 'file')).toHaveLength(1)
 })
+
+test('the Music tab shows what the music source returned, untouched', () => {
+  const track = { key: 'music:track:4231', title: 'Clair de Lune', subtitle: 'Music · Debussy', kind: 'music', content: '4231' }
+  // Music answered the query by searching the library, so the rows are not narrowed a second time here.
+  expect(titles(compose({ category: 'music', query: 'nothing like it', music: [track] }))).toEqual(['Clair de Lune'])
+  expect(compose({ category: 'music', query: '' })).toEqual([])
+  // A track plays rather than opening or copying, and it earns no launch count of its own.
+  expect(actionLabelFor('music')).toBe('Play')
+  expect(isRankable('music')).toBe(false)
+})
+
+test('the Music tab sits in the tab order and is reachable by stepping', () => {
+  expect(categoryOrder).toContain('music')
+  expect(nextCategory('event', 1)).toBe('music')
+  expect(nextCategory('music', -1)).toBe('event')
+})

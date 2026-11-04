@@ -21,6 +21,8 @@ export interface ComposeInputs {
   windows: readonly Result[]
   contacts: readonly Result[]
   events: readonly Result[]
+  /** What Music has loaded, or the tracks matching the query. Both arrive already shaped by the music source. */
+  music?: readonly Result[]
   rates: RatesState
   settings: SearchSettings
   calculate: (input: string) => string | null
@@ -58,6 +60,8 @@ export function composeResults(input: ComposeInputs): Result[] {
   if (category === 'contact') return text.length >= 2 ? [...input.contacts] : []
   if (category === 'window') return text ? createResultSearch([...input.windows])(query) : [...input.windows]
   if (category === 'event') return text ? createResultSearch([...input.events])(query) : [...input.events]
+  // Music answers the query itself, by searching the library, so the rows arrive already narrowed.
+  if (category === 'music') return [...(input.music ?? [])]
   if (category !== 'all') return input.searchLocal(query, category)
 
   const emoji = emojiQuery(query)
@@ -76,7 +80,7 @@ export function composeResults(input: ComposeInputs): Result[] {
 
 /** Only things with a stable identity earn favorites and launch counts. Paths, people, windows and events do not. */
 export function isRankable(kind: string): boolean {
-  return !['calculator', 'file', 'window', 'contact', 'event', 'web', 'setup', 'pantry'].includes(kind)
+  return !['calculator', 'file', 'window', 'contact', 'event', 'music', 'web', 'setup', 'pantry'].includes(kind)
 }
 
 export function actionLabelFor(kind: string | undefined): string {
@@ -84,6 +88,7 @@ export function actionLabelFor(kind: string | undefined): string {
   if (kind === 'system') return 'Run'
   if (kind === 'setup') return 'Settings'
   if (kind === 'window') return 'Switch'
+  if (kind === 'music') return 'Play'
   if (kind && ['application', 'quicklink', 'github', 'web', 'file', 'contact', 'event', 'bookmark'].includes(kind)) return 'Open'
   return 'Copy'
 }
@@ -104,7 +109,7 @@ export function fileResults(files: readonly FileRow[]): Result[] {
 }
 
 /** Tab order. Command ] and Command [ step through it and wrap around. */
-export const categoryOrder = ['all', 'application', 'file', 'quicklink', 'snippet', 'clipboard', 'emoji', 'window', 'contact', 'event', 'github', 'pantry'] as const
+export const categoryOrder = ['all', 'application', 'file', 'quicklink', 'snippet', 'clipboard', 'emoji', 'window', 'contact', 'event', 'music', 'github', 'pantry'] as const
 
 export function nextCategory(current: string, step: 1 | -1): string {
   const index = categoryOrder.indexOf(current as typeof categoryOrder[number])

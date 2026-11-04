@@ -58,6 +58,7 @@ const fileItems = state<Result[]>([])
 const windowItems = state<Result[]>([])
 const contactItems = state<Result[]>([])
 const eventItems = state<Result[]>([])
+const musicItems = state<Result[]>([])
 const sourceNote = state('')
 const sourceLoading = state(false)
 const exchangeRates = state<{ rates: Record<string, number>, updatedAt: number } | null>(null)
@@ -204,7 +205,7 @@ const searchEmoji = (input, scope) => emojiIndex()(input, scope)
 const allResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
-  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
+  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
@@ -717,6 +718,7 @@ pollWhile(pollClipboard, 800, () => preferencesReady() && historyEnabled())
 let windowsShown = false
 let eventsShown = false
 let eventsAt = 0
+let musicShown = false
 function sourceFailure(reason) { sourceNote.set(reason.message || String(reason)) }
 const loadFiles = createLatest(async (text, signal) => {
   const response = await fetch('/api/files?q=' + encodeURIComponent(text), { signal, cache: 'no-store' })
@@ -749,15 +751,23 @@ const loadEvents = createLatest(() => sources.events(), {
   error: (reason) => { eventsShown = false; eventItems.set([]); sourceFailure(reason) },
   done: () => sourceLoading.set(false),
 }, { serial: true })
+// With nothing typed the tab shows what is loaded; typing searches the library, which is why one loader covers both.
+const loadMusic = createLatest((text) => text.trim() ? sources.music(text) : sources.nowPlaying(), {
+  start: () => { if (!musicShown) sourceLoading.set(true) },
+  result: (found) => { musicShown = true; musicItems.set(found); sourceNote.set(found.length ? '' : 'Nothing is playing. Type to search your library.') },
+  error: (reason) => { musicShown = false; musicItems.set([]); sourceFailure(reason) },
+  done: () => sourceLoading.set(false),
+}, { serial: true })
 const searchFiles = useDebounce((text) => { void loadFiles(text) }, 150)
 const searchContacts = useDebounce((text) => { void loadContacts(text) }, 300)
+const searchMusic = useDebounce((text) => { void loadMusic(text) }, 300)
 const searchableVisible = derived(() => paletteVisible() && !settings() && !editor() && !packageDetail())
 effect(() => {
   const mode = category()
   const text = query().trim()
   const visible = searchableVisible()
   const enabled = searchSettings().files
-  searchFiles.cancel(); searchContacts.cancel(); loadFiles.cancel(); loadContacts.cancel()
+  searchFiles.cancel(); searchContacts.cancel(); searchMusic.cancel(); loadFiles.cancel(); loadContacts.cancel()
   sourceLoading.set(false)
   if (!visible) return
   if (mode === 'file' && browsePath()) return
@@ -770,14 +780,20 @@ effect(() => {
     if (text.length < 2) { contactItems.set([]); sourceNote.set('Type a name or company.'); return }
     searchContacts(text)
   }
+  else if (mode === 'music') {
+    // One letter matches most of a library, so it waits for another. An empty query is the now playing row, loaded below.
+    if (text.length < 2) return
+    searchMusic(text)
+  }
 })
 effect(() => {
   const mode = category()
   const visible = searchableVisible()
-  if (!visible) { loadWindows.cancel(); loadEvents.cancel(); return }
-  if (mode === 'window') void loadWindows('')
+  if (!visible) { loadWindows.cancel(); loadEvents.cancel(); loadMusic.cancel(); return }
+  if (mode === 'music') { if (!query().trim()) void loadMusic('') }
+  else if (mode === 'window') void loadWindows('')
   else if (mode === 'event') { if (Date.now() - eventsAt > 20000) void loadEvents('') }
-  else { loadWindows.cancel(); loadEvents.cancel() }
+  else { loadWindows.cancel(); loadEvents.cancel(); loadMusic.cancel() }
 })
 // A refresh never starts while the last one is still running, so slow scripts cannot stack up.
 pollWhile(() => { if (!loadWindows.busy()) void loadWindows('') }, 5000, () => searchableVisible() && category() === 'window')
@@ -1153,6 +1169,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.r
       <button type="button" :class="category() === 'window' ? 'tab active' : 'tab'" :aria-pressed="category() === 'window'" @click="chooseCategory('window')">Windows</button>
       <button type="button" :class="category() === 'contact' ? 'tab active' : 'tab'" :aria-pressed="category() === 'contact'" @click="chooseCategory('contact')" aria-label="Contacts">People</button>
       <button type="button" :class="category() === 'event' ? 'tab active' : 'tab'" :aria-pressed="category() === 'event'" @click="chooseCategory('event')" aria-label="Calendar events">Calendar</button>
+      <button type="button" :class="category() === 'music' ? 'tab active' : 'tab'" :aria-pressed="category() === 'music'" @click="chooseCategory('music')">Music</button>
       <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" :aria-pressed="category() === 'github'" @click="chooseCategory('github')">GitHub</button>
       <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="category() === 'pantry'" @click="chooseCategory('pantry')">Pantry</button>
     </div>
