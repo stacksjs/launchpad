@@ -144,3 +144,13 @@ test('the Music tab sits in the tab order and is reachable by stepping', () => {
   expect(nextCategory('event', 1)).toBe('music')
   expect(nextCategory('music', -1)).toBe('event')
 })
+
+test('a selection handed over leads the list, ahead of what the query itself finds', () => {
+  const copy = { key: 'selection:copy', title: 'Copy “sales”', subtitle: 'Selection · Copies to the clipboard', kind: 'clipboard', content: 'sales' }
+  const rows = compose({ query: 'Notes', selection: [copy] })
+  expect(rows[0]!.key).toBe('selection:copy')
+  // The query still does its own work underneath; the selection rows are extra, not a replacement.
+  expect(titles(rows)).toContain('Notes')
+  // Nothing handed over means nothing added.
+  expect(compose({ query: 'Notes' })[0]!.key).not.toBe('selection:copy')
+})

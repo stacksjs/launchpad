@@ -16,8 +16,10 @@ import { historyPreference as readHistoryPreference, parsePreference } from '../
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory, onSelectionService } from '../functions/native'
 import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
+import { selectionActions } from '../functions/selection'
+import type { Selection } from '../functions/selection'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
 import { clipboardDecision, clipboardTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
@@ -69,6 +71,13 @@ const extensionIssues = state<string[]>([])
 const extensionCommands = derived(() => extensionResults(extensionRows()))
 const query = state('')
 const category = state('all')
+// What macOS last handed over through the Services menu. Its rows stand only while the query still reads as it
+// arrived; the moment someone edits it, the palette's own search is the better answer.
+const handedOver = state<Selection | null>(null)
+const selectionRows = derived(() => {
+  const selection = handedOver()
+  return selection && query() === selection.value ? selectionActions(selection) : []
+})
 const items = state<Result[]>([])
 const records = state<Record<string, any>>({})
 const selected = state(0)
@@ -205,7 +214,7 @@ const searchEmoji = (input, scope) => emojiIndex()(input, scope)
 const allResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
-  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
+  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), selection: selectionRows(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
@@ -1143,11 +1152,18 @@ onMount(async () => {
   ])
 })
 const stopCommandShortcuts = onCommandShortcut((commandId) => { void runShortcut(commandId) })
+// Registering can be refused on a build whose bundle does not declare the Service; the palette carries on regardless.
+let stopSelectionService = () => {}
+void onSelectionService((selection) => {
+  if (selection.kind === 'none') return
+  batch(() => { handedOver.set(selection); category.set('all'); query.set(selection.value) })
+  void nativeWindow.show().then(() => nativeWindow.focus())
+}).then((stop) => { stopSelectionService = stop })
 // An empty File tab showed nothing to do. It now opens on the home folder, which is somewhere to start.
 effect(() => { if (category() === 'file' && !query().trim() && !browsePath() && homePath() && searchableVisible()) void openFolder(homePath()) })
 const onWindowResize = () => measureLargeType()
 globalThis.addEventListener?.('resize', onWindowResize)
-onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); globalThis.removeEventListener?.('resize', onWindowResize) })
+onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectionService(); globalThis.removeEventListener?.('resize', onWindowResize) })
 </script>
 
 <main class="flex flex-col w-full" aria-label="Launchpad">

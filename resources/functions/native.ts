@@ -1,4 +1,4 @@
-import { app, appleScript, clipboard, fs, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
+import { app, appleScript, clipboard, fs, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, serviceMenu, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { bookmarkBrowsers, bookmarkFile, bookmarkRoot, maxBookmarks, orderProfiles, parseChromiumBookmarks } from './bookmarks'
@@ -10,6 +10,8 @@ import { PermissionError, describeScriptFailure } from './applescript'
 import { contactOpenScript } from './contacts'
 import { eventOpenScript } from './calendar'
 import { playTrackScript } from './music'
+import { readSelection } from './selection'
+import type { Selection } from './selection'
 import { createSources } from './sources'
 import { expandSnippet } from './snippets'
 import { commandIdFromShortcut, shortcutId, shortcutPlan } from './shortcuts'
@@ -100,6 +102,25 @@ export function onCommandShortcut(run: (commandId: string) => void): () => void 
 
 /** Lets the view name a registration without knowing how ids are built. */
 export const commandShortcutId = shortcutId
+
+/** The name macOS advertises this Service under. It has to match `NSMessage` in the bundle, or nothing appears. */
+const selectionServiceName = 'searchWithLaunchpad'
+
+/**
+ * Offers Launchpad in the Services menu of every app, and reports what was handed over. macOS reads `NSServices` from
+ * the installed bundle, so a build without that key registers happily here and still never appears in the menu.
+ *
+ * Returns a function that withdraws the registration and stops listening.
+ */
+export async function onSelectionService(run: (selection: Selection) => void): Promise<() => void> {
+  const stop = serviceMenu.onInvoked((event) => {
+    if (event.name === selectionServiceName) run(readSelection(event.payload))
+  })
+  const outcome = await serviceMenu.register(selectionServiceName).catch((): { ok: boolean, reason?: string } => ({ ok: false }))
+  // A refused registration leaves the listener attached but idle, which costs nothing and keeps the caller simple.
+  if (!outcome.ok) return stop
+  return () => { stop(); void serviceMenu.unregister(selectionServiceName).catch(() => {}) }
+}
 
 /**
  * Reads the chosen browsers' bookmarks. A browser that is not installed, a profile that cannot be read, and a file

@@ -23,6 +23,8 @@ export interface ComposeInputs {
   events: readonly Result[]
   /** What Music has loaded, or the tracks matching the query. Both arrive already shaped by the music source. */
   music?: readonly Result[]
+  /** Rows earned by a selection macOS handed over, which lead the list because they are what was asked for. */
+  selection?: readonly Result[]
   rates: RatesState
   settings: SearchSettings
   calculate: (input: string) => string | null
@@ -75,7 +77,7 @@ export function composeResults(input: ComposeInputs): Result[] {
   const lead = answer !== null ? [calculatorRow(answer)] : conversion ? [conversion] : []
   const files = input.settings.files && text.length >= inlineFileMinimum ? narrowFiles(input.files, query).slice(0, inlineFiles) : []
   const web = webSearchResult(query, input.settings.web)
-  return [...lead, ...found, ...files, ...(web ? [web] : [])]
+  return [...(input.selection ?? []), ...lead, ...found, ...files, ...(web ? [web] : [])]
 }
 
 /** Only things with a stable identity earn favorites and launch counts. Paths, people, windows and events do not. */
