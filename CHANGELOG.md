@@ -1,5 +1,29 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.2...v1.1.3)
+
+## ✨ Features
+
+- **music**: add a Music tab to the palette ([3f7d12d](https://github.com/stacksjs/launchpad/commit/3f7d12d)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **music**: play a track and read the player through the sources ([ea69632](https://github.com/stacksjs/launchpad/commit/ea69632)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **music**: read what is playing and search the library ([9465db0](https://github.com/stacksjs/launchpad/commit/9465db0)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **music**: control playback and volume from the palette ([24de592](https://github.com/stacksjs/launchpad/commit/24de592)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **deps**: take the Pantry release that finds Zig wherever it unpacks ([e76ddd9](https://github.com/stacksjs/launchpad/commit/e76ddd9)) _(by glennmichael123 <gtorregosa@gmail.com>)_ ([pantry-pm/pantry#285](https://github.com/pantry-pm/pantry/issues/285))
+- **applescript**: stop blaming Automation for a script that never ran ([7b0bf13](https://github.com/stacksjs/launchpad/commit/7b0bf13)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **native**: pin the Craft runtime to 0.0.442 ([ee4a32d](https://github.com/stacksjs/launchpad/commit/ee4a32d)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🔧 Chores
+
+- release v1.1.3 ([6a5268c](https://github.com/stacksjs/launchpad/commit/6a5268c)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **deps**: update github actions (updated) (#14) ([3616a7c](https://github.com/stacksjs/launchpad/commit/3616a7c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_ ([#14](https://github.com/stacksjs/launchpad/issues/14))
+
+## Contributors
+
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.1...v1.1.2)
 
 ## ✨ Features
