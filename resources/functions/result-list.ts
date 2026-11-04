@@ -42,7 +42,7 @@ export function selectionTarget(event: { key: string, ctrlKey?: boolean, metaKey
   return Math.max(0, Math.min(count - 1, index + step))
 }
 
-/** System commands, emoji and extension commands help once you search for them; a long list of them does not belong in the idle view. */
+/** System commands, emoji, modes and extension commands help once you search for them; a long list of them does not belong in the idle view. */
 export function idleVisible(item: Pick<Result, 'kind' | 'key'>): boolean {
-  return item.kind !== 'system' && item.kind !== 'emoji' && !item.key.startsWith('extension:')
+  return item.kind !== 'system' && item.kind !== 'emoji' && item.kind !== 'mode' && !item.key.startsWith('extension:')
 }

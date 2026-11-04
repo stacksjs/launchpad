@@ -82,6 +82,12 @@ exposes no Quick Look, and its only delete is permanent, with no move to the Tra
 permanently erases a file where someone expected it to be recoverable is worse than one that does not
 offer to delete at all, so neither is built on what is available today.
 
+**Modes.** The palette opens on everything at once. To narrow it, search for the mode by name —
+`clipboard`, `emoji`, `windows`, `people`, `calendar`, `music`, `packages` — and press Return. A chip
+beside the search bar names the open mode; Escape leaves it, and Escape again closes the window.
+Command ] and Command [ step through the modes, Command Shift V opens Clipboard History and
+Command G opens GitHub.
+
 **Saved logins.** With *List saved 1Password logins by title* on in Settings, items from your vault
 appear by title alongside everything else, and Return hands the identifier back to 1Password to open.
 Launchpad asks the 1Password command line tool for titles and identifiers only: it never reads a

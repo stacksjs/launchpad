@@ -35,6 +35,7 @@ import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions
 import { detailFor } from '../functions/detail'
 import { gridColumns, gridScrollTop, gridTarget, gridTileSize, usesGrid } from '../functions/grid'
 import { vaultResults } from '../functions/passwords'
+import { modeById, modeResults } from '../functions/modes'
 import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
@@ -212,7 +213,7 @@ let cleanupTray = () => {}
 
 const searchCatalog = derived(() => createPackageCatalogSearch(catalog()))
 const installedPackages = derived(() => pantryResults(installedCatalog(catalog(), pantryInstalled()), items(), pantryInstalled()))
-const localItems = derived(() => [...items(), ...installedPackages(), ...systemCommandResults(), ...extensionCommands()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+const localItems = derived(() => [...items(), ...installedPackages(), ...systemCommandResults(), ...modeResults(), ...extensionCommands()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const searchLocal = derived(() => createResultSearch(localItems()))
 const searchPackages = derived(() => {
   const filter = pantryFilter()
@@ -893,7 +894,7 @@ async function copySecondary() {
   try { await clipboard.writeText(text); status.set('Copied'); await dismissLauncher() }
   catch (reason) { fail(reason) }
 }
-function cycleCategory(step) { chooseCategory(nextCategory(category(), step)); void nextTick(() => document.querySelector('.tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })) }
+function cycleCategory(step) { chooseCategory(nextCategory(category(), step)) }
 
 /**
  * Browsing never leaves the home directory, so a path from a result is checked before it is opened rather than
@@ -944,6 +945,7 @@ function showDetail() {
 }
 function hideDetail() { detailPage.set(null) }
 const hasDetail = derived(() => Boolean(detailFor(active())))
+const currentMode = derived(() => modeById(category()))
 const savedCommands = () => items().filter(item => ['quicklink', 'snippet'].includes(item.kind))
 /**
  * The field records the keys instead of asking for their names. Every press is swallowed while it has focus, so
@@ -993,6 +995,11 @@ async function run(item = active()) {
   if (item.kind === 'setup') {
     settingsSection.set(item.content)
     openSettings()
+    return
+  }
+  if (item.kind === 'mode') {
+    const mode = modeById(item.content)
+    if (mode) chooseCategory(mode.id)
     return
   }
   if (item.kind === 'file' && item.directory) { void openFolder(item.content); return }
@@ -1125,6 +1132,9 @@ function key(event) {
   }
   if (event.key === 'Escape') {
     event.preventDefault()
+    // Without a tab strip, Escape is the way back out of a mode. Only an already-empty All view dismisses.
+    if (browsePath()) { stopBrowsing(); return }
+    if (category() !== 'all' || query().trim()) { focusSearch(); return }
     void dismissLauncher()
     return
   }
@@ -1227,22 +1237,10 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <input ref="search" x-model="query" type="search" placeholder="Search anything, do something." autocomplete="off" spellcheck="false" role="combobox" aria-label="Search applications and commands" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="active() ? 'result-' + selected() : null" @mousedown.stop="">
     <button type="button" class="escape" @click="dismissLauncher()" aria-label="Hide Launchpad">esc</button>
   </header>
-  <nav class="flex gap-1 items-center px-5" aria-label="Search categories">
-    <div class="flex flex-1 gap-1 items-center categories">
-      <button type="button" :class="category() === 'all' ? 'tab active' : 'tab'" :aria-pressed="category() === 'all'" @click="chooseCategory('all')">All</button>
-      <button type="button" :class="category() === 'application' ? 'tab active' : 'tab'" :aria-pressed="category() === 'application'" @click="chooseCategory('application')" aria-label="Applications">Apps</button>
-      <button type="button" :class="category() === 'file' ? 'tab active' : 'tab'" :aria-pressed="category() === 'file'" @click="chooseCategory('file')">Files</button>
-      <button type="button" :class="category() === 'quicklink' ? 'tab active' : 'tab'" :aria-pressed="category() === 'quicklink'" @click="chooseCategory('quicklink')" aria-label="Quicklinks">Links</button>
-      <button type="button" :class="category() === 'snippet' ? 'tab active' : 'tab'" :aria-pressed="category() === 'snippet'" @click="chooseCategory('snippet')">Snippets</button>
-      <button type="button" :class="category() === 'clipboard' ? 'tab active' : 'tab'" :aria-pressed="category() === 'clipboard'" @click="chooseCategory('clipboard')">Clipboard</button>
-      <button type="button" :class="category() === 'emoji' ? 'tab active' : 'tab'" :aria-pressed="category() === 'emoji'" @click="chooseCategory('emoji')">Emoji</button>
-      <button type="button" :class="category() === 'window' ? 'tab active' : 'tab'" :aria-pressed="category() === 'window'" @click="chooseCategory('window')">Windows</button>
-      <button type="button" :class="category() === 'contact' ? 'tab active' : 'tab'" :aria-pressed="category() === 'contact'" @click="chooseCategory('contact')" aria-label="Contacts">People</button>
-      <button type="button" :class="category() === 'event' ? 'tab active' : 'tab'" :aria-pressed="category() === 'event'" @click="chooseCategory('event')" aria-label="Calendar events">Calendar</button>
-      <button type="button" :class="category() === 'music' ? 'tab active' : 'tab'" :aria-pressed="category() === 'music'" @click="chooseCategory('music')">Music</button>
-      <button type="button" :class="category() === 'github' ? 'tab active' : 'tab'" :aria-pressed="category() === 'github'" @click="chooseCategory('github')">GitHub</button>
-      <button type="button" :class="category() === 'pantry' ? 'tab active' : 'tab'" :aria-pressed="category() === 'pantry'" @click="chooseCategory('pantry')">Pantry</button>
-    </div>
+  <nav class="flex gap-1 items-center px-5" aria-label="Palette actions">
+    <!-- The modes are searched for by name instead of named all at once; this says which one is open, and leaves it. -->
+    <button :if="currentMode()" type="button" class="mode-badge" @click="chooseCategory('all')" :aria-label="'Leave ' + currentMode().title + ' (Escape)'">{{ currentMode().title }} <span aria-hidden="true">&times;</span></button>
+    <span class="flex-1"></span>
     <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
     <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
   </nav>
@@ -1317,6 +1315,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           <span :if="item.kind === 'event'" class="i-f7-calendar"></span>
           <span :if="item.kind === 'emoji'" class="i-f7-smiley"></span>
           <span :if="item.kind === 'password'" class="i-f7-lock"></span>
+          <span :if="item.kind === 'mode'" class="i-f7-square-stack-3d-up"></span>
         </span>
         <span class="result-copy"><span class="result-title" :title="item.title">{{ item.title }}</span><span class="result-subtitle" :title="item.subtitle">{{ item.subtitle }}</span></span>
         <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
@@ -1600,11 +1599,8 @@ header input::placeholder { color: var(--muted); }
 input::-webkit-search-cancel-button { display: none; }
 .escape { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
 nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-.categories { min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.categories::-webkit-scrollbar { display: none; }
 .tab { padding: 5px 11px; border-radius: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
 .tab:hover { color: var(--ink); background: var(--selected); }
-.tab.active { background: var(--selected); color: var(--ink); }
 .new { color: var(--muted); display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; }
 .new svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .section-label { height: 30px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
@@ -1728,6 +1724,8 @@ header input:focus-visible { outline: none; }
 .shortcut-field input { flex: 1; min-width: 0; }
 .shortcut-field input:focus { border-color: var(--accent); }
 .bookmark-browsers { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 14px; }
+.mode-badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border: 0; border-radius: 6px; background: var(--selected); color: var(--ink); font-size: 11px; font-weight: 500; cursor: default; }
+.mode-badge:hover { color: var(--ink); }
 .result-grid { display: grid; gap: 4px; padding: 4px 0 8px; }
 .tile { display: flex; align-items: center; justify-content: center; height: 42px; border: 0; border-radius: 8px; background: transparent; cursor: default; }
 .tile.selected { background: var(--selected); }
