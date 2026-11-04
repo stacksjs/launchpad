@@ -6,6 +6,7 @@ import { appleScriptString, cleanField, describeScriptFailure, parseRecords } fr
 import { contactDetail, contactOpenScript, contactResults, contactSearchScript, maxContacts, parseContacts } from '../resources/functions/contacts'
 import { describeEventStart, eventOpenScript, eventResults, parseEvents, parseLocalIso, upcomingEventsScript } from '../resources/functions/calendar'
 import { parseWindows, windowFocusScript, windowListScript, windowResults } from '../resources/functions/windows'
+import { librarySearchScript, nowPlayingScript, playTrackScript } from '../resources/functions/music'
 import { systemCommands } from '../resources/functions/system-commands'
 
 test('text can never end an AppleScript string literal', () => {
@@ -115,6 +116,9 @@ compile('every AppleScript Launchpad runs compiles on this macOS', async () => {
       contactOpen: contactOpenScript('AB12CD34-0000-4000-8000-000000000001:ABPerson')!,
       events: upcomingEventsScript,
       eventOpen: eventOpenScript('A-1')!,
+      nowPlaying: nowPlayingScript,
+      librarySearch: librarySearchScript('Miles "Davis" \\ Blue')!,
+      playTrack: playTrackScript('4231')!,
     }
     for (const command of systemCommands) if (command.plan.type === 'applescript') scripts[`system-${command.id}`] = command.plan.source
     for (const [name, source] of Object.entries(scripts)) {
