@@ -23,7 +23,9 @@ test('windows need Accessibility and ask for it once when missing', async () => 
 })
 
 test('a refused script points at the Automation permission for that app', async () => {
-  const refuse = ports({ appleScript: async () => ({ ok: false }) })
+  // -1743 is what macOS returns when the Automation prompt was answered with Don't Allow. A bare `{ ok: false }` would
+  // mean the event never left the bridge, which is a different message and no permission at all.
+  const refuse = ports({ appleScript: async () => ({ ok: false, error: { code: -1743 } }) })
   const sources = createSources(refuse.value)
   expect(await sources.windows().catch(reason => reason.message)).toContain('System Events')
   expect(await sources.contacts('ada').catch(reason => reason.message)).toContain('Contacts')

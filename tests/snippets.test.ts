@@ -32,7 +32,7 @@ test('the clipboard is read only when the snippet uses it, once per use', async 
   expect(used.reads).toHaveLength(2)
 })
 
-test('a system plan runs through exactly one port and explains a refused script', async () => {
+test('a system plan runs through exactly one port and explains a script that never ran', async () => {
   const calls: string[] = []
   const ports = {
     appleScript: async (source: string) => { calls.push(`script:${source}`); return { ok: !source.includes('Finder') } },
@@ -45,10 +45,11 @@ test('a system plan runs through exactly one port and explains a refused script'
   await runSystemPlan(systemCommand('screen-saver')!, ports)
   await runSystemPlan(systemCommand('toggle-mute')!, ports)
   expect(calls).toEqual(['spawn:/usr/bin/pmset sleepnow', 'url:x-apple.systempreferences:com.apple.Network-Settings.extension', 'path:/System/Library/CoreServices/ScreenSaverEngine.app', expect.stringContaining('script:set volume output muted')])
-  // A host that reports no error number keeps the permission hint, and it names Finder, which is the switch to turn on.
+  // A bare `{ ok: false }` is what the bridge answers when it never dispatched the event, so nothing was refused and
+  // there is no switch to turn on. A genuine refusal arrives with -1743, which the next test covers.
   const refused = await runSystemPlan(systemCommand('empty-trash')!, ports).catch(reason => reason)
-  expect(refused.message).toBe(`Launchpad could not run "Empty Trash". Launchpad needs your permission to control Finder. Choose OK when macOS asks, or, if you answered Don't Allow before, switch Finder on under Launchpad in System Settings > Privacy & Security > Automation.`)
-  expect(refused.permission).toBe('automation')
+  expect(refused.message).toBe(`Launchpad could not run "Empty Trash". The script never reached Finder, so no permission is missing.`)
+  expect(refused.permission).toBeUndefined()
 })
 
 test('a system command that fails for another reason does not blame Automation', async () => {

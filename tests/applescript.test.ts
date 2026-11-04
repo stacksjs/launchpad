@@ -76,11 +76,13 @@ test('events parse local ISO times, sort by start and describe their day', () =>
   for (const bad of ['', 'a"b', 'x y', 'a'.repeat(300)]) expect(eventOpenScript(bad)).toBeNull()
 })
 
-test('a failed script is explained by its error number, and older hosts keep the permission hint', () => {
+test('a failed script is explained by its error number, and one that never ran says so', () => {
   const failure = (code?: number, message?: string) => describeScriptFailure('Contacts', { ok: false, error: code === undefined && message === undefined ? undefined : { code, message } })
+  // Neither an error nor a reason means the bridge never dispatched the event. Naming a privacy pane here was the
+  // wrong instruction: there is nothing to allow, because nothing was ever asked.
+  expect(failure()).toEqual({ message: 'The script never reached Contacts, so no permission is missing.' })
   // The Automation pane cannot add an app, so the advice has to name the prompt as well as the switch.
-  expect(failure().message).toBe("Launchpad needs your permission to control Contacts. Choose OK when macOS asks, or, if you answered Don't Allow before, switch Contacts on under Launchpad in System Settings > Privacy & Security > Automation.")
-  expect(failure()).toMatchObject({ permission: 'automation' })
+  expect(failure(-1743).message).toBe("Launchpad needs your permission to control Contacts. Choose OK when macOS asks, or, if you answered Don't Allow before, switch Contacts on under Launchpad in System Settings > Privacy & Security > Automation.")
   expect(failure(-1743)).toMatchObject({ permission: 'automation' })
   expect(failure(-1744)).toMatchObject({ permission: 'automation' })
   expect(failure(-25211)).toMatchObject({ permission: 'accessibility', message: expect.stringContaining('Accessibility') })
@@ -90,10 +92,11 @@ test('a failed script is explained by its error number, and older hosts keep the
   expect(failure(-1712)).toEqual({ message: 'Contacts is waiting for an answer. Switch to Contacts, finish what it is asking, then try again.' })
   expect(failure(-1728, "Can't get window 3.")).toEqual({ message: "Contacts could not do that: Can't get window 3." })
   expect(failure(-1728)).toEqual({ message: 'Contacts could not do that (error -1728).' })
-  expect(failure(undefined, 'only a message')).toMatchObject({ permission: 'automation' })
+  // A message without a number still describes an event that ran, so it is reported rather than guessed at.
+  expect(failure(undefined, 'only a message')).toEqual({ message: 'Contacts could not do that: only a message' })
   // Craft reports a bridge that could not start as `reason`, with no error number. Nothing was refused, so nothing is granted.
   const unavailable = describeScriptFailure('Finder', { ok: false, reason: 'NSAppleScript unavailable' })
-  expect(unavailable.message).toBe('Launchpad could not run that script: NSAppleScript unavailable. The script never reached Finder, so no permission is missing.')
+  expect(unavailable.message).toBe('The script never reached Finder (NSAppleScript unavailable), so no permission is missing.')
   expect(unavailable.permission).toBeUndefined()
   // An error number still wins, because it describes what the event itself did.
   expect(describeScriptFailure('Finder', { ok: false, reason: 'whatever', error: { code: -1743 } })).toMatchObject({ permission: 'automation' })
