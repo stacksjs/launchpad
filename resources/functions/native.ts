@@ -9,6 +9,7 @@ import { clipboardDecision } from './clipboard'
 import { PermissionError, describeScriptFailure } from './applescript'
 import { contactOpenScript } from './contacts'
 import { eventOpenScript } from './calendar'
+import { playTrackScript } from './music'
 import { createSources } from './sources'
 import { expandSnippet } from './snippets'
 import { commandIdFromShortcut, shortcutId, shortcutPlan } from './shortcuts'
@@ -170,6 +171,7 @@ export const execute = createExecutor({
   focusWindow: token => script(windowFocusScript(token), 'System Events', 'Launchpad could not switch to that window.'),
   openContact: id => script(contactOpenScript(id), 'Contacts', 'Launchpad could not open that contact.'),
   openEvent: uid => script(eventOpenScript(uid), 'Calendar', 'Launchpad could not open that event.'),
+  playTrack: id => script(playTrackScript(id), 'Music', 'Launchpad could not play that track.'),
   expandText: text => expandSnippet(text, { now: new Date(), uuid: () => crypto.randomUUID(), clipboard: () => clipboard.readText().then(value => value ?? '') }),
   pasteText: async () => { if (behavior.paste) await pasteIntoFrontmost() },
 })

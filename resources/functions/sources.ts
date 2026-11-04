@@ -3,6 +3,7 @@ import type { ScriptOutcome } from './applescript'
 import { contactResults, contactSearchScript, parseContacts } from './contacts'
 import { eventResults, parseEvents, upcomingEventsScript } from './calendar'
 import { parseWindows, windowListScript, windowResults } from './windows'
+import { librarySearchScript, nowPlayingResults, nowPlayingScript, parseNowPlaying, parseTracks, trackResults } from './music'
 import type { Result } from './search'
 
 /** A failure the person can act on, with the permission to visit when there is one. */
@@ -25,6 +26,7 @@ export function createSources(ports: SourcePorts, options: { now?: () => number,
   const now = options.now ?? Date.now
   const cacheMs = options.cacheMs ?? 30_000
   const found = new Map<string, { at: number, results: Result[] }>()
+  const tracks = new Map<string, { at: number, results: Result[] }>()
   return {
     async windows(): Promise<Result[]> {
       if (await ports.accessibility() !== 'granted') {
@@ -54,6 +56,27 @@ export function createSources(ports: SourcePorts, options: { now?: () => number,
       const outcome = await ports.appleScript(upcomingEventsScript)
       if (!outcome.ok) throw failure('Calendar', outcome)
       return eventResults(parseEvents(outcome.result ?? ''), now)
+    },
+    /** What Music has loaded. Asked fresh every time, because a track changes while the palette is open. */
+    async nowPlaying(): Promise<Result[]> {
+      const outcome = await ports.appleScript(nowPlayingScript)
+      if (!outcome.ok) throw failure('Music', outcome)
+      return nowPlayingResults(parseNowPlaying(outcome.result ?? ''))
+    },
+    async music(query: string): Promise<Result[]> {
+      const source = librarySearchScript(query)
+      if (!source) return []
+      // A library of any size is slow to search, so repeating a query or backspacing is answered from memory.
+      const key = query.trim().toLocaleLowerCase()
+      const previous = tracks.get(key)
+      if (previous && now() - previous.at < cacheMs) return previous.results
+      const outcome = await ports.appleScript(source)
+      if (!outcome.ok) throw failure('Music', outcome)
+      const results = trackResults(parseTracks(outcome.result ?? ''))
+      tracks.delete(key)
+      tracks.set(key, { at: now(), results })
+      while (tracks.size > 20) tracks.delete(tracks.keys().next().value!)
+      return results
     },
   }
 }

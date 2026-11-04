@@ -15,6 +15,7 @@ interface ExecutionPorts {
   focusWindow?: (token: string) => Promise<void>
   openContact?: (id: string) => Promise<void>
   openEvent?: (uid: string) => Promise<void>
+  playTrack?: (id: string) => Promise<void>
   /** Resolve snippet placeholders such as {date} and {clipboard} just before use. */
   expandText?: (text: string) => Promise<string>
   /** Type the copied text into the app that was in front, after the palette is hidden. */
@@ -49,6 +50,10 @@ export function createExecutor(ports: ExecutionPorts) {
       else if (result.kind === 'event') {
         if (!ports.openEvent) throw new Error('Calendar is not available.')
         await ports.openEvent(result.content)
+      }
+      else if (result.kind === 'music') {
+        if (!ports.playTrack) throw new Error('Music is not available.')
+        await ports.playTrack(result.content)
       }
       else if (result.kind === 'snippet') {
         pasted = ports.expandText ? await ports.expandText(result.content) : result.content

@@ -148,3 +148,33 @@ test('the failure reported by newer hosts decides what the person is told', asyn
   expect(broken.message).toBe('Calendar could not do that: Bad thing')
   expect(broken.permission).toBeUndefined()
 })
+
+const nowPlayingOutput = 'playing\t4231\tClair de Lune\tDebussy\tSuite Bergamasque'
+const trackOutput = '4231\tClair de Lune\tDebussy\tSuite Bergamasque\n77\tSo What\tMiles Davis\tKind of Blue\n'
+
+test('what is playing is one row, and a stopped player is none', async () => {
+  const live = ports({ appleScript: async () => ({ ok: true, result: nowPlayingOutput }) })
+  const rows = await createSources(live.value).nowPlaying()
+  expect(rows).toHaveLength(1)
+  expect(rows[0]).toMatchObject({ title: 'Clair de Lune', content: 'music-play-pause', kind: 'system' })
+  const stopped = ports({ appleScript: async () => ({ ok: true, result: 'stopped' }) })
+  expect(await createSources(stopped.value).nowPlaying()).toEqual([])
+})
+
+test('a library search is answered from memory, and a refused Music names the app', async () => {
+  let calls = 0
+  const library = ports({ appleScript: async () => { calls++; return { ok: true, result: trackOutput } } })
+  const sources = createSources(library.value)
+  expect((await sources.music('blue')).map(item => item.content)).toEqual(['4231', '77'])
+  // Repeating the query, or changing only its case, costs nothing.
+  await sources.music('BLUE')
+  expect(calls).toBe(1)
+  // A query too short to be worth running never reaches Music at all.
+  expect(await sources.music('b')).toEqual([])
+  expect(calls).toBe(1)
+  const refused = ports({ appleScript: async () => ({ ok: false, error: { code: -1743 } }) })
+  const error = await createSources(refused.value).music('blue').catch(reason => reason)
+  expect(error).toBeInstanceOf(SourceError)
+  expect(error.permission).toBe('automation')
+  expect(error.message).toContain('Music')
+})

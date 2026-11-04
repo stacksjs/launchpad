@@ -115,3 +115,14 @@ test('snippets expand placeholders, copy the result and then paste it only when 
   await createExecutor({ ...base, pasteText: async () => { throw new Error('no permission') } })(snippet, '')
   expect(effects).toEqual(['copy:On 2026-10-30', 'hidden'])
 })
+
+test('a track plays through the music port, and says so when there is none', async () => {
+  const effects: string[] = []
+  const base = { openApplication: async () => {}, openLink: async () => {}, copyText: async (text: string) => { effects.push(`copy:${text}`) }, dismiss: async () => { effects.push('hidden') } }
+  const track = { key: 'music:track:4231', title: 'Clair de Lune', subtitle: '', kind: 'music', content: '4231' }
+  await createExecutor({ ...base, playTrack: async id => { effects.push(`play:${id}`) } })(track, '')
+  expect(effects).toEqual(['play:4231', 'hidden'])
+  // Without the port the track must not fall through to copying its database ID to the clipboard.
+  const failed = await createExecutor(base)(track, '').catch(reason => reason.message)
+  expect(failed).toBe('Music is not available.')
+})
