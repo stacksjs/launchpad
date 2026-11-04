@@ -18,6 +18,7 @@ import { createActivityApi, startActivityRuntime } from './activity'
 import { installedApplications } from './applications'
 import { createRatesApi } from './rates'
 import { createFilesApi } from './files'
+import { createPasswordsApi } from './passwords'
 import { createRankingApi } from './ranking'
 import { createAutomaticUpdates } from './updates'
 
@@ -34,6 +35,7 @@ const activityApi = createActivityApi(modelApi)
 const stopActivity = startActivityRuntime(activityApi)
 const ratesApi = createRatesApi()
 const filesApi = createFilesApi()
+const passwordsApi = createPasswordsApi()
 export const shutdown = async () => {
   clearInterval(updateTimer)
   installedApplications.close()
@@ -57,6 +59,8 @@ export default async function handle(request: Request): Promise<Response | null>
   if (rates) return rates
   const files = await filesApi(request)
   if (files) return files
+  const passwords = await passwordsApi(request)
+  if (passwords) return passwords
   const ranking = await rankingApi(request)
   if (ranking) return ranking
   const activity = await activityApi(request)

@@ -20,9 +20,11 @@ export interface SearchSettings {
   paste: boolean
   /** Read bookmarks from the browsers chosen here. Read only, and off until a browser is picked. */
   bookmarks: readonly string[]
+  /** List saved logins by title through the 1Password CLI. Titles and identifiers only, and off until opted in. */
+  passwords: boolean
 }
 
-export const defaultSearchSettings: SearchSettings = { files: true, currency: false, web: 'duckduckgo', paste: false, bookmarks: [] }
+export const defaultSearchSettings: SearchSettings = { files: true, currency: false, web: 'duckduckgo', paste: false, bookmarks: [], passwords: false }
 
 /** Stored as JSON text on the `search` preference. Unknown or damaged fields fall back to their defaults. */
 export function readSearchSettings(value: string | undefined): SearchSettings {
@@ -33,5 +35,6 @@ export function readSearchSettings(value: string | undefined): SearchSettings {
     web: saved.web === 'off' || (typeof saved.web === 'string' && Object.hasOwn(webEngines, saved.web)) ? saved.web as SearchSettings['web'] : defaultSearchSettings.web,
     paste: saved.paste === true,
     bookmarks: Array.isArray(saved.bookmarks) ? saved.bookmarks.filter(value => typeof value === 'string').slice(0, 10) as string[] : defaultSearchSettings.bookmarks,
+    passwords: saved.passwords === true,
   }
 }
