@@ -82,6 +82,12 @@ exposes no Quick Look, and its only delete is permanent, with no move to the Tra
 permanently erases a file where someone expected it to be recoverable is worse than one that does not
 offer to delete at all, so neither is built on what is available today.
 
+**Saved logins.** With *List saved 1Password logins by title* on in Settings, items from your vault
+appear by title alongside everything else, and Return hands the identifier back to 1Password to open.
+Launchpad asks the 1Password command line tool for titles and identifiers only: it never reads a
+secret, never holds a vault credential, and never stores what it was told. The listing is read once
+and narrowed here, so typing never reaches the tool. Needs the `op` command line tool installed.
+
 **Emoji as a grid.** The Emoji tab lays its results out as a grid rather than a column, so a screen
 shows forty instead of a dozen. Left and right step one tile and carry across a row end; up and down
 move a whole row. The column count follows the window.

@@ -25,6 +25,8 @@ export interface ComposeInputs {
   music?: readonly Result[]
   /** Rows earned by a selection macOS handed over, which lead the list because they are what was asked for. */
   selection?: readonly Result[]
+  /** Saved logins by title, already narrowed to the query. */
+  passwords?: readonly Result[]
   rates: RatesState
   settings: SearchSettings
   calculate: (input: string) => string | null
@@ -77,12 +79,12 @@ export function composeResults(input: ComposeInputs): Result[] {
   const lead = answer !== null ? [calculatorRow(answer)] : conversion ? [conversion] : []
   const files = input.settings.files && text.length >= inlineFileMinimum ? narrowFiles(input.files, query).slice(0, inlineFiles) : []
   const web = webSearchResult(query, input.settings.web)
-  return [...(input.selection ?? []), ...lead, ...found, ...files, ...(web ? [web] : [])]
+  return [...(input.selection ?? []), ...lead, ...found, ...(input.passwords ?? []), ...files, ...(web ? [web] : [])]
 }
 
 /** Only things with a stable identity earn favorites and launch counts. Paths, people, windows and events do not. */
 export function isRankable(kind: string): boolean {
-  return !['calculator', 'file', 'window', 'contact', 'event', 'music', 'web', 'setup', 'pantry'].includes(kind)
+  return !['calculator', 'file', 'window', 'contact', 'event', 'music', 'password', 'web', 'setup', 'pantry'].includes(kind)
 }
 
 export function actionLabelFor(kind: string | undefined): string {
@@ -90,6 +92,7 @@ export function actionLabelFor(kind: string | undefined): string {
   if (kind === 'system') return 'Run'
   if (kind === 'setup') return 'Settings'
   if (kind === 'window') return 'Switch'
+  if (kind === 'password') return 'Open'
   if (kind === 'music') return 'Play'
   if (kind && ['application', 'quicklink', 'github', 'web', 'file', 'contact', 'event', 'bookmark'].includes(kind)) return 'Open'
   return 'Copy'

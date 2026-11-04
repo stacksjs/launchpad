@@ -154,3 +154,13 @@ test('a selection handed over leads the list, ahead of what the query itself fin
   // Nothing handed over means nothing added.
   expect(compose({ query: 'Notes' })[0]!.key).not.toBe('selection:copy')
 })
+
+test('saved logins ride along with an ordinary search, and are never ranked', () => {
+  const login = { key: 'password:abc', title: 'Example Login', subtitle: '1Password · Login · Private', kind: 'password', content: 'abc' }
+  const rows = compose({ query: 'Notes', passwords: [login] })
+  // They sit after what the query itself found, the way inline file matches do.
+  expect(rows.map(row => row.kind)).toContain('password')
+  // An item in a vault has no identity the palette should count launches against.
+  expect(isRankable('password')).toBe(false)
+  expect(actionLabelFor('password')).toBe('Open')
+})

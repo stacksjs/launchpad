@@ -1,6 +1,7 @@
 import { recordSuccessfulOperation } from './activity'
 import { quicklinkArgument, quicklinkUrl } from './search'
 import type { Result } from './search'
+import { vaultOpenUrl } from './passwords'
 import { systemCommand } from './system-commands'
 import type { SystemCommand } from './system-commands'
 
@@ -50,6 +51,12 @@ export function createExecutor(ports: ExecutionPorts) {
       else if (result.kind === 'event') {
         if (!ports.openEvent) throw new Error('Calendar is not available.')
         await ports.openEvent(result.content)
+      }
+      else if (result.kind === 'password') {
+        // The identifier goes back to 1Password, which decides what to reveal and asks for whatever it needs first.
+        const link = vaultOpenUrl(result.content)
+        if (!link) throw new Error('That saved item could not be opened.')
+        await ports.openLink(link)
       }
       else if (result.kind === 'music') {
         if (!ports.playTrack) throw new Error('Music is not available.')

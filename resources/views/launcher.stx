@@ -34,6 +34,7 @@ import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } fr
 import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions/large-type'
 import { detailFor } from '../functions/detail'
 import { gridColumns, gridScrollTop, gridTarget, gridTileSize, usesGrid } from '../functions/grid'
+import { vaultResults } from '../functions/passwords'
 import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
@@ -63,6 +64,7 @@ const windowItems = state<Result[]>([])
 const contactItems = state<Result[]>([])
 const eventItems = state<Result[]>([])
 const musicItems = state<Result[]>([])
+const passwordItems = state<Result[]>([])
 const sourceNote = state('')
 const sourceLoading = state(false)
 const exchangeRates = state<{ rates: Record<string, number>, updatedAt: number } | null>(null)
@@ -76,6 +78,13 @@ const category = state('all')
 // What macOS last handed over through the Services menu. Its rows stand only while the query still reads as it
 // arrived; the moment someone edits it, the palette's own search is the better answer.
 const handedOver = state<Selection | null>(null)
+// The whole listing is fetched once and narrowed here, so typing never spawns a process.
+const passwordRows = derived(() => {
+  const text = query().trim()
+  const rows = passwordItems()
+  if (!rows.length || text.length < 2 || category() !== 'all') return []
+  return createResultSearch(rows)(text).slice(0, 5)
+})
 const selectionRows = derived(() => {
   const selection = handedOver()
   return selection && query() === selection.value ? selectionActions(selection) : []
@@ -218,7 +227,7 @@ const searchEmoji = (input, scope) => emojiIndex()(input, scope)
 const allResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
-  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), selection: selectionRows(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
+  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), selection: selectionRows(), passwords: passwordRows(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
@@ -1181,6 +1190,16 @@ onMount(async () => {
     (async () => { try { githubViewer.set(await restoreGitHub()) } catch (reason) { githubStatus.set(reason.message) } })(),
   ])
 })
+async function loadPasswords() {
+  if (!searchSettings().passwords) { passwordItems.set([]); return }
+  try {
+    const body = await api('passwords')
+    passwordItems.set(body.available ? vaultResults(body.items) : [])
+    if (!body.available && body.reason && body.reason !== 'off') status.set(body.reason)
+  }
+  catch { passwordItems.set([]) }
+}
+effect(() => { if (searchableVisible() && searchSettings().passwords) void loadPasswords() })
 const stopCommandShortcuts = onCommandShortcut((commandId) => { void runShortcut(commandId) })
 // Registering can be refused on a build whose bundle does not declare the Service; the palette carries on regardless.
 let stopSelectionService = () => {}
@@ -1297,6 +1316,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           <span :if="item.kind === 'contact'" class="i-f7-person-crop-circle"></span>
           <span :if="item.kind === 'event'" class="i-f7-calendar"></span>
           <span :if="item.kind === 'emoji'" class="i-f7-smiley"></span>
+          <span :if="item.kind === 'password'" class="i-f7-lock"></span>
         </span>
         <span class="result-copy"><span class="result-title" :title="item.title">{{ item.title }}</span><span class="result-subtitle" :title="item.subtitle">{{ item.subtitle }}</span></span>
         <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
@@ -1466,6 +1486,8 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       <section :if="settingsSection() === 'search'" class="settings-group">
         <h2>Find more, faster.</h2>
         <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().files" @change="saveSearch({ files: $event.target.checked })"> Search file names on this Mac</label>
+        <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().passwords" @change="saveSearch({ passwords: $event.target.checked })"> List saved 1Password logins by title</label>
+        <p class="help">Titles and identifiers only. Launchpad never reads a secret and never holds a vault credential; choosing a result hands it back to 1Password. Needs the 1Password command line tool.</p>
         <p class="help">Uses Spotlight's index. Library, hidden items, dependencies and app internals are skipped. File names stay on this Mac and are not stored.</p>
         <label for="web-engine">When you search, offer a web search with</label>
         <select id="web-engine" :value="searchSettings().web" @change="saveSearch({ web: $event.target.value })"><option value="duckduckgo">DuckDuckGo</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option><option value="kagi">Kagi</option><option value="off">Off</option></select>
