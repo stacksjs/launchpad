@@ -16,7 +16,7 @@ import { historyPreference as readHistoryPreference, parsePreference } from '../
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
 import { visibleApplicationPaths } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
-import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory, onSelectionService } from '../functions/native'
+import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory, onSelectionService, chooseSaveFile, chooseOpenFile, chooseFolder } from '../functions/native'
 import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
 import { selectionActions } from '../functions/selection'
 import type { Selection } from '../functions/selection'
@@ -36,6 +36,7 @@ import { detailFor } from '../functions/detail'
 import { gridColumns, gridScrollTop, gridTarget, gridTileSize, usesGrid } from '../functions/grid'
 import { vaultResults } from '../functions/passwords'
 import { modeById, modeResults } from '../functions/modes'
+import { describeReport, readTransferSettings } from '../functions/transfer'
 import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
@@ -138,6 +139,7 @@ const settingsSections = [
   { id: 'github', title: 'GitHub', icon: 'M6 3v12a4 4 0 0 0 4 4h4 M18 6v4a4 4 0 0 1-4 4H6 M9 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M21 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M20 19a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z', color: '#6556c8', description: 'Connect your account to search your repositories.', keywords: 'account token private issues pull requests' },
   { id: 'pantry', title: 'Pantry', icon: 'M3 7l9-5 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10 M7.5 4.5l9 5', color: '#dd7553', description: 'Connect Pantry to install and manage your tools.', keywords: 'packages cli apps libraries fonts' },
   { id: 'extensions', title: 'Extensions', icon: 'M9 3H4v6a3 3 0 1 1 0 6v5h5a3 3 0 1 1 6 0h5v-5a3 3 0 1 1 0-6V3h-5a3 3 0 1 1-6 0Z', color: '#8b66cf', description: 'Add quicklinks and snippets to Launchpad.', keywords: 'commands manifest json' },
+  { id: 'sync', title: 'Sync', icon: 'M12 3v9 M8.5 8.5 12 12l3.5-3.5 M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3', color: '#2f8f8a', description: 'Carry your setup to another Mac as one file.', keywords: 'export import backup transfer file folder another mac dropbox icloud migrate' },
   { id: 'usage', title: 'Usage', icon: 'M4 20V10h4v10H4Z M10 20V4h4v16h-4Z M16 20V8h4v12h-4Z', color: '#43a96a', description: 'Review your activity, saved only on this Mac.', keywords: 'privacy activity history statistics recording' },
 ]
 const visibleSettings = derived(() => settingsSections.filter(section => (section.title + ' ' + section.keywords).toLowerCase().includes(settingsQuery().trim().toLowerCase())))
@@ -169,6 +171,13 @@ const paletteVisible = state(false)
 const icons = state<Record<string, string>>({})
 const preferences = state<Record<string, any>>({})
 const preferencesReady = state(false)
+// Carrying a setup to another Mac. `importPlan` holds what a chosen file would do, so nothing is written until the
+// person has read it and said which side wins.
+const syncFolder = state('')
+const syncStatus = state('')
+const syncBusy = state(false)
+const importPath = state('')
+const importPlan = state<any>(null)
 const themePreference = state('system')
 const activeTheme = state(builtInTheme)
 const savedThemes = state([])
@@ -259,12 +268,19 @@ function pollWhile(callback, milliseconds, enabled) {
   effect(() => { if (enabled()) timer.resume(); else timer.pause() })
 }
 
+// A kept copy is rewritten when configuration changed, rather than every time Settings is closed, so a folder a
+// syncing service is watching does not see a new version of the same file for no reason. Launch counts and clipboard
+// writes are deliberately not on this list: they happen constantly and are not in the file anyway.
+const configurationResources = ['commands', 'themes', 'extensions', 'preferences']
+let configurationChanged = false
+
 async function api(path, method = 'GET', body?) {
   const response = await fetch('/api/' + path, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) })
   if (!response.ok) {
     const data = await response.json().catch(() => ({}))
     throw Object.assign(new Error(data.error || 'Could not save your changes. Try again.'), { status: response.status })
   }
+  if (method !== 'GET' && configurationResources.includes(path.split('?')[0].split('/')[0])) configurationChanged = true
   return response.status === 204 ? null : (await response.json()).data
 }
 
@@ -433,7 +449,14 @@ async function updateLaunchpad(action = 'check') {
 function checkForUpdates() { settingsSection.set('updates'); openSettings(true) }
 pollWhile(refreshUpdate, 500, () => paletteVisible() && settings() && settingsSection() === 'updates')
 pollWhile(refreshUpdate, 60000, () => paletteVisible() && !(settings() && settingsSection() === 'updates'))
-function closeSettings() { settings.set(false); void nextTick(() => search.current?.focus()) }
+function closeSettings() {
+  settings.set(false)
+  if (syncFolder() && configurationChanged) {
+    configurationChanged = false
+    void writeSettingsFile({ folder: syncFolder() })
+  }
+  void nextTick(() => search.current?.focus())
+}
 async function refreshLogin(initialize = false) {
   if (loginBusy()) return
   loginBusy.set(true)
@@ -685,6 +708,7 @@ async function loadPreferences() {
     historyDays.set(saved.days)
   }
   automaticUpdatesEnabled.set(parsePreference(values.updates?.value).enabled !== false)
+  syncFolder.set(readTransferSettings(values.sync?.value).folder)
   if (values.usage) usageEnabled.set(parsePreference(values.usage.value).enabled === true)
   preferencesReady.set(true)
 }
@@ -851,6 +875,99 @@ async function saveSearch(patch) {
     if (reread) await reload()
   }
   catch (reason) { fail(reason) }
+}
+
+/**
+ * Writing the settings file, and reading one back.
+ *
+ * Every path comes from a dialog the person answered: Launchpad proposes a file name and never a location. An import
+ * is two steps on purpose — what the file would do, then doing it — because a merge that silently picked a side would
+ * be the one thing someone could not undo.
+ */
+async function writeSettingsFile(target) {
+  syncBusy.set(true)
+  try {
+    const result = await api('transfer/export', 'POST', target)
+    syncStatus.set('Saved to ' + result.path)
+    return true
+  }
+  catch (reason) { syncStatus.set(reason.message); return false }
+  finally { syncBusy.set(false) }
+}
+
+async function exportSettings() {
+  try {
+    const suggested = (await api('transfer')).name
+    const path = await chooseSaveFile(suggested)
+    if (path) await writeSettingsFile({ path })
+  }
+  catch (reason) { syncStatus.set(reason.message) }
+}
+
+async function chooseSyncFolder() {
+  try {
+    const folder = await chooseFolder()
+    if (!folder) return
+    await preference('sync', JSON.stringify({ folder }))
+    syncFolder.set(folder)
+    await writeSettingsFile({ folder })
+  }
+  catch (reason) { syncStatus.set(reason.message) }
+}
+
+async function stopKeepingCopy() {
+  try {
+    await preference('sync', JSON.stringify({ folder: '' }))
+    syncFolder.set('')
+    // The file is left alone: it is in a folder the person chose, and deleting it was never asked for.
+    syncStatus.set('Launchpad will stop updating that file. The file itself is still there.')
+  }
+  catch (reason) { syncStatus.set(reason.message) }
+}
+
+async function chooseImport() {
+  const path = await chooseOpenFile()
+  if (!path) return
+  syncBusy.set(true)
+  importPlan.set(null)
+  syncStatus.set('')
+  try {
+    const plan = await api('transfer/preview', 'POST', { path })
+    importPath.set(path)
+    importPlan.set(plan)
+  }
+  catch (reason) { importPath.set(''); syncStatus.set(reason.message) }
+  finally { syncBusy.set(false) }
+}
+
+/** The day a file was written, or nothing at all if it does not say. */
+function importedOn(stamp) {
+  return stamp ? ', exported ' + stamp.slice(0, 10) : ''
+}
+
+/** The first few names from one side of a plan, so the template holds no logic of its own. */
+function importLabels(entries) {
+  const names = (entries || []).slice(0, 8).map(entry => entry.label).join(', ')
+  return (entries || []).length > 8 ? names + ' and more' : names
+}
+
+function cancelImport() {
+  batch(() => { importPlan.set(null); importPath.set('') })
+}
+
+async function applyImport(choice) {
+  if (!importPath()) return
+  syncBusy.set(true)
+  try {
+    const report = await api('transfer/import', 'POST', { path: importPath(), choice })
+    cancelImport()
+    syncStatus.set(describeReport(report))
+    // Imported rows are nothing until they are read back: themes, preferences and the palette's own items all change.
+    await loadPreferences()
+    await reload()
+  }
+  catch (reason) { syncStatus.set(reason.message) }
+  finally { syncBusy.set(false) }
 }
 
 function extensionSummary(row) {
@@ -1519,6 +1636,32 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <textarea id="extension-manifest" x-model="extensionDraft" rows="8" spellcheck="false" placeholder="Paste a manifest here"></textarea>
         <div :if="extensionIssues().length" class="error" role="alert"><div :for="(issue, index) in extensionIssues()" :key="index">{{ issue }}</div></div>
         <div class="flex gap-3 items-center"><button type="button" class="save-button" @click="installExtension()" :disabled="!extensionDraft().trim()">Install</button><button type="button" class="text-action" @click="extensionDraft.set(sampleManifest)">Use an example</button></div>
+      </section>
+      <section :if="settingsSection() === 'sync'" class="settings-group">
+        <h2>One setup, every Mac.</h2>
+        <p class="help">Your commands, themes, extensions, favourites and settings written to a single file, and read back on another Mac. Nothing leaves this Mac on its own: the file goes where you put it, and Launchpad has no account and no server to sync through.</p>
+        <p class="help">Clipboard history and usage records are never in the file. Neither are your GitHub and Pantry tokens, which stay in this Mac's keychain — the other Mac asks for its own.</p>
+        <div class="setting-actions">
+          <button type="button" class="save-button" @click="exportSettings()" :disabled="syncBusy()">Export to a file...</button>
+          <button type="button" class="text-action" @click="chooseImport()" :disabled="syncBusy()">Import from a file...</button>
+        </div>
+        <div :if="importPlan()" class="settings-group">
+          <h2>Before importing</h2>
+          <p class="help">From Launchpad {{ importPlan().from || 'an earlier version' }}{{ importedOn(importPlan().exportedAt) }}. {{ importPlan().summary }}</p>
+          <div :if="importPlan().add.length" class="setting-row"><div><strong>{{ plural(importPlan().add.length, 'new item') }}</strong><p class="help">{{ importLabels(importPlan().add) }}</p></div></div>
+          <div :if="importPlan().conflicts.length" class="setting-row"><div><strong>{{ plural(importPlan().conflicts.length, 'item') }} already different here</strong><p class="help">{{ importLabels(importPlan().conflicts) }}</p></div></div>
+          <p :if="importPlan().conflicts.length" class="help">Adding leaves these as they are on this Mac. Replacing takes the file's version instead. Either way, nothing is deleted.</p>
+          <div class="setting-actions">
+            <button type="button" class="save-button" @click="applyImport('mine')" :disabled="syncBusy()">{{ importPlan().add.length ? 'Add ' + plural(importPlan().add.length, 'item') : 'Keep everything as it is' }}</button>
+            <button :if="importPlan().conflicts.length" type="button" class="text-action" @click="applyImport('theirs')" :disabled="syncBusy()">Add and replace {{ importPlan().conflicts.length }}</button>
+            <button type="button" class="text-action" @click="cancelImport()">Cancel</button>
+          </div>
+        </div>
+        <h2 class="mt-5">Keep a copy up to date</h2>
+        <p class="help">Choose a folder and Launchpad rewrites the file there whenever you change something and close Settings. Put that folder in iCloud Drive, Dropbox or anything else that syncs, and your other Mac has the file waiting to import. The service is yours, not Launchpad's.</p>
+        <div :if="!syncFolder()" class="setting-actions"><button type="button" class="text-action" @click="chooseSyncFolder()" :disabled="syncBusy()">Choose a folder...</button></div>
+        <div :if="syncFolder()" class="setting-row"><div><strong>{{ syncFolder() }}</strong><p class="help">Named after this Mac, so each machine keeps its own file in the same folder.</p></div><button type="button" class="text-action" @click="stopKeepingCopy()">Stop</button></div>
+        <p :if="syncStatus()" class="help" role="status">{{ syncStatus() }}</p>
       </section>
       <section :if="settingsSection() === 'usage'" class="settings-group">
     <div class="setting-row"><div><h2>Your year, in commands.</h2><p class="help">Keep local activity for your future year review.</p></div><input type="checkbox" role="switch" :checked="usageEnabled()" @change="usagePreference(!usageEnabled())" aria-label="Record local usage"></div>

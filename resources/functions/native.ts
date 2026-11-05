@@ -1,4 +1,4 @@
-import { app, appleScript, clipboard, fs, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, serviceMenu, shell, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
+import { app, appleScript, clipboard, fs, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, serviceMenu, shell, showOpenDialog, showSaveDialog, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { bookmarkBrowsers, bookmarkFile, bookmarkRoot, maxBookmarks, orderProfiles, parseChromiumBookmarks } from './bookmarks'
@@ -207,6 +207,28 @@ export const sources = createSources({
 })
 
 export const revealInFinder = (path: string) => shell.showInFinder(path)
+
+/**
+ * Asking for a file or a folder through the system's own dialog.
+ *
+ * Launchpad never picks a path on someone's behalf: the place a settings file is written to, or read from, is chosen
+ * in the dialog macOS puts up, and a cancelled dialog returns nothing rather than a guess. In the sandboxed build
+ * this is also what grants access to the place they picked.
+ */
+export async function chooseSaveFile(name: string): Promise<string> {
+  const result = await showSaveDialog({ title: 'Export Launchpad Settings', defaultPath: name, buttonLabel: 'Export', filters: [{ name: 'Launchpad Settings', extensions: ['json'] }], canCreateDirectories: true })
+  return result.canceled ? '' : result.filePath ?? ''
+}
+
+export async function chooseOpenFile(): Promise<string> {
+  const result = await showOpenDialog({ title: 'Import Launchpad Settings', buttonLabel: 'Open', filters: [{ name: 'Launchpad Settings', extensions: ['json'] }], canChooseFiles: true, canChooseDirectories: false })
+  return result.canceled ? '' : result.filePaths[0] ?? ''
+}
+
+export async function chooseFolder(): Promise<string> {
+  const result = await showOpenDialog({ title: 'Choose a Folder for Launchpad Settings', buttonLabel: 'Choose', canChooseFiles: false, canChooseDirectories: true, canCreateDirectories: true })
+  return result.canceled ? '' : result.filePaths[0] ?? ''
+}
 export const openPrivacySettings = (name: 'accessibility' | 'automation') => name === 'accessibility' ? permissions.openSettings('accessibility') : shell.openExternal('x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Automation')
 
 export async function captureClipboard(): Promise<string> {
