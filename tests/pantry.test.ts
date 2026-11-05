@@ -5,7 +5,7 @@ import { bundledPackageCatalog } from 'ts-pantry/catalog'
 import AppPreference from '../app/Models/AppPreference'
 import CatalogPackage from '../app/Models/CatalogPackage'
 import { pantryApi } from '../app/Desktop/pantry'
-import { createPackageCatalogSearch, installedCatalog, pantryResults } from '../resources/functions/pantry'
+import { createPackageCatalogSearch, installedCatalog, packageInstallState, pantryResults } from '../resources/functions/pantry'
 import { rankResults } from '../resources/functions/search'
 
 test('the complete public catalog persists through a read-only native model API', async () => {
@@ -70,4 +70,20 @@ test('literal Pantry descriptions survive when the package name also has a fuzzy
 test('oversized Pantry requests are refused from their declared length', async () => {
   const response = await pantryApi(new Request('http://localhost/api/pantry/desktop/pair', { method: 'POST', headers: { 'content-length': '5000' }, body: '{}' }), { fetch: () => { throw new Error('must not reach Pantry') } })
   expect(response?.status).toBe(413)
+})
+
+
+test('app installation readiness requires a bundle and permits repair of old successful jobs', () => {
+  const entry = { ...bundledPackageCatalog().find(item => item.domain === 'figma.com')! }
+  const stored = [{ name: entry.domain, version: '1' }]
+  const job = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), domain: entry.domain, status: 'succeeded' as const, createdAt: new Date().toISOString(), output: 'done' }
+  expect(packageInstallState(entry, stored, job, true)).toMatchObject({ ready: false, repair: true, disabled: false, button: 'Repair installation' })
+  expect(installedCatalog([entry], stored)).toEqual([])
+  expect(pantryResults([entry], [], stored)[0]?.installedVersion).toBeUndefined()
+  const installed = [{ ...stored[0]!, applicationPath: '/Users/test/Applications/Figma.app' }]
+  expect(packageInstallState(entry, installed, job, true)).toMatchObject({ ready: true, repair: false, applicationPath: installed[0]?.applicationPath })
+  expect(pantryResults([entry], [], installed)[0]).toMatchObject({ kind: 'application', content: installed[0]?.applicationPath })
+  expect(packageInstallState(entry, [], { ...job, status: 'running' }, true)).toMatchObject({ active: true, disabled: true })
+  expect(packageInstallState(entry, [], { ...job, status: 'failed', error: 'No compatible artifact' }, true)).toMatchObject({ disabled: false, button: 'Try again', status: 'No compatible artifact' })
+  expect(packageInstallState(entry, [], null, false).button).toBe('Connect Pantry')
 })

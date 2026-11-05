@@ -12,6 +12,7 @@
     "better-dx": "^0.2.38"
   },
   "dependencies": {
+    "@stacksjs/components": "0.2.800",
     "@stacksjs/desktop": "0.2.800",
     "@stacksjs/github": "0.75.323",
     "@stacksjs/image": "0.75.334",

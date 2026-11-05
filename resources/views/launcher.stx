@@ -40,7 +40,7 @@ import { describeReport, readTransferSettings } from '../functions/transfer'
 import { breadcrumb, browseResults, isWithin, normalizePath, parentPath } from '../functions/browse'
 import { githubResults, restoreGitHub, connectGitHub, disconnectGitHub } from '../functions/github'
 import type { GitHubView } from '../functions/github'
-import { pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
+import { packageInstallState, pantryResults, installedCatalog, createPackageCatalogSearch, restorePantry, pantryConnected, connectPantry, disconnectPantry, installedPantry, installPantry, pantryJobs } from '../functions/pantry'
 import type { PackageCatalogEntry, DesktopInstalledPackage, DesktopInstallJob } from '../functions/pantry'
 import { activityPayload, formatUsageTime, recordSuccessfulOperation } from '../functions/activity'
 import type { ActivityAction, ActivitySummary } from '../functions/activity'
@@ -56,7 +56,10 @@ const pantryFilter = state('all')
 const packageDetail = state<Result | null>(null)
 const installJobs = state<DesktopInstallJob[]>([])
 const installJob = derived(() => installJobs().find(job => job.domain === packageDetail()?.content) || null)
-const packageAppPath = derived(() => pantryInstalled().find(item => item.name === packageDetail()?.package?.domain && item.applicationPath)?.applicationPath || '')
+const packageState = derived(() => packageDetail()?.package ? packageInstallState(packageDetail().package, pantryInstalled(), installJob(), pantryReady()) : null)
+const packageAppPath = derived(() => packageState()?.applicationPath || '')
+const packageError = state('')
+const pantryInstallRefresh = state(false)
 const packageBusy = state(false)
 const installRequests: Record<string, string> = {}
 let pollingJob = false
@@ -338,39 +341,45 @@ async function copySetupCommand() {
   try { await clipboard.writeText('pantry desktop setup --yes'); pantryStatus.set('Setup command copied. Run it in your terminal.') }
   catch (reason) { pantryStatus.set(reason.message || 'Could not copy the setup command.') }
 }
-function closePackage() { packageDetail.set(null); void nextTick(() => search.current?.focus()) }
+function closePackage() { packageError.set(''); packageDetail.set(null); void nextTick(() => search.current?.focus()) }
+function configurePantry() { settingsSection.set('pantry'); packageError.set(''); packageDetail.set(null); openSettings() }
 async function startInstall() {
   const item = packageDetail()
   if (!item || packageBusy()) return
-  if (!pantryReady()) { settingsSection.set('pantry'); packageDetail.set(null); openSettings(); return }
+  if (!pantryReady()) { configurePantry(); return }
   packageBusy.set(true)
   try {
-    if (!installRequests[item.content] || installJob()?.status === 'failed') installRequests[item.content] = crypto.randomUUID()
+    packageError.set('')
+    if (!installRequests[item.content] || (installJob() && ['failed', 'succeeded'].includes(installJob().status) && installRequests[item.content] === installJob().requestId)) installRequests[item.content] = crypto.randomUUID()
     const job = await installPantry(item.content, installRequests[item.content])
     installJobs.set([job, ...installJobs().filter(previous => previous.id !== job.id)])
+    if (job.status === 'succeeded') pantryInstallRefresh.set(true)
     pantryStatus.set('Installation requested from Pantry')
   }
-  catch (reason) { pantryStatus.set(reason.message) }
+  catch (reason) { packageError.set(reason.message) }
   finally { packageBusy.set(false) }
 }
 async function pollInstall() {
-  if (!installJobs().some(job => ['queued', 'running'].includes(job.status)) || pollingJob) return
+  if ((!pantryInstallRefresh() && !installJobs().some(job => ['queued', 'running'].includes(job.status))) || pollingJob) return
   pollingJob = true
   try {
     const previous = installJobs()
     const current = await pantryJobs()
+    packageError.set('')
     installJobs.set(current)
     const completed = current.filter(job => job.status === 'succeeded' && previous.some(old => old.id === job.id && ['queued', 'running'].includes(old.status)))
-    if (completed.length) {
+    if (completed.length) pantryInstallRefresh.set(true)
+    if (pantryInstallRefresh()) {
       pantryInstalled.set(await installedPantry())
       pantryStatus.set('Installed with Pantry')
       await reload()
+      pantryInstallRefresh.set(false)
     }
   }
-  catch (reason) { pantryStatus.set(reason.message) }
+  catch (reason) { pantryStatus.set(reason.message); packageError.set(reason.message) }
   finally { pollingJob = false }
 }
-pollWhile(pollInstall, 1000, () => installJobs().some(job => ['queued', 'running'].includes(job.status)))
+pollWhile(pollInstall, 1000, () => pantryInstallRefresh() || installJobs().some(job => ['queued', 'running'].includes(job.status)))
 
 const refreshApplications = createApplicationRefresh({ load: () => api('applications'), current: items, replace: value => items.set(value), count: count => status.set(plural(count, 'application') + ' · Local commands') })
 pollWhile(() => { void refreshApplications().catch(fail) }, 5000, () => paletteVisible())
@@ -1106,7 +1115,9 @@ async function runShortcut(commandId) {
 async function run(item = active()) {
   if (!item || saving()) return
   if (item.kind === 'pantry') {
+    packageError.set('')
     packageDetail.set(item)
+    if (pantryReady()) void refreshPackages()
     return
   }
   if (item.kind === 'setup') {
@@ -1599,7 +1610,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       <section :if="settingsSection() === 'pantry'" class="settings-group">
         <h2>Your tools, through Pantry.</h2>
         <p class="help">Search applications, command line tools, libraries and fonts locally. Installation uses the Pantry CLI you install separately, with your user account and its package permissions.</p>
-        <p class="help">Run this once in your terminal, then enter the five minute pairing code below.</p>
+        <p class="help">Set up or update Pantry in your terminal. For a new connection, enter the pairing code within five minutes.</p>
         <div class="setup-command"><code>pantry desktop setup --yes</code><button type="button" class="text-action" @click="copySetupCommand()">Copy</button></div>
         <form :if="!pantryReady()" @submit.prevent="connectPackages()"><label for="pantry-code">Pantry pairing code</label><input id="pantry-code" x-model="pantryCode" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="8 digit code"><button type="submit" class="save-button" :disabled="packageBusy() || pantryRestoring() || pairingDigits(pantryCode()).length !== 8">Connect Pantry</button></form>
         <button :if="!pantryReady()" type="button" class="text-action" @click="refreshPackages()" :disabled="packageBusy() || pantryRestoring()">Check saved connection</button>
@@ -1685,14 +1696,16 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
   <div :if="packageDetail()" class="editor" role="dialog" aria-modal="true" aria-label="Pantry package details">
     <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ packageDetail().title }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closePackage()">esc</button></div>
     <div class="dialog-body">
-      <div class="package-heading"><img :if="packageDetail().icon" :src="packageDetail().icon" class="package-logo" width="48" height="48" alt=""><div><h2>{{ packageDetail().title }}</h2><p class="help">{{ packageDetail().package?.kind }} · {{ packageDetail().content }}</p></div></div>
+      <div class="package-heading"><img :if="packageDetail().icon" :src="packageDetail().icon" class="package-logo" width="48" height="48" alt=""><div><h2>{{ packageDetail().title }}</h2><p class="help">{{ packageDetail().package?.kind === 'app' ? 'Mac application' : packageDetail().package?.kind === 'cli' ? 'Command line tool' : packageDetail().package?.kind === 'font' ? 'Font' : 'Library' }} · {{ packageDetail().content }}</p></div></div>
       <p class="package-description">{{ packageDetail().package?.description }}</p>
       <div class="flex gap-3 items-center"><span class="package-badge">{{ pantryInstalled().find(item => item.name === packageDetail().content)?.version || packageDetail().package?.latestVersion || 'Latest available' }}</span><button :if="packageDetail().package?.homepageUrl" type="button" class="text-action" @click="openLink(packageDetail().package.homepageUrl, 'pantry')">Project website ↗</button><button :if="packageDetail().package?.githubUrl" type="button" class="text-action" @click="openLink(packageDetail().package.githubUrl, 'pantry')">GitHub ↗</button></div>
-      <p class="help">Pantry selects the compatible artifact and installs dependencies. A listed package may be unavailable for this Mac. Installation runs in the separately installed Pantry service.</p>
-      <p class="help" role="status">{{ installJob() ? installJob().status === 'succeeded' ? 'Installed successfully' : installJob().status === 'failed' ? installJob().error : 'Pantry is ' + installJob().status : pantryStatus() }}</p>
-      <pre :if="installJob()?.output" class="package-output" aria-label="Pantry installation output">{{ installJob().output }}</pre>
+      <div class="package-status" :class="{ 'package-status-error': packageError() || installJob()?.status === 'failed' || packageState()?.repair }" role="status" aria-live="polite" :aria-busy="packageState()?.active">
+        <span :if="packageState()?.active" class="package-spinner" aria-hidden="true"></span>
+        <div><strong>{{ packageError() ? 'Pantry needs attention' : packageState()?.active ? 'Installation in progress' : packageState()?.repair ? 'Finish app installation' : installJob()?.status === 'failed' ? 'Installation needs attention' : packageState()?.ready ? 'Installed' : 'Ready to install' }}</strong><p>{{ packageError() || packageState()?.status }}</p><p :if="packageAppPath()" class="package-path">{{ packageAppPath() }}</p><button :if="packageState()?.repair" type="button" class="text-action" @click="configurePantry()">Pantry setup and settings ↗</button></div>
+      </div>
+      <details :if="installJob()?.output" class="package-details"><summary>Installation details</summary><pre class="package-output" aria-label="Pantry installation output">{{ installJob().output }}</pre></details>
     </div>
-    <div class="dialog-footer"><button type="button" class="secondary-button" @click="closePackage()">Back</button><button :if="packageAppPath()" type="button" class="secondary-button" @click="openPackageApplication()">Open application</button><button type="button" class="save-button" @click="startInstall()" :disabled="packageBusy() || (installJob() && ['queued', 'running', 'succeeded'].includes(installJob().status))">{{ !pantryReady() ? 'Connect Pantry' : installJob()?.status === 'succeeded' ? 'Installed' : installJob()?.status === 'failed' ? 'Retry installation' : installJob() ? 'Installing...' : 'Install with Pantry' }}</button></div>
+    <div class="dialog-footer"><button type="button" class="secondary-button" @click="closePackage()">Back</button><button :if="packageAppPath()" type="button" class="save-button" @click="openPackageApplication()">Open {{ packageDetail().title }}</button><button :if="!packageAppPath()" type="button" class="save-button" @click="startInstall()" :disabled="packageBusy() || pantryRestoring() || packageState()?.disabled">{{ pantryRestoring() ? 'Checking installation…' : packageBusy() ? 'Requesting…' : packageState()?.button }}</button></div>
   </div>
 
   <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="aliasApplication() ? 'Application search aliases' : editId() === null ? 'New command' : 'Edit command'">
@@ -1913,6 +1926,16 @@ header input:focus-visible { outline: none; }
 .package-heading { display: flex; align-items: center; gap: 14px; }
 .package-heading img, .item-icon img { object-fit: contain; }
 .package-description { font-size: 14px; line-height: 1.6; }
+.package-status { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+.package-status strong { font-size: 13px; }
+.package-status p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.package-status-error { border-color: #c8805080; }
+.package-path { overflow-wrap: anywhere; }
+.package-details { margin-top: 14px; color: var(--muted); font-size: 12px; }
+.package-details summary { cursor: pointer; padding: 6px 0; }
+.package-spinner { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 2px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: pantry-spin 1s linear infinite; }
+@keyframes pantry-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .package-spinner { animation: none; } }
 .package-output { max-height: 140px; overflow: auto; padding: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 8px; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .setup-command { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
 </style>

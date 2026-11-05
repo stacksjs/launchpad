@@ -40,12 +40,14 @@ export async function pantryJob(id: string): Promise<DesktopInstallJob> { return
 const identity = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
 export { createPackageCatalogSearch }
 export function installedCatalog(catalog: readonly PackageCatalogEntry[], installed: DesktopInstalledPackage[]): PackageCatalogEntry[] {
-  const names = new Set(installed.map(item => item.name))
+  const apps = new Set(catalog.filter(entry => entry.kind === 'app').map(entry => entry.domain))
+  const names = new Set(installed.filter(item => !apps.has(item.name) || item.applicationPath).map(item => item.name))
   return catalog.filter(entry => names.has(entry.domain))
 }
 export function pantryResults(catalog: readonly PackageCatalogEntry[], applications: Result[], installed: DesktopInstalledPackage[], filter = 'all', includeInstalledApps = false): Result[] {
   const apps = new Set(applications.filter(item => item.kind === 'application').map(item => identity(item.title)))
-  const versions = new Map(installed.map(item => [item.name, item.version]))
+  const appDomains = new Set(catalog.filter(entry => entry.kind === 'app').map(entry => entry.domain))
+  const versions = new Map(installed.filter(item => !appDomains.has(item.name) || item.applicationPath).map(item => [item.name, item.version]))
   const appPaths = new Map(installed.filter(item => item.applicationPath).map(item => [item.name, item.applicationPath!]))
   return catalog.filter(entry => (filter === 'all' || entry.kind === filter) && (includeInstalledApps || !(entry.kind === 'app' && apps.has(identity(entry.name))))).map(entry => ({
     key: `pantry:${entry.domain}`, title: entry.name,
@@ -57,3 +59,22 @@ export function pantryResults(catalog: readonly PackageCatalogEntry[], applicati
 }
 
 export async function pantryJobs(): Promise<DesktopInstallJob[]> { return await client().jobs() }
+
+/** App readiness follows a discovered bundle, including with older Pantry services. */
+export function packageInstallState(entry: PackageCatalogEntry, installed: DesktopInstalledPackage[], job: DesktopInstallJob | null, connected: boolean) {
+  const record = installed.find(item => item.name === entry.domain && (entry.kind !== 'app' || item.applicationPath))
+  const applicationPath = record?.applicationPath || ''
+  const active = Boolean(job && ['queued', 'running'].includes(job.status))
+  const repair = entry.kind === 'app' && !applicationPath && (installed.some(item => item.name === entry.domain) || job?.status === 'succeeded')
+  const ready = Boolean(record)
+  const status = active ? job?.status === 'queued' ? 'Waiting for another installation to finish' : `Installing ${entry.name}…`
+    : repair ? 'The package was downloaded, but the app is missing from Applications. Install it again to finish setup.'
+    : job?.status === 'failed' ? job.error || 'Installation failed. Open the details below, then try again.'
+    : ready ? entry.kind === 'app' ? 'Ready to open' : 'Installed on this Mac'
+    : connected ? entry.kind === 'app' ? 'Installs to your Applications folder' : entry.kind === 'font' ? 'Installs to your Fonts folder' : 'Installs for your user account'
+    : 'Connect Pantry in Settings to install this package.'
+  return { applicationPath, active, ready, repair, status,
+    button: !connected ? 'Connect Pantry' : active ? job?.status === 'queued' ? 'Queued…' : 'Installing…' : repair ? 'Repair installation' : job?.status === 'failed' ? 'Try again' : ready ? 'Installed' : 'Install',
+    disabled: connected && (active || ready),
+  }
+}

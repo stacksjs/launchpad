@@ -34,7 +34,7 @@ const api = createActivityApi(modelApi)
 const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: '1.0.10' })
 const stopUsage = startActivityRuntime(api)
 const packages = ${JSON.stringify(packages)}
-const service = startDesktopBridge({ stateDirectory: ${JSON.stringify(join(root, 'pantry'))}, port: 0, catalog: packages, run: async (args) => { await Bun.sleep(20); return args.at(-1) === packages[3].domain ? 7 : 0 } })
+const service = startDesktopBridge({ stateDirectory: ${JSON.stringify(join(root, 'pantry'))}, port: 0, catalog: packages, applications: () => packages.filter(entry => entry.kind === 'app').map(entry => ({ name: entry.domain, version: '1', applicationPath: '/Applications/UsageFixture.app' })), run: async (args) => { await Bun.sleep(20); return args.at(-1) === packages[3].domain ? 7 : 0 } })
 const baseUrl = 'http://127.0.0.1:' + service.server.port
 const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(${JSON.stringify(join(root, 'pantry'))}), 'Usage fixture')
 export const shutdown = async () => { await stopUsage(); await service.close() }
