@@ -11,6 +11,7 @@ import { installedApplications } from './applications'
 import { createRatesApi } from './rates'
 import { createFilesApi } from './files'
 import { createPasswordsApi } from './passwords'
+import { createTransferApi } from './transfer'
 import { createRankingApi } from './ranking'
 import { createAutomaticUpdates } from './updates'
 import { asidePath, databaseSidecars, isSchemaConflict, recoveryNotice } from '../../resources/functions/database-recovery'
@@ -53,6 +54,7 @@ const stopActivity = startActivityRuntime(activityApi)
 const ratesApi = createRatesApi()
 const filesApi = createFilesApi()
 const passwordsApi = createPasswordsApi()
+const transferApi = createTransferApi({ version: pkg.version })
 export const shutdown = async () => {
   clearInterval(updateTimer)
   installedApplications.close()
@@ -80,6 +82,8 @@ export default async function handle(request: Request): Promise<Response | null>
   if (files) return files
   const passwords = await passwordsApi(request)
   if (passwords) return passwords
+  const transfer = await transferApi(request)
+  if (transfer) return transfer
   const ranking = await rankingApi(request)
   if (ranking) return ranking
   const activity = await activityApi(request)

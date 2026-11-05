@@ -20,10 +20,21 @@
 /** The format this build writes. An older document still reads; a newer one is refused rather than guessed at. */
 export const documentVersion = 1
 
+/**
+ * The preferences that travel.
+ *
+ * `usage` is left out although it is a preference: recording is opt-in, and carrying the choice over would start
+ * recording on a Mac whose owner never agreed to it there. `loginInitialized` records that this Mac's login item has
+ * been set up, which is true of one machine and not the other. `pantryCatalog` is a cache revision.
+ */
+export const carriedPreferences = ['appearance', 'history', 'githubScope', 'search', 'updates', 'theme'] as const
+
+export type CarriedPreference = typeof carriedPreferences[number]
+
 export interface TransferCommand { title: string, kind: 'quicklink' | 'snippet', content: string, alias: string, shortcut: string }
 export interface TransferTheme { name: string, light: string, dark: string, font: string }
 export interface TransferExtension { name: string, manifest: string, enabled: boolean }
-export interface TransferPreference { key: string, value: string }
+export interface TransferPreference { key: CarriedPreference, value: string }
 /** A favourite or its aliases, without the launch count that sits in the same row. */
 export interface TransferFavorite { key: string, aliases: string, favorite: boolean }
 
@@ -38,15 +49,6 @@ export interface TransferDocument {
   preferences: TransferPreference[]
   favorites: TransferFavorite[]
 }
-
-/**
- * The preferences that travel.
- *
- * `usage` is left out although it is a preference: recording is opt-in, and carrying the choice over would start
- * recording on a Mac whose owner never agreed to it there. `loginInitialized` records that this Mac's login item has
- * been set up, which is true of one machine and not the other. `pantryCatalog` is a cache revision.
- */
-export const carriedPreferences = ['appearance', 'history', 'githubScope', 'search', 'updates', 'theme'] as const
 
 /** Enough for any real setup, and a bound on what a damaged or hostile file can ask Launchpad to read. */
 const limits = { commands: 2000, themes: 200, extensions: 200, preferences: 50, favorites: 5000 }
@@ -94,7 +96,8 @@ export interface TransferSource {
   commands: readonly Partial<TransferCommand>[]
   themes: readonly Partial<TransferTheme>[]
   extensions: readonly Partial<TransferExtension>[]
-  preferences: readonly Partial<TransferPreference>[]
+  /** Every preference row, carried or not: which ones travel is decided here rather than by the caller. */
+  preferences: readonly { key?: string, value?: string }[]
   favorites: readonly (Partial<TransferFavorite> & { launches?: number, lastUsed?: number })[]
 }
 
@@ -128,8 +131,9 @@ const readPreference = (row: unknown): TransferPreference | null => {
   const value = text(source?.value, 1000)
   // A key outside the carried set is dropped rather than refused: a newer build may carry preferences this one has
   // no business writing, and the rest of the document is still worth reading.
-  if (typeof source?.key !== 'string' || !(carriedPreferences as readonly string[]).includes(source.key) || value === null) return null
-  return { key: source.key, value }
+  const key = carriedPreferences.find(carried => carried === source?.key)
+  if (!key || value === null) return null
+  return { key, value }
 }
 
 const readFavorite = (row: unknown): TransferFavorite | null => {
