@@ -3,16 +3,7 @@ import { join } from 'node:path'
 import { applicationDataDirectory, createNativeUpdateApi } from '@stacksjs/desktop'
 import pkg from '../../package.json'
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
-import Command from '../Models/Command'
-import LaunchRecord from '../Models/LaunchRecord'
-import ClipboardEntry from '../Models/ClipboardEntry'
-import AppPreference from '../Models/AppPreference'
-import LauncherActivity from '../Models/LauncherActivity'
-import LauncherUsageDay from '../Models/LauncherUsageDay'
-import UsageRecordingPeriod from '../Models/UsageRecordingPeriod'
-import PantryInstallation from '../Models/PantryInstallation'
-import CatalogPackage from '../Models/CatalogPackage'
-import ExchangeRate from '../Models/ExchangeRate'
+import { models } from './models'
 import { pantryApi } from './pantry'
 import { clearClipboardHistory, pruneClipboardHistory } from './history'
 import { createActivityApi, startActivityRuntime } from './activity'
@@ -23,8 +14,6 @@ import { createPasswordsApi } from './passwords'
 import { createRankingApi } from './ranking'
 import { createAutomaticUpdates } from './updates'
 import { asidePath, databaseSidecars, isSchemaConflict, recoveryNotice } from '../../resources/functions/database-recovery'
-
-const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage, ExchangeRate }
 
 /**
  * The model boot refuses an upgrade that would drop anything, so a store written by a newer build leaves this one

@@ -65,13 +65,28 @@ export function parseDetail(text: string): DetailBlock[] {
       blocks.push({ kind: 'code', text: body.join('\n'), language: fence[1] ?? '' })
       continue
     }
-    if (!line.trim()) { flush(); continue }
-    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(line.trim())) { flush(); blocks.push({ kind: 'rule' }); continue }
+    if (!line.trim()) {
+      flush()
+      continue
+    }
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+      flush()
+      blocks.push({ kind: 'rule' })
+      continue
+    }
     const image = imageAt(line)
     const url = image ? imageUrl(image[2]!) : null
-    if (image && url) { flush(); blocks.push({ kind: 'image', url, alt: image[1] ?? '' }); continue }
+    if (image && url) {
+      flush()
+      blocks.push({ kind: 'image', url, alt: image[1] ?? '' })
+      continue
+    }
     const heading = headingAt(line)
-    if (heading) { flush(); blocks.push({ kind: 'heading', level: heading[1]!.length as 1 | 2 | 3, text: heading[2]!.trim() }); continue }
+    if (heading) {
+      flush()
+      blocks.push({ kind: 'heading', level: heading[1]!.length as 1 | 2 | 3, text: heading[2]!.trim() })
+      continue
+    }
     if (/^\s*>\s?/.test(line)) {
       flush()
       const body: string[] = []

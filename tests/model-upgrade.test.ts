@@ -14,11 +14,12 @@ import LaunchRecord from '../app/Models/LaunchRecord'
 import LauncherActivity from '../app/Models/LauncherActivity'
 import LauncherUsageDay from '../app/Models/LauncherUsageDay'
 import PantryInstallation from '../app/Models/PantryInstallation'
+import Theme from '../app/Models/Theme'
 import UsageRecordingPeriod from '../app/Models/UsageRecordingPeriod'
 
 // The models every earlier release shipped. Newer releases add tables; they never change or remove these.
 const previous = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage }
-const current = { ...previous, ExchangeRate, Extension }
+const current = { ...previous, ExchangeRate, Extension, Theme }
 
 test('a database from the previous release upgrades in place and keeps every row', async () => {
   const root = mkdtempSync(join(tmpdir(), 'launchpad-upgrade-'))

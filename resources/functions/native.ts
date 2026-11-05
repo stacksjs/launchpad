@@ -119,7 +119,10 @@ export async function onSelectionService(run: (selection: Selection) => void): P
   const outcome = await serviceMenu.register(selectionServiceName).catch((): { ok: boolean, reason?: string } => ({ ok: false }))
   // A refused registration leaves the listener attached but idle, which costs nothing and keeps the caller simple.
   if (!outcome.ok) return stop
-  return () => { stop(); void serviceMenu.unregister(selectionServiceName).catch(() => {}) }
+  return () => {
+    stop()
+    void serviceMenu.unregister(selectionServiceName).catch(() => {})
+  }
 }
 
 /**
