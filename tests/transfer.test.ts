@@ -3,10 +3,13 @@ import {
   buildDocument,
   carriedPreferences,
   describePlan,
+  describeReport,
   documentName,
   documentVersion,
+  folderPath,
   planMerge,
   readDocument,
+  readTransferSettings,
   resolveMerge,
   serializeDocument,
 } from '../resources/functions/transfer'
@@ -114,4 +117,22 @@ test('the file is named after the Mac, so one folder can hold several', () => {
   expect(documentName("Glenn's MacBook Pro")).toBe('launchpad-glenn-s-macbook-pro.json')
   expect(documentName('')).toBe('launchpad-settings.json')
   expect(documentName('../../etc/passwd')).toBe('launchpad-etc-passwd.json')
+})
+
+test('a kept folder is read back, and anything unusable means no folder', () => {
+  expect(readTransferSettings('{"folder":"/Users/me/Dropbox/Launchpad"}')).toEqual({ folder: '/Users/me/Dropbox/Launchpad' })
+  for (const value of [undefined, '', '{', '[]', '{"folder":""}', '{"folder":"Dropbox"}', '{"folder":42}', `{"folder":"/${'x'.repeat(1100)}"}`])
+    expect(readTransferSettings(value)).toEqual({ folder: '' })
+})
+
+test('the file lands in the folder whether or not it was given a trailing slash', () => {
+  expect(folderPath('/Users/me/Dropbox', 'launchpad-air.json')).toBe('/Users/me/Dropbox/launchpad-air.json')
+  expect(folderPath('/Users/me/Dropbox///', 'launchpad-air.json')).toBe('/Users/me/Dropbox/launchpad-air.json')
+})
+
+test('a report says what happened, including the conflicts nothing happened to', () => {
+  expect(describeReport({ added: 3, replaced: 0, unchanged: 4, conflicts: 2 })).toBe('Imported · 3 added · 2 kept as it was here · 4 already the same')
+  expect(describeReport({ added: 0, replaced: 2, unchanged: 0, conflicts: 2 })).toBe('Imported · 2 replaced')
+  expect(describeReport({ added: 1, replaced: 1, unchanged: 0, conflicts: 3 })).toBe('Imported · 1 added · 1 replaced · 2 kept as it was here')
+  expect(describeReport({ added: 0, replaced: 0, unchanged: 0, conflicts: 0 })).toBe('Nothing in that file was new to this Mac.')
 })

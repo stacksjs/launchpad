@@ -10,6 +10,7 @@ import {
   carriedPreferences,
   describePlan,
   documentName,
+  folderPath,
   identity,
   planMerge,
   readDocument,
@@ -212,7 +213,9 @@ export function createTransferApi(options: TransferPorts = {}) {
     let body: Record<string, unknown>
     try { body = await request.json() as Record<string, unknown> }
     catch { return refuse('Expected a JSON body.') }
-    const path = checkPath(body.path)
+    // A kept copy names its folder and lets the file be named here, so every Mac's copy is named the same way.
+    const folder = checkPath(body.folder)
+    const path = folder ? folderPath(folder, documentName(machine())) : checkPath(body.path)
     if (!path) return refuse('That is not a usable file path.')
 
     if (pathname === '/api/transfer/export') {

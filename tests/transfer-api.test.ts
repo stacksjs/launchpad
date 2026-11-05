@@ -157,3 +157,15 @@ test('an unknown transfer path and a wrong method are refused rather than ignore
   expect(wrong!.status).toBe(405)
   expect(await api()(new Request('http://launchpad.test/api/other'))).toBeNull()
 })
+
+test('a kept folder names the file itself, so both Macs agree on the name', async () => {
+  await seed()
+  const result = await data(await post('/api/transfer/export', { folder: '/Users/me/Dropbox/Launchpad/' }))
+  expect(result.path).toBe('/Users/me/Dropbox/Launchpad/launchpad-test-mac.json')
+  expect(Object.keys(written)).toEqual(['/Users/me/Dropbox/Launchpad/launchpad-test-mac.json'])
+})
+
+test('a folder that is not an absolute path is refused like any other', async () => {
+  expect(await failure(await post('/api/transfer/export', { folder: 'Dropbox' }))).toBe('That is not a usable file path.')
+  expect(Object.keys(written)).toEqual([])
+})

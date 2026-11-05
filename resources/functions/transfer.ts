@@ -25,7 +25,8 @@ export const documentVersion = 1
  *
  * `usage` is left out although it is a preference: recording is opt-in, and carrying the choice over would start
  * recording on a Mac whose owner never agreed to it there. `loginInitialized` records that this Mac's login item has
- * been set up, which is true of one machine and not the other. `pantryCatalog` is a cache revision.
+ * been set up, which is true of one machine and not the other. `pantryCatalog` is a cache revision. `sync` names a
+ * folder on this Mac, and carrying it would have each machine writing over the other's copy.
  */
 export const carriedPreferences = ['appearance', 'history', 'githubScope', 'search', 'updates', 'theme'] as const
 
@@ -258,6 +259,19 @@ export function resolveMerge(plan: MergePlan, choice: ConflictChoice = 'mine'): 
   return choice === 'theirs' ? [...plan.add, ...plan.conflicts.map(({ kind, label, row }) => ({ kind, label, row }))] : [...plan.add]
 }
 
+export interface TransferReport { added: number, replaced: number, unchanged: number, conflicts: number }
+
+/** What an import actually did, said plainly. A conflict left alone is still worth mentioning: nothing happened to it. */
+export function describeReport(report: TransferReport): string {
+  const parts: string[] = []
+  if (report.added) parts.push(`${report.added} added`)
+  if (report.replaced) parts.push(`${report.replaced} replaced`)
+  const kept = report.conflicts - report.replaced
+  if (kept > 0) parts.push(`${kept} kept as it was here`)
+  if (report.unchanged) parts.push(`${report.unchanged} already the same`)
+  return parts.length ? `Imported · ${parts.join(' · ')}` : 'Nothing in that file was new to this Mac.'
+}
+
 /** A one-line account of a plan, for the person about to accept it. */
 export function describePlan(plan: MergePlan): string {
   const parts: string[] = []
@@ -271,4 +285,30 @@ export function describePlan(plan: MergePlan): string {
 export function documentName(machine: string): string {
   const slug = machine.normalize('NFD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLocaleLowerCase().slice(0, 40)
   return slug ? `launchpad-${slug}.json` : 'launchpad-settings.json'
+}
+
+/**
+ * Where a copy is kept, when someone wants one kept.
+ *
+ * Choosing a folder is what turns an export into something that keeps up with the setup. A folder a syncing service
+ * already watches then carries the file between Macs, with no account and nothing of Launchpad's in the middle: the
+ * service is one the person already chose, and Launchpad only writes a file into a folder they named.
+ */
+export interface TransferSettings { folder: string }
+
+export const defaultTransferSettings: TransferSettings = { folder: '' }
+
+/** Stored as JSON text on the `sync` preference. Anything unreadable means no folder, which is the default. */
+export function readTransferSettings(value: string | undefined): TransferSettings {
+  try {
+    const saved = JSON.parse(value || '{}') as { folder?: unknown }
+    const folder = typeof saved?.folder === 'string' ? saved.folder.trim() : ''
+    return { folder: folder.startsWith('/') && folder.length <= 1024 ? folder : '' }
+  }
+  catch { return defaultTransferSettings }
+}
+
+/** The file inside a chosen folder. One trailing slash or none makes no difference to where it lands. */
+export function folderPath(folder: string, name: string): string {
+  return `${folder.replace(/\/+$/, '')}/${name}`
 }
