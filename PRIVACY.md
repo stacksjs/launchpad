@@ -48,9 +48,19 @@ Direct-download copies check Launchpad's GitHub releases and download available 
 
 Turn off Automatic Updates in Software Update settings to check and download manually. Installation waits for Install and Restart. The preference stays in the local database. App Store copies use App Store updates.
 
+## Settings file
+
+Settings has an export that writes your configuration to one JSON file: quicklinks, snippets, their aliases and shortcuts, saved themes, installed extension manifests, favorites and their aliases, and the appearance, history retention, GitHub repository scope, search, update and theme preferences. Clipboard history, usage records, Pantry receipts, cached package metadata and exchange rates are not in the file. Launch counts and last-used times are not in it either, so a favorite can travel without how often you opened it. Your GitHub and Pantry tokens are not in it: they are in macOS Keychain, and the other Mac asks for its own.
+
+Launchpad writes this file only where you point a save dialog, and reads one only where you point an open dialog. Choosing Keep a copy up to date asks for a folder and rewrites the file there when you change a setting and close Settings. Nothing is sent anywhere: Launchpad has no account, no server and no sync service of its own.
+
+If you put that folder in iCloud Drive, Dropbox or another syncing service, that service receives the file and handles it under its own privacy practices. That is your choice of service and not a connection Launchpad makes. Choose Stop to leave the file where it is and stop updating it; Launchpad does not delete it.
+
+Importing a file shows what it would add and what already differs on this Mac before anything is written, and never deletes a command, theme, extension, favorite or preference.
+
 ## Storage and deletion
 
-Launchpad provides no cloud synchronization. Local data remains until its retention period expires or you delete it. Uninstalling an app may leave its container and Keychain items behind. Disconnect GitHub and clear clipboard and usage history before removing the app if you want to remove those records. Saved commands and preferences can also be removed with the app's Application Support data.
+Launchpad has no cloud synchronization of its own and no hosted service: carrying settings between Macs is the file described above, written where you choose. Local data remains until its retention period expires or you delete it. Uninstalling an app may leave its container and Keychain items behind. Disconnect GitHub and clear clipboard and usage history before removing the app if you want to remove those records. Saved commands and preferences can also be removed with the app's Application Support data.
 
 Contact Chris Breuer at chris@stacksjs.com for privacy questions. [Support and issue reporting](https://github.com/stacksjs/launchpad/issues) are available on GitHub. Do not include personal clipboard contents, tokens or other sensitive text in public issues.
 

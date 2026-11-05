@@ -131,7 +131,8 @@ Launchpad works without a Stacks account or hosted API. Its local SQLite databas
 - **Exchange rates are opt-in.** When you turn them on, Launchpad downloads the European Central Bank's published rates about once a day from `api.frankfurter.dev`. The request carries no search text.
 - **Credentials use Keychain.** GitHub and Pantry connection tokens are separate from the local database.
 - **Connected services use the network.** GitHub receives GitHub searches. Catalog refreshes and logos come from Pantry's public sources; installations contact the registry and upstream providers through Pantry.
-- **No cloud synchronization is enabled.** Local clipboard history and usage history have separate clear controls.
+- **Settings travel as a file, not a service.** Export your commands, themes, extensions, favorites and preferences to one JSON file, and import it on another Mac after reading what it would change. Clipboard history, usage records, launch counts and Keychain tokens are not in it. Keep a copy in a folder you choose — iCloud Drive, Dropbox, anything — and that service, not Launchpad, carries it.
+- **No cloud synchronization of its own.** Launchpad has no account and no hosted service. Local clipboard history and usage history have separate clear controls.
 
 Read the [privacy policy](PRIVACY.md) and [local usage contract](docs/local-usage.md) for retention, metric definitions and API behavior.
 
