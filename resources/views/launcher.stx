@@ -56,7 +56,7 @@ const pantryFilter = state('all')
 const packageDetail = state<Result | null>(null)
 const installJobs = state<DesktopInstallJob[]>([])
 const installJob = derived(() => installJobs().find(job => job.domain === packageDetail()?.content) || null)
-const packageState = derived(() => packageDetail()?.package ? packageInstallState(packageDetail().package, pantryInstalled(), installJob(), pantryReady()) : null)
+const packageState = derived(() => packageDetail()?.package ? packageInstallState(packageDetail().package, pantryInstalled(), installJob(), pantryReady(), pantryRestoring() || pantryInstallRefresh()) : null)
 const packageAppPath = derived(() => packageState()?.applicationPath || '')
 const packageError = state('')
 const pantryInstallRefresh = state(false)
@@ -326,7 +326,7 @@ async function refreshPackages() {
   finally { pantryRestoring.set(false) }
 }
 async function disconnectPackages() {
-  try { await disconnectPantry(); pantryReady.set(false); pantryInstalled.set([]); pantryStatus.set('Pantry disconnected. Catalog search remains available.') }
+  try { await disconnectPantry(); pantryReady.set(false); pantryInstalled.set([]); installJobs.set([]); pantryInstallRefresh.set(false); packageError.set(''); pantryStatus.set('Pantry disconnected. Catalog search remains available.') }
   catch (reason) { pantryStatus.set(reason.message) }
 }
 async function openPackageApplication() {
@@ -360,11 +360,12 @@ async function startInstall() {
   finally { packageBusy.set(false) }
 }
 async function pollInstall() {
-  if ((!pantryInstallRefresh() && !installJobs().some(job => ['queued', 'running'].includes(job.status))) || pollingJob) return
+  if (!pantryReady() || (!pantryInstallRefresh() && !installJobs().some(job => ['queued', 'running'].includes(job.status))) || pollingJob) return
   pollingJob = true
   try {
     const previous = installJobs()
     const current = await pantryJobs()
+    if (!pantryReady()) return
     packageError.set('')
     installJobs.set(current)
     const completed = current.filter(job => job.status === 'succeeded' && previous.some(old => old.id === job.id && ['queued', 'running'].includes(old.status)))
@@ -376,10 +377,10 @@ async function pollInstall() {
       pantryInstallRefresh.set(false)
     }
   }
-  catch (reason) { pantryStatus.set(reason.message); packageError.set(reason.message) }
+  catch (reason) { if (pantryReady()) { pantryStatus.set(reason.message); packageError.set(reason.message) } }
   finally { pollingJob = false }
 }
-pollWhile(pollInstall, 1000, () => pantryInstallRefresh() || installJobs().some(job => ['queued', 'running'].includes(job.status)))
+pollWhile(pollInstall, 1000, () => pantryReady() && (pantryInstallRefresh() || installJobs().some(job => ['queued', 'running'].includes(job.status))))
 
 const refreshApplications = createApplicationRefresh({ load: () => api('applications'), current: items, replace: value => items.set(value), count: count => status.set(plural(count, 'application') + ' · Local commands') })
 pollWhile(() => { void refreshApplications().catch(fail) }, 5000, () => paletteVisible())
@@ -1699,9 +1700,9 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       <div class="package-heading"><img :if="packageDetail().icon" :src="packageDetail().icon" class="package-logo" width="48" height="48" alt=""><div><h2>{{ packageDetail().title }}</h2><p class="help">{{ packageDetail().package?.kind === 'app' ? 'Mac application' : packageDetail().package?.kind === 'cli' ? 'Command line tool' : packageDetail().package?.kind === 'font' ? 'Font' : 'Library' }} · {{ packageDetail().content }}</p></div></div>
       <p class="package-description">{{ packageDetail().package?.description }}</p>
       <div class="flex gap-3 items-center"><span class="package-badge">{{ pantryInstalled().find(item => item.name === packageDetail().content)?.version || packageDetail().package?.latestVersion || 'Latest available' }}</span><button :if="packageDetail().package?.homepageUrl" type="button" class="text-action" @click="openLink(packageDetail().package.homepageUrl, 'pantry')">Project website ↗</button><button :if="packageDetail().package?.githubUrl" type="button" class="text-action" @click="openLink(packageDetail().package.githubUrl, 'pantry')">GitHub ↗</button></div>
-      <div class="package-status" :class="{ 'package-status-error': packageError() || installJob()?.status === 'failed' || packageState()?.repair }" role="status" aria-live="polite" :aria-busy="packageState()?.active">
-        <span :if="packageState()?.active" class="package-spinner" aria-hidden="true"></span>
-        <div><strong>{{ packageError() ? 'Pantry needs attention' : packageState()?.active ? 'Installation in progress' : packageState()?.repair ? 'Finish app installation' : installJob()?.status === 'failed' ? 'Installation needs attention' : packageState()?.ready ? 'Installed' : 'Ready to install' }}</strong><p>{{ packageError() || packageState()?.status }}</p><p :if="packageAppPath()" class="package-path">{{ packageAppPath() }}</p><button :if="packageState()?.repair" type="button" class="text-action" @click="configurePantry()">Pantry setup and settings ↗</button></div>
+      <div class="package-status" :class="{ 'package-status-error': packageError() || installJob()?.status === 'failed' || packageState()?.repair }" role="status" aria-live="polite" :aria-busy="packageState()?.active || packageState()?.checking">
+        <span :if="packageState()?.active || packageState()?.checking" class="package-spinner" aria-hidden="true"></span>
+        <div><strong>{{ packageError() ? 'Pantry needs attention' : packageState()?.checking ? 'Checking installation' : packageState()?.active ? 'Installation in progress' : packageState()?.repair ? 'Finish app installation' : installJob()?.status === 'failed' ? 'Installation needs attention' : packageState()?.ready ? 'Installed' : 'Ready to install' }}</strong><p>{{ packageError() || packageState()?.status }}</p><p :if="packageAppPath()" class="package-path">{{ packageAppPath() }}</p><button :if="packageState()?.repair" type="button" class="text-action" @click="configurePantry()">Pantry setup and settings ↗</button></div>
       </div>
       <details :if="installJob()?.output" class="package-details"><summary>Installation details</summary><pre class="package-output" aria-label="Pantry installation output">{{ installJob().output }}</pre></details>
     </div>

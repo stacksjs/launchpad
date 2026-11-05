@@ -78,6 +78,7 @@ test('app installation readiness requires a bundle and permits repair of old suc
   const stored = [{ name: entry.domain, version: '1' }]
   const job = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), domain: entry.domain, status: 'succeeded' as const, createdAt: new Date().toISOString(), output: 'done' }
   expect(packageInstallState(entry, stored, job, true)).toMatchObject({ ready: false, repair: true, disabled: false, button: 'Repair installation' })
+  expect(packageInstallState(entry, stored, job, true, true)).toMatchObject({ checking: true, repair: false, disabled: true, button: 'Checking installation…' })
   expect(installedCatalog([entry], stored)).toEqual([])
   expect(pantryResults([entry], [], stored)[0]?.installedVersion).toBeUndefined()
   const installed = [{ ...stored[0]!, applicationPath: '/Users/test/Applications/Figma.app' }]

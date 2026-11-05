@@ -61,20 +61,21 @@ export function pantryResults(catalog: readonly PackageCatalogEntry[], applicati
 export async function pantryJobs(): Promise<DesktopInstallJob[]> { return await client().jobs() }
 
 /** App readiness follows a discovered bundle, including with older Pantry services. */
-export function packageInstallState(entry: PackageCatalogEntry, installed: DesktopInstalledPackage[], job: DesktopInstallJob | null, connected: boolean) {
+export function packageInstallState(entry: PackageCatalogEntry, installed: DesktopInstalledPackage[], job: DesktopInstallJob | null, connected: boolean, refreshing = false) {
   const record = installed.find(item => item.name === entry.domain && (entry.kind !== 'app' || item.applicationPath))
   const applicationPath = record?.applicationPath || ''
   const active = Boolean(job && ['queued', 'running'].includes(job.status))
-  const repair = entry.kind === 'app' && !applicationPath && (installed.some(item => item.name === entry.domain) || job?.status === 'succeeded')
+  const checking = refreshing && !active
+  const repair = !checking && entry.kind === 'app' && !applicationPath && (installed.some(item => item.name === entry.domain) || job?.status === 'succeeded')
   const ready = Boolean(record)
-  const status = active ? job?.status === 'queued' ? 'Waiting for another installation to finish' : `Installing ${entry.name}…`
+  const status = checking ? 'Confirming the installation on this Mac…' : active ? job?.status === 'queued' ? 'Waiting for another installation to finish' : `Installing ${entry.name}…`
     : repair ? 'The package was downloaded, but the app is missing from Applications. Install it again to finish setup.'
     : job?.status === 'failed' ? job.error || 'Installation failed. Open the details below, then try again.'
     : ready ? entry.kind === 'app' ? 'Ready to open' : 'Installed on this Mac'
     : connected ? entry.kind === 'app' ? 'Installs to your Applications folder' : entry.kind === 'font' ? 'Installs to your Fonts folder' : 'Installs for your user account'
     : 'Connect Pantry in Settings to install this package.'
-  return { applicationPath, active, ready, repair, status,
-    button: !connected ? 'Connect Pantry' : active ? job?.status === 'queued' ? 'Queued…' : 'Installing…' : repair ? 'Repair installation' : job?.status === 'failed' ? 'Try again' : ready ? 'Installed' : 'Install',
-    disabled: connected && (active || ready),
+  return { applicationPath, active, checking, ready, repair, status,
+    button: !connected ? 'Connect Pantry' : checking ? 'Checking installation…' : active ? job?.status === 'queued' ? 'Queued…' : 'Installing…' : repair ? 'Repair installation' : job?.status === 'failed' ? 'Try again' : ready ? 'Installed' : 'Install',
+    disabled: connected && (active || ready || checking),
   }
 }

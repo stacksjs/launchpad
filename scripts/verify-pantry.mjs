@@ -47,9 +47,12 @@ try {
   await page.waitForFunction(() => !window.__launcher.packageBusy())
   assert.equal(requests.length, 2)
   assert.equal(requests[0].requestId, requests[1].requestId, 'Retrying an uncertain request must retain its deduplication key')
+  await page.evaluate(() => { const s = window.__launcher; s.packageError.set(''); s.pantryInstallRefresh.set(true) })
+  assert.equal(await page.getByRole('button', { name: 'Checking installation…', exact: true }).isDisabled(), true)
+  assert.equal(await page.getByRole('button', { name: 'Repair installation', exact: true }).count(), 0)
   await page.evaluate(() => {
     const s = window.__launcher
-    s.packageError.set('')
+    s.pantryInstallRefresh.set(false)
     s.installJobs.set(s.installJobs().map(job => ({ ...job, status: 'queued' })))
   })
   assert.equal(await page.getByRole('button', { name: 'Queued…', exact: true }).isDisabled(), true)
