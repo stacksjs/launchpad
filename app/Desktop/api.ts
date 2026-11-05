@@ -1,3 +1,4 @@
+import { existsSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { applicationDataDirectory, createNativeUpdateApi } from '@stacksjs/desktop'
 import pkg from '../../package.json'
@@ -21,10 +22,37 @@ import { createFilesApi } from './files'
 import { createPasswordsApi } from './passwords'
 import { createRankingApi } from './ranking'
 import { createAutomaticUpdates } from './updates'
+import { asidePath, databaseSidecars, isSchemaConflict, recoveryNotice } from '../../resources/functions/database-recovery'
 
 const models = { Command, LaunchRecord, ClipboardEntry, AppPreference, LauncherActivity, LauncherUsageDay, UsageRecordingPeriod, PantryInstallation, CatalogPackage, ExchangeRate }
+
+/**
+ * The model boot refuses an upgrade that would drop anything, so a store written by a newer build leaves this one
+ * unable to start — and with no Dock icon, unable to say so. A launcher that will not open is worse than one that
+ * has forgotten something, so the old store is set aside and a fresh one takes its place.
+ *
+ * Only that one failure is recovered from. A full disk or an unwritable path still throws, because losing the store
+ * would be the wrong answer to either.
+ */
+function openDatabase(path: string): string {
+  try {
+    openNativeDatabase({ path, models })
+    return ''
+  }
+  catch (reason) {
+    if (!isSchemaConflict(reason)) throw reason
+    const movedTo = asidePath(path)
+    renameSync(path, movedTo)
+    // A journal left from the old store would be replayed against the new one.
+    for (const suffix of databaseSidecars) if (existsSync(path + suffix)) renameSync(path + suffix, movedTo + suffix)
+    openNativeDatabase({ path, models })
+    return movedTo
+  }
+}
+
 // Craft/stx owns the authenticated loopback session and backend process.
-openNativeDatabase({ path: join(applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' }), 'launchpad.sqlite'), models })
+const databaseSetAside = openDatabase(join(applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' }), 'launchpad.sqlite'))
+if (databaseSetAside) console.warn(recoveryNotice(databaseSetAside))
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: pkg.version })
 const automaticUpdates = createAutomaticUpdates(updates)
@@ -48,6 +76,8 @@ export default async function handle(request: Request): Promise<Response | null>
   const pathname = new URL(request.url).pathname
   const pantry = await pantryApi(request, { onJobs: activityApi.recordPantryJobs })
   if (pantry) return pantry
+  if (pathname === '/api/startup' && request.method === 'GET')
+    return Response.json({ databaseSetAside, notice: databaseSetAside ? recoveryNotice(databaseSetAside) : '' }, { headers: { 'cache-control': 'private, no-store' } })
   if (pathname === '/api/applications' && request.method === 'GET')
     return Response.json({ data: await installedApplications() }, { headers: { 'cache-control': 'private, no-store' } })
   if (pathname === '/api/clipboard-history' && request.method === 'DELETE') {

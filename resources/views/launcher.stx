@@ -1210,6 +1210,14 @@ async function loadPasswords() {
   catch { passwordItems.set([]) }
 }
 effect(() => { if (searchableVisible() && searchSettings().passwords) void loadPasswords() })
+// A store written by a newer build is set aside rather than refused, which is only honest if it is said out loud.
+void (async () => {
+  try {
+    const startup = await api('startup')
+    if (startup?.notice) status.set(startup.notice)
+  }
+  catch { /* an older backend has no such route, and nothing was set aside */ }
+})()
 const stopCommandShortcuts = onCommandShortcut((commandId) => { void runShortcut(commandId) })
 // Registering can be refused on a build whose bundle does not declare the Service; the palette carries on regardless.
 let stopSelectionService = () => {}
