@@ -19,7 +19,7 @@ try {
   let releaseStatus = () => {}
   const slowStatus = new Promise(resolve => { releaseStatus = resolve })
   page.on('pageerror', error => errors.push(String(error)))
-  await page.addInitScript(factory => { (0, eval)(`(${factory})`)(['window', 'app']) }, installMockBridge.toString())
+  await page.addInitScript(factory => { const bridge = (0, eval)(`(${factory})`)(['window', 'app', 'serviceMenu']); bridge.whenCalled('serviceMenu', 'register', { ok: true }) }, installMockBridge.toString())
   await page.route('**/*', async route => {
     const url = new URL(route.request().url())
     if (url.origin !== 'http://localhost') return route.abort()
@@ -34,7 +34,7 @@ try {
         const action = url.pathname.split('/').pop()
         actions.push(action)
         if (action === 'check') state = offline ? { ...state, phase: 'error', error: 'Network unavailable' } : { currentVersion: state.currentVersion, phase: 'available', version: '1.0.11' }
-        if (action === 'download') state = { ...state, phase: 'ready', percent: 100 }
+        if (action === 'download') state = { ...state, phase: 'downloading', percent: 37 }
         if (action === 'install') state = { ...state, phase: 'installed' }
       }
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify(state) })
@@ -52,6 +52,7 @@ try {
   })
   await page.goto('http://localhost/')
   await page.waitForFunction(() => window.__launcher)
+  if (process.env.LAUNCHPAD_UI_DARK) await page.evaluate(() => { document.documentElement.classList.add('dark'); window.__launcher.applyTheme() })
   await page.evaluate(() => {
     const s = window.__launcher
     s.settings.set(true); s.settingsSection.set('updates'); s.paletteVisible.set(true)
@@ -69,9 +70,25 @@ try {
   assert.equal(await page.getByText('Network unavailable', { exact: true }).count(), 1, 'A stale status read cannot overwrite a newer check.')
   assert.equal(await page.getByText('You are up to date.', { exact: true }).count(), 0)
   offline = false
-  await page.getByRole('button', { name: 'Check for Updates...', exact: true }).click()
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await page.getByText('Launchpad 1.0.11 is available.', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'Download update', exact: true }).click()
+  await page.getByText('37%', { exact: true }).waitFor()
+  const progress = page.getByRole('progressbar', { name: 'Update download progress' })
+  assert.equal(await progress.getAttribute('value'), '37')
+  assert.equal(await page.locator('.update-card').getAttribute('aria-busy'), 'true')
+  assert.equal(await page.getByRole('button', { name: 'Downloading…', exact: true }).count(), 0)
+  const toggleBox = await automaticUpdates.boundingBox()
+  const detailBox = await page.locator('.settings-detail').boundingBox()
+  assert.ok(toggleBox.y + toggleBox.height <= detailBox.y + detailBox.height, 'Automatic updates stays visible alongside download progress.')
+  if (process.env.LAUNCHPAD_UPDATE_SCREENSHOT) await page.screenshot({ path: process.env.LAUNCHPAD_UPDATE_SCREENSHOT })
+  state = { ...state, percent: undefined }
+  await page.evaluate(value => window.__launcher.updateState.set(value), state)
+  await page.getByText('Preparing download…', { exact: true }).waitFor()
+  assert.equal(await page.getByRole('progressbar', { name: 'Update download progress' }).getAttribute('aria-valuenow'), null)
+  assert.equal(await page.getByText('0%', { exact: true }).count(), 0, 'Unknown progress must not pretend the download is at zero.')
+  state = { ...state, phase: 'ready', percent: 100 }
+  await page.evaluate(value => window.__launcher.updateState.set(value), state)
   await page.getByRole('button', { name: 'Install and Restart', exact: true }).click()
   await page.getByText('Restarting Launchpad...', { exact: true }).waitFor()
   assert.deepEqual(actions, ['check', 'check', 'download', 'install'])
@@ -106,6 +123,21 @@ try {
   await page.evaluate(() => window.__launcher.updateState.set({ currentVersion: '1.0.10', phase: 'unavailable', error: 'Use the App Store to update this copy.' }))
   await page.getByText('Use the App Store to update this copy.', { exact: true }).waitFor()
   assert.equal(await page.getByRole('switch', { name: 'Automatic Updates', exact: true }).count(), 0)
+  await page.evaluate(() => { const s = window.__launcher; s.settings.set(false); s.query.set(''); s.category.set('all'); s.error.set(''); s.loading.set(false); s.items.set([{ key: 'sample:github', title: 'GitHub', kind: 'quicklink', content: 'https://github.com', subtitle: 'Quicklink' }]) })
+  const header = page.locator('.palette-header')
+  const box = await header.boundingBox()
+  assert.ok(box.height <= 64, 'Search and actions share one compact header.')
+  assert.equal(await page.getByRole('navigation', { name: 'Palette actions' }).evaluate(nav => nav.parentElement.tagName), 'HEADER')
+  const inputBox = await page.getByRole('combobox', { name: 'Search applications and commands' }).boundingBox()
+  const actionsBox = await page.getByRole('navigation', { name: 'Palette actions' }).boundingBox()
+  assert.ok(Math.abs(inputBox.y + inputBox.height / 2 - actionsBox.y - actionsBox.height / 2) < 2)
+  if (process.env.LAUNCHPAD_HEADER_SCREENSHOT) await page.screenshot({ path: process.env.LAUNCHPAD_HEADER_SCREENSHOT })
+  await page.evaluate(() => window.__launcher.category.set('application'))
+  for (const width of [720, 560, 420]) {
+    await page.setViewportSize({ width, height: 450 })
+    assert.ok((await page.getByRole('combobox', { name: 'Search applications and commands' }).boundingBox()).width > 100, 'The mode chip leaves room to type at narrow widths.')
+    assert.equal(await header.evaluate(node => node.scrollWidth <= node.clientWidth), true, 'Header controls must fit without wrapping or horizontal overflow.')
+  }
   assert.deepEqual(errors, [])
   process.stdout.write(JSON.stringify({ offlineCheckDoesNotClaimCurrent: true, retryDownloadInstallControls: true, frameworkEndpoint: true }) + '\n')
 }
