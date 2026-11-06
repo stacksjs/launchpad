@@ -1806,7 +1806,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <h2>One setup, every Mac.</h2>
         <p class="help">Your commands, themes, extensions, favourites and settings written to a single file, and read back on another Mac. Nothing leaves this Mac on its own: the file goes where you put it, and Launchpad has no account and no server to sync through.</p>
         <p class="help">Clipboard history and usage records are never in the file. Neither are your GitHub and Pantry tokens, which stay in this Mac's keychain — the other Mac asks for its own.</p>
-        <div class="setting-actions">
+        <div class="button-row">
           <button type="button" class="save-button" @click="exportSettings()" :disabled="syncBusy()">Export to a file...</button>
           <button type="button" class="text-action" @click="chooseImport()" :disabled="syncBusy()">Import from a file...</button>
         </div>
@@ -1816,7 +1816,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           <div :if="importPlan().add.length" class="setting-row"><div><strong>{{ plural(importPlan().add.length, 'new item') }}</strong><p class="help">{{ importLabels(importPlan().add) }}</p></div></div>
           <div :if="importPlan().conflicts.length" class="setting-row"><div><strong>{{ plural(importPlan().conflicts.length, 'item') }} already different here</strong><p class="help">{{ importLabels(importPlan().conflicts) }}</p></div></div>
           <p :if="importPlan().conflicts.length" class="help">Adding leaves these as they are on this Mac. Replacing takes the file's version instead. Either way, nothing is deleted.</p>
-          <div class="setting-actions">
+          <div class="button-row">
             <button type="button" class="save-button" @click="applyImport('mine')" :disabled="syncBusy()">{{ importPlan().add.length ? 'Add ' + plural(importPlan().add.length, 'item') : 'Keep everything as it is' }}</button>
             <button :if="importPlan().conflicts.length" type="button" class="text-action" @click="applyImport('theirs')" :disabled="syncBusy()">Add and replace {{ importPlan().conflicts.length }}</button>
             <button type="button" class="text-action" @click="cancelImport()">Cancel</button>
@@ -2055,6 +2055,12 @@ header input:focus-visible { outline: none; }
 .setting-row, .setting-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .setting-row input[type=checkbox] { width: 30px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
 .setting-actions { margin-top: 14px; }
+/* A row of buttons stands together. `.setting-actions` spreads its children apart, which suits one help text and one
+   action but leaves two buttons pushed to opposite edges, reading as unrelated. */
+.button-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+/* `.settings h2` sets `margin: 0 0 6px`, and an element-plus-class selector outranks a utility class, so `mt-5` on a
+   settings subheading never applied and every one of them sat flush against whatever came before it. */
+.settings h2.mt-5 { margin-top: 20px; }
 .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
 .theme-option { display: flex; flex-direction: column; gap: 9px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; }
 .theme-option.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
