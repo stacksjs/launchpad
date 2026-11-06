@@ -1,5 +1,23 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.8...v1.1.9)
+
+## ✨ Features
+
+- **transfer**: show what a conflicting item actually disagrees about ([ccd9508](https://github.com/stacksjs/launchpad/commit/ccd9508)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **settings**: give subheadings room and keep a row of buttons together ([1d15985](https://github.com/stacksjs/launchpad/commit/1d15985)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🔧 Chores
+
+- release v1.1.9 ([7f6f59a](https://github.com/stacksjs/launchpad/commit/7f6f59a)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## Contributors
+
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.7...v1.1.8)
 
 ## 🐛 Bug Fixes
