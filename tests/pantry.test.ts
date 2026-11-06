@@ -88,3 +88,8 @@ test('app installation readiness requires a bundle and permits repair of old suc
   expect(packageInstallState(entry, [], { ...job, status: 'failed', error: 'No compatible artifact' }, true)).toMatchObject({ disabled: false, button: 'Try again', status: 'No compatible artifact' })
   expect(packageInstallState(entry, [], null, false).button).toBe('Connect Pantry')
 })
+
+
+test('the shipped Pantry catalog routes GitHub Desktop through native app installation', () => {
+  expect(bundledPackageCatalog().find(entry => entry.domain === 'github.com/desktop')?.kind).toBe('app')
+})

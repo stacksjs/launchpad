@@ -14,7 +14,7 @@
         "@stacksjs/ts-svg": "0.1.7",
         "@stacksjs/validation": "0.75.323",
         "ts-images": "0.2.32",
-        "ts-pantry": "0.11.167",
+        "ts-pantry": "0.11.171",
       },
       "devDependencies": {
         "@buddysh/buddy": "^0.11.13",
@@ -341,7 +341,7 @@
 
     "ts-medium-editor": ["ts-medium-editor@0.2.0", "", {}, "sha512-XR4Orpxm1v9OfP6dCMImYpPaqdJUdoRl3laUUiPB9dR9WJHSFbWZmHCBdPG3uiQiaQljeSssKQTZTUcfQnsj3g=="],
 
-    "ts-pantry": ["ts-pantry@0.11.167", "", { "dependencies": { "@stacksjs/bumpx": "^0.2.29", "@stacksjs/env": "^0.75.311" }, "bin": { "ts-pantry": "./dist/bin/cli.js", "pantry-desktop": "./dist/bin/desktop.js" } }, "sha512-KqxQnL3YkYaYDBISsEnsgK4+078+b3w8sVZow12+DGqQy63GXY+h7KSwOKaHrcpnyo0huby5C96QHzIclQ933Q=="],
+    "ts-pantry": ["ts-pantry@0.11.171", "", { "dependencies": { "@stacksjs/bumpx": "^0.2.29", "@stacksjs/env": "^0.75.311" }, "bin": { "ts-pantry": "./dist/bin/cli.js", "pantry-desktop": "./dist/bin/desktop.js" } }, "sha512-wvT/exa0NPj7KWxbcEa6QPWh2i3aEobRrUeAgwgFCpNPiXPPphTmA9dyESIEAAiQoI7bsme4Mw948dweF4mRHw=="],
 
     "ts-qr-codes": ["ts-qr-codes@0.1.9", "", { "bin": { "qrx": "./dist/cli.js" } }, "sha512-q2U4hjgx+L57IsCKew/+an/P+mdcvRLr2tlW4waOaulRCpm5OZLakZ32czjscUaHiGOIeG13J28lxUawyIc9/Q=="],
 
