@@ -14,6 +14,9 @@ export interface Result {
   favorite?: boolean
   launches?: number
   lastUsed?: number
+  /** When clipboard text was captured, independent of when it was used. */
+  capturedAt?: number
+  sourceApp?: string
   package?: import('ts-pantry/catalog').PackageCatalogEntry
   installedVersion?: string
   icon?: string

@@ -1,3 +1,4 @@
+import { clipboardResults } from './clipboard'
 import { conversionResult } from './convert'
 import type { RatesState } from './convert'
 import { emojiQuery } from './emoji'
@@ -59,6 +60,7 @@ const calculatorRow = (answer: string): Result => ({ key: 'calculator', title: a
 export function composeResults(input: ComposeInputs): Result[] {
   const { category, query } = input
   const text = query.trim()
+  if (category === 'clipboard') return clipboardResults(input.searchLocal('', 'clipboard'), query)
   if (category === 'emoji') return input.searchEmoji(query, 'emoji')
   if (category === 'file') return input.browsing || text.length >= fileTabMinimum ? narrowFiles(input.files, query) : []
   if (category === 'contact') return text.length >= 2 ? [...input.contacts] : []

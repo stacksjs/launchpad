@@ -164,3 +164,17 @@ test('saved logins ride along with an ordinary search, and are never ranked', ()
   expect(isRankable('password')).toBe(false)
   expect(actionLabelFor('password')).toBe('Open')
 })
+
+
+test('the Clipboard History pipeline bypasses launcher ranking and searches text after the title', () => {
+  const rows: Result[] = [
+    { key: 'clipboard:1', id: 1, kind: 'clipboard', title: 'Alpha', content: 'Alpha needle', subtitle: 'Clipboard', capturedAt: 100, favorite: true, launches: 999 },
+    { key: 'clipboard:2', id: 2, kind: 'clipboard', title: 'Zulu', content: 'Zulu ' + 'x'.repeat(200) + ' needle', subtitle: 'Clipboard', capturedAt: 200 },
+  ]
+  const searchLocal = createResultSearch(rows)
+  expect(searchLocal('', 'clipboard').map(row => row.id)).toEqual([1, 2])
+  expect(compose({ category: 'clipboard', searchLocal }).map(row => row.id)).toEqual([2, 1])
+  expect(compose({ category: 'clipboard', query: 'needle', searchLocal }).map(row => row.id)).toEqual([2, 1])
+  // Launcher-wide search retains its existing relevance/favorite ranking.
+  expect(compose({ category: 'all', query: 'alpha', searchLocal })[0]!.id).toBe(1)
+})
