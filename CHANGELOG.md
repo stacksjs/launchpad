@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.7...v1.1.8)
+
+## 🐛 Bug Fixes
+
+- **ui**: preload application icons before scrolling into view ([b94378f](https://github.com/stacksjs/launchpad/commit/b94378f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.8 ([e21b95e](https://github.com/stacksjs/launchpad/commit/e21b95e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.6...v1.1.7)
 
 ## 🐛 Bug Fixes
