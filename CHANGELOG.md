@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.5...v1.1.6)
+
+## 🐛 Bug Fixes
+
+- **clipboard**: show newest copies first and improve history review ([55adb9f](https://github.com/stacksjs/launchpad/commit/55adb9f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.6 ([72d3787](https://github.com/stacksjs/launchpad/commit/72d3787)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.4...v1.1.5)
 
 ## 🐛 Bug Fixes
