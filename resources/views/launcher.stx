@@ -236,6 +236,7 @@ const githubStatus = state('Public repositories work without connecting an accou
 const tokenInput = state('')
 let historyCursor = -1
 let historyBusy = false
+let historyReadRevision = 0
 let githubEpoch = 0
 let githubRequest: AbortController | null = null
 const search = useRef('search')
@@ -428,11 +429,14 @@ effect(() => {
 
 async function reload() {
   loading.set(true)
+  const historyToken = historyQueue.token()
+  const historyAllowed = historyQueue.current(historyToken)
+  const historyRevision = historyAllowed ? ++historyReadRevision : historyReadRevision
   try {
-    const [apps, commands, history, launches, extensions] = await Promise.all([api('applications'), all('commands'), all('clipboard-entries'), all('launch-records'), all('extensions')])
+    const [apps, commands, history, launches, extensions] = await Promise.all([api('applications'), all('commands'), historyAllowed ? all('clipboard-entries') : Promise.resolve([]), all('launch-records'), all('extensions')])
     replaceItems([...apps,
       ...commands.map(row => ({ key: 'command:' + row.id, id: row.id, title: row.title, subtitle: row.kind === 'snippet' ? 'Snippet · Copy text' : row.content, kind: row.kind, content: row.content, alias: row.alias, shortcut: row.shortcut || '' })),
-      ...clipboardResults(history.map(clipboardResult)),
+      ...(historyAllowed && historyRevision === historyReadRevision && historyQueue.current(historyToken) ? clipboardResults(history.map(clipboardResult)) : items().filter(item => item.kind === 'clipboard')),
       ...bookmarkResults(await readBookmarks(searchSettings().bookmarks).catch(() => [])),
     ])
     extensionRows.set(extensions)
@@ -596,8 +600,12 @@ function replaceItems(next) {
   batch(() => { items.set(next); selected.set(index); visibleLimit.set(Math.max(visibleLimit(), index + 1)); resultScrollTop.set(top) })
   void nextTick(() => { if (list.current) list.current.scrollTop = top })
 }
-async function reloadHistory() {
+async function reloadHistory(duringClear = false) {
+  const token = historyQueue.token()
+  if (!duringClear && !historyQueue.current(token)) return
+  const revision = ++historyReadRevision
   const rows = await all('clipboard-entries')
+  if (revision !== historyReadRevision || token !== historyQueue.token() || (!duringClear && !historyQueue.current(token))) return
   replaceItems([...items().filter(item => item.kind !== 'clipboard'), ...clipboardResults(rows.map(clipboardResult))])
 }
 // All clipboard writes share one cancellation boundary, including manual reads and the watcher.
@@ -615,7 +623,7 @@ const historyQueue = createClipboardQueue(async ({ text, sourceApp, capturedAt }
     try { historyCursor = (await clipboard.historySnapshot(-1)).changeCount }
     catch (reason) { historyEnabled.set(false); fail(reason) }
   }
-  await reloadHistory()
+  await reloadHistory(true)
 })
 function saveHistoryText(text, sourceApp = '', token = historyQueue.token()) {
   return historyQueue.save({ text, sourceApp, capturedAt: Date.now() }, token)

@@ -11,7 +11,7 @@ const deferred = () => { let resolve; const promise = new Promise(yes => { resol
 const errors = []
 async function fixture() {
   const page = await browser.newPage({ viewport: { width: 720, height: 450 }, colorScheme: process.env.LAUNCHPAD_UI_DARK ? 'dark' : 'light' })
-  const data = { rows: [{ id: 1, content: 'Existing fixture copy', capturedAt: Date.now() - 1000 }], writes: [], clears: 0, failClear: false, failPreference: false, writeGate: null, preferenceGate: null }
+  const data = { rows: [{ id: 1, content: 'Existing fixture copy', capturedAt: Date.now() - 1000 }], writes: [], clears: 0, failClear: false, failPreference: false, writeGate: null, preferenceGate: null, readGate: null }
   page.on('pageerror', error => errors.push(error.stack || String(error)))
   await page.addInitScript(factory => {
     const bridge = (0, eval)(`(${factory})`)(['window', 'app', 'serviceMenu', 'clipboard'])
@@ -27,7 +27,13 @@ async function fixture() {
     if (url.origin !== 'http://localhost') return route.abort()
     if (url.pathname === '/') return route.fulfill({ contentType: 'text/html', body: html })
     if (url.pathname === '/api/clipboard-entries') {
-      if (method === 'GET') return respond(data.rows)
+      if (method === 'GET') {
+        const body = JSON.stringify({ data: data.rows })
+        const gate = data.readGate
+        data.readGate = null
+        if (gate) await gate.promise
+        return route.fulfill({ contentType: 'application/json', body })
+      }
       data.writes.push(route.request().postDataJSON())
       if (data.writeGate) await data.writeGate.promise
       const row = { id: Math.max(0, ...data.rows.map(row => row.id)) + 1, ...route.request().postDataJSON() }
@@ -40,6 +46,7 @@ async function fixture() {
       data.rows = []
       return route.fulfill({ status: 204 })
     }
+    if (['/api/applications', '/api/commands', '/api/launch-records', '/api/extensions'].includes(url.pathname)) return respond([])
     if (url.pathname.startsWith('/api/preferences')) {
       if (data.preferenceGate) await data.preferenceGate.promise
       if (data.failPreference) return fail('History setting could not be saved')
@@ -148,7 +155,36 @@ try {
     assert.equal(await page.getByRole('alert').count(), 0)
     await page.close()
   }
+  {
+    const { page, data } = await fixture()
+    for (const method of ['reload', 'reloadHistory']) {
+      if (!data.rows.length) await page.evaluate(() => window.__launcher.saveHistoryText('New fixture copy'))
+      data.readGate = deferred()
+      const gate = data.readGate
+      const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/clipboard-entries' && request.method() === 'GET')
+      await page.evaluate(method => { window.__staleRead = window.__launcher[method]() }, method)
+      await request
+      await confirmClear(page)
+      await page.waitForFunction(() => !window.__launcher.historyClearing())
+      gate.resolve()
+      await page.evaluate(() => window.__staleRead)
+      assert.equal(data.rows.length, 0)
+      assert.equal(await page.evaluate(() => window.__launcher.items().filter(item => item.kind === 'clipboard').length), 0, `A stale ${method} response cannot put cleared rows back on screen.`)
+    }
+    await page.evaluate(() => window.__launcher.saveHistoryText('First fixture copy'))
+    data.readGate = deferred()
+    const gate = data.readGate
+    const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/clipboard-entries' && request.method() === 'GET')
+    await page.evaluate(() => { window.__staleRead = window.__launcher.reloadHistory() })
+    await request
+    data.rows.push({ id: 2, content: 'Newer fixture copy', capturedAt: Date.now() + 1000 })
+    await page.evaluate(() => window.__launcher.reloadHistory())
+    gate.resolve()
+    await page.evaluate(() => window.__staleRead)
+    assert.equal(await page.evaluate(() => window.__launcher.results()[0].content), 'Newer fixture copy', 'An older refresh cannot replace a newer result snapshot.')
+    await page.close()
+  }
   assert.deepEqual(errors, [])
-  console.log('Clipboard reliability passed: pause boundaries, no resume backfill, preference retry, in-flight/queued/manual/automatic clear races, protected content, and failed-clear retry.')
+  console.log('Clipboard reliability passed: pause boundaries, no resume backfill, preference retry, in-flight/queued/manual/automatic clear races, protected content, failed-clear retry, and stale refresh responses.')
 }
 finally { await browser.close() }
