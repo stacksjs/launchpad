@@ -1,5 +1,20 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.6...v1.1.7)
+
+## 🐛 Bug Fixes
+
+- **clipboard**: discard stale history refreshes after clearing ([cff4d81](https://github.com/stacksjs/launchpad/commit/cff4d81)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **clipboard**: enforce recording boundaries and improve history actions ([390a9e7](https://github.com/stacksjs/launchpad/commit/390a9e7)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.7 ([7a08e8b](https://github.com/stacksjs/launchpad/commit/7a08e8b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.5...v1.1.6)
 
 ## 🐛 Bug Fixes
