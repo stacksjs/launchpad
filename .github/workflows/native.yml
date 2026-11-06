@@ -49,7 +49,7 @@ jobs:
         run: bun run test:clipboard-native
       - name: Install pinned browser
         run: bunx playwright install chromium
-      - name: Verify clipboard, updates and installs in both appearances
+      - name: Verify icons, clipboard, updates and installs in both appearances
         run: bun run test:ui
       - name: Preserve browser evidence
         if: always()

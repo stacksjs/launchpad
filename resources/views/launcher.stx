@@ -14,7 +14,7 @@ import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functio
 import { parseApplicationAliases } from '../functions/search-text'
 import { historyPreference as readHistoryPreference, parsePreference } from '../functions/preferences'
 import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
-import { visibleApplicationPaths } from '../functions/application-icons'
+import { iconPrefetchPaths, createIconPrefetcher, decodeApplicationIcon } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory, onSelectionService, chooseSaveFile, chooseOpenFile, chooseFolder } from '../functions/native'
 import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
@@ -415,17 +415,23 @@ pollWhile(pollInstall, 1000, () => pantryReady() && (pantryInstallRefresh() || i
 const refreshApplications = createApplicationRefresh({ load: () => api('applications'), current: items, replace: value => items.set(value), count: count => status.set(plural(count, 'application') + ' · Local commands') })
 pollWhile(() => { void refreshApplications().catch(fail) }, 5000, () => paletteVisible())
 
-const loadResultIcons = useDebounce((paths) => {
-  void applicationIcons(paths).then(value => {
-    if (Object.entries(value).some(([path, icon]) => icons()[path] !== icon)) icons.set({ ...icons(), ...value })
-  }).catch(fail)
-}, 50)
-effect(() => {
-  loadResultIcons.cancel()
-  if (!paletteVisible() || settings() || editor() || packageDetail()) return
-  const paths = visibleApplicationPaths(results(), resultScrollTop(), list.current?.clientHeight || 450)
-  if (paths.length) loadResultIcons(paths)
+const iconPrefetcher = createIconPrefetcher({
+  load: async path => (await applicationIcons([path]))[path] || null,
+  prepare: decodeApplicationIcon,
+  publish: (path, icon) => { icons.set({ ...icons(), [path]: icon }) },
 })
+let previousIconScrollTop = 0
+effect(() => {
+  const top = resultScrollTop()
+  const direction = top < previousIconScrollTop ? -1 : 1
+  previousIconScrollTop = top
+  const visible = paletteVisible() && !settings() && !editor() && !packageDetail()
+  const rows = visible && ['all', 'application', 'clipboard'].includes(category()) ? allResults() : []
+  const priority = iconPrefetchPaths(rows, top, resultViewportHeight(), direction)
+  // Warm installed apps even before the palette opens, including beyond the first page of results.
+  iconPrefetcher.update([...priority, ...iconPrefetchPaths(historyItems())])
+})
+onDestroy(() => iconPrefetcher.dispose())
 
 async function reload() {
   loading.set(true)
@@ -1565,7 +1571,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       <!-- Park unused slots so fast typing and backspacing never need to recreate result rows. -->
       <button :for="(item, index) in renderedResults()" :key="index" x-show="index < viewport().end - viewport().start" :disabled="index >= viewport().end - viewport().start" :aria-hidden="index >= viewport().end - viewport().start" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="index < viewport().end - viewport().start && viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
         <span class="item-icon" aria-hidden="true">
-          <img :if="['application', 'pantry', 'clipboard'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="lazy" decoding="async">
+          <img :if="['application', 'pantry', 'clipboard'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="eager" decoding="async">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
           <span :if="item.kind === 'pantry' && !item.icon" class="i-f7-cube-box"></span>
           <span :if="item.kind === 'quicklink'" class="i-f7-link"></span>

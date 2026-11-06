@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApplicationDiscovery } from '../app/Desktop/applications'
 import { createApplicationRefresh } from '../resources/functions/applications'
-import { createApplicationIconLoader, visibleApplicationPaths } from '../resources/functions/application-icons'
+import { createApplicationIconLoader, iconPrefetchPaths } from '../resources/functions/application-icons'
 import type { Result } from '../resources/functions/search'
 import { rankResults } from '../resources/functions/search'
 
@@ -156,11 +156,13 @@ test('icon reads share a global concurrency bound, cache misses and survive one 
   expect(peak).toBe(2)
 })
 
-test('icon demand follows the visible viewport and excludes icons already loaded', () => {
+test('icon prefetch leads with the viewport and warms upcoming rows before the remaining list', () => {
   const apps = Array.from({ length: 100 }, (_, index) => ({ key: String(index), title: String(index), kind: 'application', content: '/app' + index, subtitle: '' }))
-  expect(visibleApplicationPaths(apps, 0, 260)).toEqual(apps.slice(0, 7).map(item => item.content))
-  expect(visibleApplicationPaths(apps, 520, 260)).toEqual(apps.slice(8, 17).map(item => item.content))
-  expect(visibleApplicationPaths([{ ...apps[0]!, icon: 'data:icon' }, { ...apps[1]!, kind: 'snippet' }], 0, 260)).toEqual([])
+  expect(iconPrefetchPaths(apps, 0, 260).slice(0, 20)).toEqual(apps.slice(0, 20).map(item => item.content))
+  expect(iconPrefetchPaths(apps, 0, 260)).toHaveLength(100)
+  expect(iconPrefetchPaths(apps, 520, 260).slice(0, 20)).toEqual(apps.slice(10, 30).map(item => item.content))
+  expect(iconPrefetchPaths(apps, 520, 260, -1).slice(0, 7)).toEqual([...apps.slice(10, 15), apps[9]!, apps[8]!].map(item => item.content))
+  expect(iconPrefetchPaths([{ ...apps[0]!, icon: 'data:icon' }, { ...apps[1]!, kind: 'snippet' }], 0, 260)).toEqual([])
 })
 
 test('a root that is a file does not discard apps from the other roots', async () => {
@@ -175,11 +177,11 @@ test('a root that is a file does not discard apps from the other roots', async (
 })
 
 
-test('clipboard source icons load only verified source paths in the visible viewport', () => {
+test('clipboard source icons prefetch only verified source paths', () => {
   const rows = [
     { key: 'clipboard:1', title: 'One', subtitle: '', content: '/Untrusted.app', kind: 'clipboard' },
     { key: 'clipboard:2', title: 'Two', subtitle: '', content: 'Copied text', kind: 'clipboard', sourceAppPath: '/Trusted.app' },
     { key: 'clipboard:3', title: 'Three', subtitle: '', content: 'Text', kind: 'clipboard', sourceAppPath: '/Cached.app', icon: 'data:cached' },
   ]
-  expect(visibleApplicationPaths(rows, 0, 260)).toEqual(['/Trusted.app'])
+  expect(iconPrefetchPaths(rows, 0, 260)).toEqual(['/Trusted.app'])
 })

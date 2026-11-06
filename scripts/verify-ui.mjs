@@ -15,7 +15,7 @@ for (const mode of ['light', 'dark']) {
     LAUNCHPAD_HEADER_SCREENSHOT: resolve(evidence, `header-${mode}.png`),
     LAUNCHPAD_PANTRY_SCREENSHOT: resolve(evidence, `pantry-${mode}.png`),
   }
-  for (const script of ['verify-clipboard', 'verify-clipboard-reliability', 'verify-updates', 'verify-pantry']) {
+  for (const script of ['verify-icons', 'verify-clipboard', 'verify-clipboard-reliability', 'verify-updates', 'verify-pantry']) {
     console.log(`UI acceptance: ${script} (${mode})`)
     const result = spawnSync(process.execPath, [`scripts/${script}.mjs`, bundle], { env, stdio: 'inherit', timeout: 120000 })
     if (result.error) throw result.error
