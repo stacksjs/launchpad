@@ -5,7 +5,7 @@ import type { Result } from './search'
 export function visibleApplicationPaths(results: readonly Result[], scrollTop: number, height: number): string[] {
   const start = Math.max(0, Math.floor(scrollTop / resultRowHeight) - 2)
   const end = Math.ceil((scrollTop + height) / resultRowHeight) + 2
-  return results.slice(start, end).filter(item => item.kind === 'application' && !item.icon).map(item => item.content)
+  return results.slice(start, end).flatMap(item => !item.icon && item.kind === 'application' ? [item.content] : !item.icon && item.kind === 'clipboard' && item.sourceAppPath ? [item.sourceAppPath] : [])
 }
 
 /** Cache native icons and share concurrent bridge calls. Missing icons must not cause render loops. */

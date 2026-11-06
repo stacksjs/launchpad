@@ -79,7 +79,7 @@ export function createApplicationDiscovery(roots = ['/Applications', '/System/Ap
               const info = metadata.get(path)
               const title = info?.displayName || filename
               const searchAliases = applicationSearchAliases({ filename, displayName: title, bundleName: info?.bundleName, bundleId: info?.bundleId })
-              apps.set(path, { key: path, title, searchAliases, subtitle: 'Application', kind: 'application', content: path })
+              apps.set(path, { key: path, title, bundleId: info?.bundleId || '', searchAliases, subtitle: 'Application', kind: 'application', content: path })
             }
             else if (entry.isDirectory() && depth < 4) directories.push({ path, depth: depth + 1 })
           }

@@ -17,6 +17,9 @@ export interface Result {
   /** When clipboard text was captured, independent of when it was used. */
   capturedAt?: number
   sourceApp?: string
+  sourceAppName?: string
+  sourceAppPath?: string
+  bundleId?: string
   package?: import('ts-pantry/catalog').PackageCatalogEntry
   installedVersion?: string
   icon?: string

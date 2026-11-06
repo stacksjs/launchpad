@@ -11,6 +11,13 @@ try {
   const page = await browser.newPage({ viewport: { width: 720, height: 450 }, colorScheme: process.env.LAUNCHPAD_UI_DARK ? 'dark' : 'light' })
   const errors = []
   const writes = []
+  const commands = []
+  const activity = []
+  let failCommand = false
+  const apps = [
+    { key: '/Applications/Safari.app', title: 'Safari Technology Preview', content: '/Applications/Safari.app', subtitle: 'Application', kind: 'application', bundleId: 'com.apple.Safari' },
+    { key: '/Applications/TextEdit.app', title: 'TextEdit', content: '/Applications/TextEdit.app', subtitle: 'Application', kind: 'application', bundleId: 'com.apple.TextEdit' },
+  ]
   const now = Date.now() - 60000
   let rows = [
     { id: 1, content: 'Alpha older copy', capturedAt: now - 120000, sourceApp: 'com.apple.Notes' },
@@ -45,17 +52,29 @@ try {
       rows = rows.filter(row => row.id !== Number(url.pathname.split('/').pop()))
       return route.fulfill({ status: 204 })
     }
-    if (url.pathname === '/api/applications') return respond([])
+    if (url.pathname === '/api/applications') return respond(apps)
+    if (url.pathname === '/api/commands') {
+      if (method === 'GET') return respond(commands)
+      if (failCommand) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Snippet could not be saved' }) })
+      const row = { id: commands.length + 1, ...route.request().postDataJSON() }
+      commands.push(row)
+      return respond(row)
+    }
+    if (url.pathname === '/api/ranking') return respond({ id: 90, ...route.request().postDataJSON(), launches: 1 })
+    if (url.pathname === '/api/activity-events') { activity.push(route.request().postDataJSON()); return route.fulfill({ status: 204 }) }
+    if (url.pathname === '/api/clipboard-history') { rows = []; return route.fulfill({ status: 204 }) }
     if (['/api/commands', '/api/extensions', '/api/launch-records'].includes(url.pathname)) return respond([])
     return route.abort()
   })
   await page.goto('http://localhost/')
   await page.waitForFunction(() => window.__launcher)
-  await page.evaluate(() => {
+  await page.evaluate(apps => {
     const s = window.__launcher
+    s.items.set(apps)
+    s.icons.set({ '/Applications/Safari.app': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=' })
     s.loading.set(false); s.chooseCategory('clipboard')
     s.records.set({ 'clipboard:1': { favorite: true, launches: 999, lastUsed: Date.now() } })
-  })
+  }, apps)
   await page.evaluate(() => window.__launcher.reloadHistory())
   assert.deepEqual(await page.evaluate(() => window.__launcher.results().map(row => row.id)), [3, 2, 1])
   await page.getByText('Newest first · 3 entries', { exact: true }).waitFor()
@@ -67,6 +86,76 @@ try {
   assert.equal(await page.getByLabel('Selected clipboard text').textContent(), rows[1].content)
   await search.fill('Safari')
   assert.deepEqual(await page.evaluate(() => window.__launcher.results().map(row => row.id)), [2])
+  const filter = page.getByRole('combobox', { name: 'Filter by source app' })
+  await search.fill('')
+  await filter.selectOption('com.apple.Safari')
+  assert.deepEqual(await page.evaluate(() => window.__launcher.results().map(row => row.id)), [2])
+  assert.match(await page.locator('#result-0 .result-subtitle').textContent(), /Safari Technology Preview/)
+  assert.match(await page.locator('#result-0 img').getAttribute('src'), /^data:image/)
+  await search.fill('studio')
+  await page.getByText('No matching clipboard text.', { exact: true }).waitFor()
+  await search.fill('')
+  await filter.selectOption('com.apple.TextEdit')
+  assert.deepEqual(await page.evaluate(() => window.__launcher.results().map(row => row.id)), [3])
+  await filter.selectOption('com.apple.Safari')
+  rows.push({ id: 4, content: 'A newer copy from a different app', capturedAt: Date.now(), sourceApp: 'com.apple.TextEdit' })
+  await page.evaluate(() => window.__launcher.reloadHistory())
+  assert.equal(await page.evaluate(() => window.__launcher.active().id), 2, 'An incoming copy from another app cannot change the filtered preview.')
+  rows.pop()
+  await page.evaluate(() => window.__launcher.reloadHistory())
+  await page.evaluate(() => window.__launcher.historySource.set('com.example.Removed'))
+  await page.getByText('No copies from this app.', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Show all apps', exact: true }).click()
+  assert.equal(await filter.inputValue(), 'all')
+  await search.fill('resume checklist')
+
+  const snippetText = rows[1].content
+  const hides = () => page.evaluate(() => window.__bridge.calls.filter(call => call.method === 'hide').length)
+  const beforeCopy = await hides()
+  await page.evaluate(() => { window.__launcher.paletteVisible.set(true); window.__launcher.usageEnabled.set(true); window.__launcher.preferencesReady.set(true) })
+  await page.getByRole('button', { name: 'Copy and keep browsing', exact: true }).click()
+  await page.getByText('Copied. Keep browsing.', { exact: true }).waitFor()
+  await page.evaluate(() => window.__launcher.flushUsage())
+  assert.equal(await hides(), beforeCopy, 'Copy here must never dismiss the native window.')
+  assert.equal(await page.evaluate(() => window.__launcher.paletteVisible()), true)
+  assert.equal(await page.getByLabel('Selected clipboard text').textContent(), snippetText)
+  assert.equal(activity.filter(event => event.action === 'command_executed' && event.kind === 'clipboard').length, 1)
+  assert.equal(activity.some(event => event.action === 'palette_dismissed'), false)
+  assert.equal(JSON.stringify(activity).includes('checklist'), false, 'Usage records must never contain clipboard text.')
+  await search.press('Meta+Enter')
+  await page.waitForFunction(() => !window.__launcher.saving())
+  assert.equal(await hides(), beforeCopy, 'Command Return uses the same keep-open action.')
+  await page.evaluate(() => window.__bridge.whenCalled('clipboard', 'writeText', () => { throw new Error('Clipboard write refused') }))
+  await page.getByRole('button', { name: 'Copy and keep browsing', exact: true }).click()
+  await page.getByRole('alert').getByText('Clipboard write refused', { exact: true }).waitFor()
+  assert.equal(await page.getByText('Copied. Keep browsing.', { exact: true }).count(), 0, 'A failed retry cannot retain an old success message.')
+  await page.evaluate(() => window.__launcher.flushUsage())
+  assert.equal(activity.filter(event => event.action === 'command_executed' && event.kind === 'clipboard').length, 2, 'Failed copies earn no usage event.')
+  assert.equal(await hides(), beforeCopy)
+  await page.evaluate(() => { window.__bridge.whenCalled('clipboard', 'writeText', undefined); window.__launcher.clearError(); window.__launcher.preferencesReady.set(false) })
+
+  await page.getByRole('button', { name: 'Save as snippet', exact: true }).click()
+  const editor = page.getByRole('dialog', { name: 'Save clipboard as snippet', exact: true })
+  assert.equal(await editor.getByLabel('Text to copy', { exact: true }).inputValue(), snippetText)
+  assert.equal(await editor.getByLabel('Type', { exact: true }).isDisabled(), true)
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).click()
+  assert.equal(commands.length, 0, 'Cancelling conversion writes nothing.')
+  assert.equal(rows.length, 3, 'Conversion never removes the original clipboard entry.')
+  await page.getByRole('button', { name: 'Save as snippet', exact: true }).click()
+  await editor.getByLabel('Name', { exact: true }).fill('Reusable checklist')
+  failCommand = true
+  await editor.getByRole('button', { name: 'Save snippet', exact: true }).click()
+  await editor.getByRole('alert').getByText('Snippet could not be saved', { exact: true }).waitFor()
+  assert.equal(await editor.getByLabel('Text to copy', { exact: true }).inputValue(), snippetText)
+  assert.equal(commands.length, 0)
+  failCommand = false
+  await editor.getByRole('button', { name: 'Save snippet', exact: true }).click()
+  await editor.waitFor({ state: 'detached' })
+  await page.getByText('Snippet saved. Find it in Snippets.', { exact: true }).waitFor()
+  assert.equal(await page.getByRole('alert').count(), 0, 'Successful snippet retry clears its prior error.')
+  assert.equal(commands.length, 1)
+  assert.equal(commands[0].kind, 'snippet')
+  assert.equal(commands[0].content, snippetText, 'Saved snippets preserve all original text and line breaks.')
   await search.fill('no-such-saved-text')
   await page.getByText('No matching clipboard text.', { exact: true }).waitFor()
   assert.equal(await page.getByText('Enable history below to record new text, or save the current clipboard yourself.', { exact: true }).count(), 0)
@@ -141,7 +230,16 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Enable history', exact: true }).isVisible(), true)
     if (process.env.LAUNCHPAD_CLIPBOARD_SCREENSHOT) await page.screenshot({ path: process.env.LAUNCHPAD_CLIPBOARD_SCREENSHOT.replace('.png', `-${width}.png`), animations: 'disabled' })
   }
+  await page.unroute('**/api/clipboard-entries?*')
+  await page.getByRole('button', { name: 'Clear history', exact: true }).click()
+  const confirmation = page.getByRole('alertdialog')
+  await confirmation.getByRole('button', { name: 'OK', exact: true }).click()
+  await confirmation.waitFor({ state: 'detached' })
+  await page.waitForFunction(() => !window.__launcher.historyClearing())
+  await page.evaluate(async () => { await window.__launcher.reload(); window.__launcher.chooseCategory('snippet') })
+  assert.equal(await page.locator('#result-0 .result-title').textContent(), 'Reusable checklist', 'Saved snippets survive clearing clipboard history and reloading.')
+  assert.equal(commands[0].content, snippetText)
   assert.deepEqual(errors, [])
-  console.log('Clipboard UI acceptance passed: chronological search, timestamps, preview, stable live selection, deletion, duplicate saves, retry, 200-entry paging, keyboard navigation, and responsive layout.')
+  console.log('Clipboard UI acceptance passed: chronological search, timestamps, preview, stable live selection, deletion, duplicate saves, retry, source names/icons/filters, snippet conversion, copy here, privacy-safe usage, 200-entry paging, keyboard navigation, and responsive layout.')
 }
 finally { await browser.close() }

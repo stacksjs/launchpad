@@ -21,7 +21,8 @@ import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
 import { selectionActions } from '../functions/selection'
 import type { Selection } from '../functions/selection'
 import { initializeLogin, setLoginEnabled } from '../functions/startup'
-import { clipboardDecision, clipboardResult, clipboardResults, clipboardSelection, clipboardSummary, clipboardTime } from '../functions/clipboard'
+import { createClipboardQueue } from '../functions/clipboard-queue'
+import { clipboardDecision, clipboardResult, clipboardResults, clipboardSelection, clipboardSummary, clipboardTime, clipboardWithSources, clipboardSources, clipboardSourceName, clipboardSnippetTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
 import { actionLabelFor, composeResults, fileResults, fileTabMinimum, inlineFileMinimum, isRankable, nextCategory, secondaryActions } from '../functions/launcher-results'
 import { emojiResults } from '../functions/emoji'
@@ -219,7 +220,13 @@ const colorMode = useColorMode({ initialMode: 'system', storageKey: 'launchpad.a
 const historyEnabled = state(false)
 const historyDays = state(7)
 const historyStatus = state('History is paused')
+const historySource = state('all')
+const historyActionStatus = state('')
+const clipboardSnippet = state(false)
 const historySaving = state(false)
+const historyClearing = state(false)
+const historyPreferenceBusy = state(false)
+const historyPreferenceUnsaved = state(false)
 const githubView = state<GitHubView>('issues')
 const githubScope = state('stacksjs/launchpad')
 const githubViewer = state<{ login: string } | null>(null)
@@ -240,7 +247,14 @@ let cleanupTray = () => {}
 
 const searchCatalog = derived(() => createPackageCatalogSearch(catalog()))
 const installedPackages = derived(() => pantryResults(installedCatalog(catalog(), pantryInstalled()), items(), pantryInstalled()))
-const localItems = derived(() => [...items(), ...installedPackages(), ...systemCommandResults(), ...modeResults(), ...extensionCommands()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
+const historyItems = derived(() => clipboardWithSources(items()))
+const historySourceOptions = derived(() => {
+  const sources = clipboardSources(historyItems())
+  const chosen = historySource()
+  if (chosen !== 'all' && !sources.some(source => source.id === chosen)) sources.push({ id: chosen, title: clipboardSourceName(chosen), path: '', count: 0 })
+  return sources
+})
+const localItems = derived(() => [...historyItems(), ...installedPackages(), ...systemCommandResults(), ...modeResults(), ...extensionCommands()].map(item => ({ ...item, ...records()[item.key], key: item.key, id: item.id })))
 const searchLocal = derived(() => createResultSearch(localItems()))
 const searchPackages = derived(() => {
   const filter = pantryFilter()
@@ -255,7 +269,7 @@ const searchEmoji = (input, scope) => emojiIndex()(input, scope)
 const allResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
-  return composeResults({ category: category(), query: query(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), selection: selectionRows(), passwords: passwordRows(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
+  return composeResults({ category: category(), query: query(), clipboardSource: historySource(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), selection: selectionRows(), passwords: passwordRows(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
 })
 const presentResults = createResultPresentation()
 const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
@@ -431,7 +445,7 @@ async function reload() {
 }
 
 function focusSearch() { batch(() => { query.set(''); category.set('all'); selected.set(0) }); void nextTick(() => search.current?.focus()) }
-function chooseCategory(value) { batch(() => { query.set(''); category.set(value); selected.set(0) }); void nextTick(() => search.current?.focus()) }
+function chooseCategory(value) { batch(() => { query.set(''); category.set(value); if (value === 'clipboard') historySource.set('all'); selected.set(0) }); void nextTick(() => search.current?.focus()) }
 function clearError() { batch(() => { error.set(''); errorPermission.set('') }) }
 function fail(reason) { batch(() => { error.set(reason.message || String(reason)); errorPermission.set(reason.permission || '') }) }
 function openSettings(checkUpdates = false) {
@@ -506,7 +520,7 @@ async function changeLogin(enabled) {
   catch (reason) { loginStatus.set(reason.message) }
   finally { loginBusy.set(false) }
 }
-function closeEditor() { editor.set(false); aliasApplication.set(null); void nextTick(() => search.current?.focus()) }
+function closeEditor() { clipboardSnippet.set(false); editor.set(false); aliasApplication.set(null); void nextTick(() => search.current?.focus()) }
 function activate() { settings.set(false); editor.set(false); packageDetail.set(null); focusSearch(); paletteVisibility(true); void refreshApplications().catch(fail) }
 function paletteVisibility(visible) { paletteVisible.set(visible); track(visible ? 'palette_opened' : 'palette_dismissed') }
 async function dismissLauncher() { paletteVisibility(false); void flushUsage(); await nativeWindow.hide() }
@@ -577,7 +591,7 @@ effect(() => { if (paletteVisible() && settings() && settingsSection() === 'usag
 function replaceItems(next) {
   if (category() !== 'clipboard') { items.set(next); return }
   const before = selected()
-  const index = clipboardSelection(active(), before, clipboardResults(next, query()), before > 0 || resultScrollTop() > 0)
+  const index = clipboardSelection(active(), before, clipboardResults(clipboardWithSources(next), query(), historySource()), before > 0 || resultScrollTop() > 0)
   const top = Math.max(0, resultScrollTop() + (index - before) * resultRowHeight)
   batch(() => { items.set(next); selected.set(index); visibleLimit.set(Math.max(visibleLimit(), index + 1)); resultScrollTop.set(top) })
   void nextTick(() => { if (list.current) list.current.scrollTop = top })
@@ -586,17 +600,25 @@ async function reloadHistory() {
   const rows = await all('clipboard-entries')
   replaceItems([...items().filter(item => item.kind !== 'clipboard'), ...clipboardResults(rows.map(clipboardResult))])
 }
-// Manual saves and the clipboard watcher share one write queue, so the same change cannot be recorded twice.
-let historyWrite = Promise.resolve()
-function saveHistoryText(text, sourceApp = '') {
-  const task = historyWrite.then(async () => {
-    if (text === clipboardResults(items())[0]?.content) return
-    await api('clipboard-entries', 'POST', { content: text, capturedAt: Date.now(), sourceApp })
-    track('clipboard_saved', { kind: 'clipboard' })
-    await reloadHistory()
-  })
-  historyWrite = task.catch(() => {})
-  return task
+// All clipboard writes share one cancellation boundary, including manual reads and the watcher.
+const historyQueue = createClipboardQueue(async ({ text, sourceApp, capturedAt }) => {
+  if (text === clipboardResults(items())[0]?.content) return false
+  await api('clipboard-entries', 'POST', { content: text, capturedAt, sourceApp })
+  track('clipboard_saved', { kind: 'clipboard' })
+  await reloadHistory()
+  return true
+}, async () => {
+  await api('clipboard-history', 'DELETE')
+  historyCursor = -1
+  // Establish a fresh boundary so the old pasteboard cannot refill a cleared history.
+  if (historyEnabled()) {
+    try { historyCursor = (await clipboard.historySnapshot(-1)).changeCount }
+    catch (reason) { historyEnabled.set(false); fail(reason) }
+  }
+  await reloadHistory()
+})
+function saveHistoryText(text, sourceApp = '', token = historyQueue.token()) {
+  return historyQueue.save({ text, sourceApp, capturedAt: Date.now() }, token)
 }
 let preferenceTask = Promise.resolve()
 function preference(key, value) {
@@ -701,32 +723,64 @@ async function deleteTheme(id) {
   catch (reason) { fail(reason) }
 }
 async function historyPreference(enabled, days = historyDays()) {
+  if (historyPreferenceBusy() || historyClearing()) return
+  historyPreferenceBusy.set(true)
+  clearError()
+  historyQueue.invalidate()
+  // Stop immediately, before a slow preference write or clipboard read can complete.
+  historyEnabled.set(false)
+  historyStatus.set(enabled ? 'Starting recording…' : 'Pausing recording…')
+  historyDays.set(Number(days))
+  let persisted = false
   try {
+    await historyQueue.drain()
     await preference('history', JSON.stringify({ enabled, days: Number(days) }))
+    persisted = true
+    historyPreferenceUnsaved.set(false)
     historyCursor = -1
+    // Text copied while paused stays out of history when recording resumes.
+    if (enabled) historyCursor = (await clipboard.historySnapshot(-1)).changeCount
+    await reloadHistory()
     historyEnabled.set(enabled)
-    historyDays.set(Number(days))
     historyStatus.set(enabled ? 'Recording new text locally' : 'History is paused')
   }
-  catch (reason) { fail(reason) }
+  catch (reason) {
+    historyPreferenceUnsaved.set(!persisted)
+    historyStatus.set(persisted ? 'Paused for this session · Clipboard unavailable' : 'Paused for this session · Settings not saved')
+    fail(reason)
+  }
+  finally { historyPreferenceBusy.set(false) }
 }
 async function pollClipboard() {
-  if (historyBusy || !historyEnabled()) return
+  if (historyBusy || !historyEnabled() || historyClearing()) return
   historyBusy = true
+  const token = historyQueue.token()
+  const cursor = historyCursor
   try {
-    const snapshot = await clipboard.historySnapshot(historyCursor)
+    const snapshot = await clipboard.historySnapshot(cursor)
+    if (!historyQueue.current(token) || !historyEnabled()) return
     const decision = clipboardDecision(snapshot.text)
-    if (decision === 'save') await saveHistoryText(snapshot.text, snapshot.sourceBundleId)
+    // The first read establishes the starting point, rather than backfilling the current pasteboard.
+    if (cursor !== -1 && !snapshot.blocked && decision === 'save') await saveHistoryText(snapshot.text, snapshot.sourceBundleId, token)
+    if (!historyQueue.current(token) || !historyEnabled()) return
     historyCursor = snapshot.changeCount
     historyStatus.set(snapshot.blocked ? 'Protected clipboard content skipped' : decision === 'too-large' ? 'Text over 20,000 characters skipped' : 'Recording new text locally')
   }
-  catch (reason) { historyEnabled.set(false); historyStatus.set('History stopped'); fail(reason) }
+  catch (reason) {
+    if (!historyQueue.current(token)) return
+    historyQueue.invalidate(); historyEnabled.set(false); historyStatus.set('History stopped'); fail(reason)
+  }
   finally { historyBusy = false }
 }
 async function clearHistory() {
+  if (historyClearing() || historyPreferenceBusy()) return
   if (!await stxConfirm('Delete all saved clipboard history from this Mac?')) return
-  try { await api('clipboard-history', 'DELETE'); await reloadHistory() }
+  if (historyClearing()) return
+  historyClearing.set(true)
+  clearError()
+  try { await historyQueue.clear() }
   catch (reason) { fail(reason) }
+  finally { historyClearing.set(false) }
 }
 async function loadPreferences() {
   const rows = await all('preferences')
@@ -1189,6 +1243,7 @@ async function favorite() {
 }
 
 function newCommand() {
+  clipboardSnippet.set(false)
   aliasApplication.set(null)
   editId.set(null)
   title.set('')
@@ -1198,6 +1253,27 @@ function newCommand() {
   editor.set(true)
   clearError()
   void nextTick(() => commandTitle.current?.focus())
+}
+function saveAsSnippet() {
+  const item = active()
+  if (item?.kind !== 'clipboard' || saving() || historyClearing()) return
+  newCommand()
+  batch(() => { clipboardSnippet.set(true); kind.set('snippet'); title.set(clipboardSnippetTitle(item.content)); content.set(item.content) })
+}
+async function copyAndKeepBrowsing() {
+  const item = active()
+  if (item?.kind !== 'clipboard' || saving() || historyClearing()) return
+  clearError()
+  historyActionStatus.set('')
+  saving.set(true)
+  try {
+    await recordSuccessfulOperation(() => clipboard.writeText(item.content), duration => track('command_executed', item, duration))
+    historyActionStatus.set('Copied. Keep browsing.')
+    const saved = await api('ranking', 'POST', { key: item.key, action: 'launch' })
+    records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
+  }
+  catch (reason) { fail(reason) }
+  finally { saving.set(false) }
 }
 function editCommand() {
   const item = active()
@@ -1222,6 +1298,8 @@ function editCommand() {
   void nextTick(() => commandTitle.current?.focus())
 }
 async function saveCommand() {
+  if (saving()) return
+  clearError()
   saving.set(true)
   try {
     const application = aliasApplication()
@@ -1250,15 +1328,21 @@ async function saveCommand() {
     if (editId() === null) track('command_created', { kind: kind() })
     editor.set(false)
     await reload()
+    if (clipboardSnippet()) { historyActionStatus.set('Snippet saved. Find it in Snippets.'); clipboardSnippet.set(false) }
   }
   catch (reason) { fail(reason) }
   finally { saving.set(false) }
 }
 
 async function saveClipboard() {
-  if (historySaving()) return
+  if (historySaving() || historyClearing() || historyPreferenceBusy()) return
   historySaving.set(true)
-  try { await saveHistoryText(await captureClipboard()); chooseCategory('clipboard'); resetResultPosition() }
+  const token = historyQueue.token()
+  try {
+    const text = await captureClipboard()
+    await saveHistoryText(text, '', token)
+    if (historyQueue.current(token)) { chooseCategory('clipboard'); resetResultPosition() }
+  }
   catch (reason) { fail(reason) }
   finally { historySaving.set(false) }
 }
@@ -1311,7 +1395,7 @@ function key(event) {
   if (event.metaKey && (event.key === ']' || event.key === '[')) { event.preventDefault(); cycleCategory(event.key === ']' ? 1 : -1); return }
   const target = event.target
   if (target !== search.current && target?.closest?.('button, select, input, textarea, a, [contenteditable="true"]')) return
-  if (event.metaKey && event.key === 'Enter') { event.preventDefault(); void revealActive(); return }
+  if (event.metaKey && event.key === 'Enter') { event.preventDefault(); if (category() === 'clipboard') void copyAndKeepBrowsing(); else void revealActive(); return }
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'c') { event.preventDefault(); void copySecondary(); return }
   if (event.metaKey && event.key.toLowerCase() === 'd') { event.preventDefault(); void favorite(); return }
   if (event.metaKey && event.key.toLowerCase() === 'e') { event.preventDefault(); editCommand(); return }
@@ -1334,7 +1418,9 @@ function key(event) {
 
 function resetResultPosition() { selected.set(0); visibleLimit.set(100); resultScrollTop.set(0); if (list.current) list.current.scrollTop = 0 }
 // History refreshes preserve the selected key. A new query or mode still starts at the first match.
-effect(() => { query(); category(); resetResultPosition() })
+effect(() => { query(); category(); historySource(); resetResultPosition() })
+let historyActionKey = ''
+effect(() => { const key = active()?.key || ''; if (key !== historyActionKey) { historyActionKey = key; historyActionStatus.set('') } })
 effect(() => { items(); if (category() !== 'clipboard') resetResultPosition() })
 useEventListener('keydown', key, { capture: true })
 onMount(() => {
@@ -1453,28 +1539,30 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <span class="help">{{ plural(catalog().length, 'package') }}</span><button type="button" class="ml-auto text-action" @click="refreshCatalog()" :disabled="packageBusy()">Refresh catalog</button>
   </div>
   <section class="flex flex-1 flex-col min-h-0" aria-label="Search results">
-    <div class="flex items-center justify-between px-6 section-label">
+    <div class="flex items-center justify-between px-6 section-label" :class="{ 'history-label': category() === 'clipboard' }">
       <span>{{ category() === 'clipboard' ? 'Newest first · ' + plural(allResults().length, query().trim() ? 'match' : 'entry', query().trim() ? 'matches' : 'entries') : category() === 'github' ? 'GitHub' : category() === 'pantry' ? 'Pantry catalog' : query() ? 'Results' : 'Your launchpad' }}</span>
-      <button :if="category() === 'clipboard'" type="button" class="text-action" @click="saveClipboard()" :disabled="historySaving()">{{ historySaving() ? 'Saving…' : 'Save current clipboard' }}</button>
+      <select :if="category() === 'clipboard'" x-model="historySource" class="history-source" aria-label="Filter by source app"><option value="all">All apps</option><option :for="source in historySourceOptions()" :key="source.id" :value="source.id">{{ source.title + ' (' + source.count + ')' }}</option></select>
+      <button :if="category() === 'clipboard'" type="button" class="text-action" aria-label="Save current clipboard" @click="saveClipboard()" :disabled="historySaving() || historyClearing() || historyPreferenceBusy()">{{ historySaving() ? 'Saving…' : 'Save clipboard' }}</button>
       <span :if="category() !== 'clipboard'" role="status" aria-live="polite">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
     </div>
     <div class="result-region" :class="{ 'history-region': category() === 'clipboard' }">
     <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="scrollResults($event)">
       <p :if="loading() || (category() === 'github' && githubLoading()) || (sourceLoading() && results().length === 0)" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : loading() ? 'Finding your applications...' : 'Looking...' }}</p>
       <div :if="!loading() && !githubLoading() && !sourceLoading() && results().length === 0" class="empty">
-        <p>{{ category() === 'clipboard' ? query().trim() ? 'No matching clipboard text.' : 'Keep useful text close.' : 'Nothing here yet.' }}</p>
-        <p class="empty-detail">{{ category() === 'clipboard' ? query().trim() ? 'Search any part of the saved text or its source app. Try a shorter search.' : 'Enable history below to record new text, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : ['file', 'window', 'contact', 'event'].includes(category()) && sourceNote() ? sourceNote() : category() === 'emoji' ? 'Try a word like rocket, party or thumbs up.' : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
+        <p>{{ category() === 'clipboard' ? query().trim() ? 'No matching clipboard text.' : historySource() !== 'all' ? 'No copies from this app.' : 'Keep useful text close.' : 'Nothing here yet.' }}</p>
+        <p class="empty-detail">{{ category() === 'clipboard' ? query().trim() ? 'Search any part of the saved text or its source app. Try a shorter search.' : historySource() !== 'all' ? 'There are no saved copies from this app.' : 'Enable history below to record new text, or save the current clipboard yourself.' : category() === 'github' ? githubStatus() : ['file', 'window', 'contact', 'event'].includes(category()) && sourceNote() ? sourceNote() : category() === 'emoji' ? 'Try a word like rocket, party or thumbs up.' : category() === 'all' ? 'No matching installed commands. Browse Pantry to discover more tools, or create a command with Command N.' : 'Try another search, or create a quicklink or snippet with Command N.' }}</p>
+        <button :if="category() === 'clipboard' && historySource() !== 'all'" type="button" class="text-action" @click="historySource.set('all')">Show all apps</button>
       </div>
       <div aria-hidden="true" :style="'height:' + viewport().top + 'px;flex-shrink:0'"></div>
       <!-- Park unused slots so fast typing and backspacing never need to recreate result rows. -->
       <button :for="(item, index) in renderedResults()" :key="index" x-show="index < viewport().end - viewport().start" :disabled="index >= viewport().end - viewport().start" :aria-hidden="index >= viewport().end - viewport().start" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="index < viewport().end - viewport().start && viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
         <span class="item-icon" aria-hidden="true">
-          <img :if="['application', 'pantry'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="lazy" decoding="async">
+          <img :if="['application', 'pantry', 'clipboard'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="lazy" decoding="async">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
           <span :if="item.kind === 'pantry' && !item.icon" class="i-f7-cube-box"></span>
           <span :if="item.kind === 'quicklink'" class="i-f7-link"></span>
           <span :if="item.kind === 'snippet'" class="i-f7-text-alignleft"></span>
-          <span :if="item.kind === 'clipboard'" class="i-f7-doc-on-clipboard"></span>
+          <span :if="item.kind === 'clipboard' && !item.icon" class="i-f7-doc-on-clipboard"></span>
           <span :if="item.kind === 'calculator'" class="i-f7-number"></span>
           <span :if="item.kind === 'github'" class="i-f7-chevron-left-slash-chevron-right"></span>
           <span :if="item.kind === 'file'" :class="item.subtitle.startsWith('Folder') ? 'i-f7-folder' : 'i-f7-doc'"></span>
@@ -1487,7 +1575,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           <span :if="item.kind === 'password'" class="i-f7-lock"></span>
           <span :if="item.kind === 'mode'" class="i-f7-square-stack-3d-up"></span>
         </span>
-        <span class="result-copy"><span class="result-title" :title="item.title">{{ item.title }}</span><span class="result-subtitle" :title="item.subtitle">{{ category() === 'clipboard' ? clipboardTime(item.capturedAt) + (item.sourceApp ? ' · ' + item.sourceApp.split('.').pop() : '') : item.subtitle }}</span></span>
+        <span class="result-copy"><span class="result-title" :title="item.title">{{ item.title }}</span><span class="result-subtitle" :title="item.subtitle">{{ category() === 'clipboard' ? clipboardTime(item.capturedAt) + ' · ' + (item.sourceAppName || clipboardSourceName(item.sourceApp || '')) : item.subtitle }}</span></span>
         <span :if="item.kind === 'pantry'" class="package-badge">{{ item.installedVersion ? 'Installed' : item.package?.kind }}</span>
         <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
         <span :if="viewport().start + index === selected()" class="return-key" aria-hidden="true">↵</span>
@@ -1503,20 +1591,23 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       <div class="clipboard-preview-heading"><strong>Preview</strong><span>{{ clipboardSummary(active().content) }}</span></div>
       <p class="clipboard-preview-time">{{ clipboardTime(active().capturedAt) }}</p>
       <pre aria-label="Selected clipboard text">{{ active().content }}</pre>
+      <div class="clipboard-preview-actions"><button type="button" class="text-action" @click="copyAndKeepBrowsing()" :disabled="saving() || historyClearing()" aria-label="Copy and keep browsing" title="Copy and keep browsing (Command Return)">Copy <kbd>⌘ ↵</kbd></button><button type="button" class="text-action" @click="saveAsSnippet()" :disabled="saving() || historyClearing()">Save as snippet</button></div>
+      <p :if="historyActionStatus()" class="clipboard-action-status" role="status" aria-live="polite">{{ historyActionStatus() }}</p>
     </aside>
     </div>
   </section>
   <div :if="category() === 'clipboard'" class="flex gap-3 items-center px-5 history-tools">
-    <span role="status" aria-live="polite">{{ historyEnabled() ? historyStatus() : 'History paused · ' + historyDays() + ' day retention' }}</span>
-    <button type="button" class="ml-auto text-action" @click="historyPreference(!historyEnabled())">{{ historyEnabled() ? 'Pause' : 'Enable history' }}</button>
-    <button type="button" class="text-action" @click="clearHistory()" :disabled="!items().some(item => item.kind === 'clipboard')">Clear history</button>
+    <span role="status" aria-live="polite">{{ historyClearing() ? 'Clearing history…' : historyPreferenceBusy() || historyPreferenceUnsaved() ? historyStatus() : historyEnabled() ? historyStatus() : 'History paused · ' + historyDays() + ' day retention' }}</span>
+    <button :if="historyPreferenceUnsaved()" type="button" class="text-action" :disabled="historyClearing() || historyPreferenceBusy()" @click="historyPreference(false)">Save paused setting</button>
+    <button type="button" class="ml-auto text-action" :disabled="historyClearing() || historyPreferenceBusy()" @click="historyPreference(!historyEnabled())">{{ historyEnabled() ? 'Pause' : 'Enable history' }}</button>
+    <button type="button" class="text-action" @click="clearHistory()" :disabled="historyClearing() || historyPreferenceBusy() || !items().some(item => item.kind === 'clipboard')">Clear history</button>
   </div>
   <p :if="category() === 'github'" class="px-5 github-status" role="status">{{ githubLoading() ? 'Searching GitHub...' : githubStatus() }}</p>
   <p :if="category() === 'pantry'" class="px-5 github-status" role="status">{{ pantryStatus() }}</p>
   <div :if="allResults().length > results().length" class="flex items-center justify-center history-tools"><button type="button" class="text-action" @click="visibleLimit.set(visibleLimit() + 100)">Show {{ Math.min(100, allResults().length - results().length) }} more</button></div>
   <footer class="flex gap-3 items-center px-5">
     <span class="wordmark">Launchpad</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
-    <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'clipboard' ? '↑↓ Review · Return to copy' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
+    <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'clipboard' ? '↑↓ Review · ⌘↵ Copy here' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet', 'clipboard'].includes(active()?.kind)" type="button" class="footer-action" @click="remove()" aria-label="Delete selected saved item">Delete</button>
@@ -1638,11 +1729,12 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       </section>
       <section :if="settingsSection() === 'clipboard'" class="settings-group">
     <h2>Clipboard History</h2>
-    <label class="toggle-row"><input type="checkbox" role="switch" :checked="historyEnabled()" @change="historyPreference(!historyEnabled())"> Record new clipboard text</label>
+    <label class="toggle-row"><input type="checkbox" role="switch" :disabled="historyClearing() || historyPreferenceBusy()" :checked="historyEnabled()" @change="historyPreference(!historyEnabled())"> Record new clipboard text</label>
     <p class="help">Stored only on this Mac, up to 200 entries. Protected and transient pasteboard types are skipped, with additional checks for known password managers. Unmarked sensitive text can still be captured. Pause before copying anything you want to keep out of history.</p>
+    <p class="help">Resuming records the next new copy. Text copied while paused stays out of history.</p>
     <label for="history-days">Keep history for</label>
-    <select id="history-days" :value="historyDays()" @change="historyPreference(historyEnabled(), $event.target.value)"><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select>
-    <div class="setting-actions"><span class="help">{{ historyEnabled() ? historyStatus() : 'History is paused' }}</span><button type="button" class="danger-button" @click="clearHistory()">Clear history</button></div>
+    <select id="history-days" :disabled="historyClearing() || historyPreferenceBusy()" :value="historyDays()" @change="historyPreference(historyEnabled(), $event.target.value)"><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select>
+    <div class="setting-actions"><span class="help">{{ historyStatus() }}</span><button :if="historyPreferenceUnsaved()" type="button" class="text-action" :disabled="historyClearing() || historyPreferenceBusy()" @click="historyPreference(false)">Save paused setting</button><button type="button" class="danger-button" :disabled="historyClearing() || historyPreferenceBusy()" @click="clearHistory()">Clear history</button></div>
       </section>
       <section :if="settingsSection() === 'github'" class="settings-group">
     <h2>GitHub {{ githubViewer() ? '· @' + githubViewer().login : '' }}</h2>
@@ -1756,9 +1848,9 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <div class="dialog-footer"><button type="button" class="secondary-button" @click="closePackage()">Back</button><button :if="packageAppPath()" type="button" class="save-button" @click="openPackageApplication()">Open {{ packageDetail().title }}</button><button :if="!packageAppPath()" type="button" class="save-button" @click="startInstall()" :disabled="packageBusy() || pantryRestoring() || packageState()?.disabled">{{ pantryRestoring() ? 'Checking installation…' : packageBusy() ? 'Requesting…' : packageState()?.button }}</button></div>
   </div>
 
-  <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="aliasApplication() ? 'Application search aliases' : editId() === null ? 'New command' : 'Edit command'">
+  <div :if="editor()" class="editor" role="dialog" aria-modal="true" :aria-label="aliasApplication() ? 'Application search aliases' : clipboardSnippet() ? 'Save clipboard as snippet' : editId() === null ? 'New command' : 'Edit command'">
     <form class="dialog-form" @submit.prevent="saveCommand()">
-      <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ aliasApplication() ? 'Search aliases' : editId() === null ? 'New command' : 'Edit command' }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closeEditor()">esc</button></div>
+      <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1>{{ aliasApplication() ? 'Search aliases' : clipboardSnippet() ? 'Save as snippet' : editId() === null ? 'New command' : 'Edit command' }}</h1><button type="button" class="escape" @mousedown.stop="" @click="closeEditor()">esc</button></div>
       <div class="dialog-body">
       <div :if="aliasApplication()">
         <h2>{{ aliasApplication().title }}</h2>
@@ -1769,8 +1861,9 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <p class="help">Up to 20 aliases. Saved only on this Mac. Clear this field to remove your aliases.</p>
       </div>
       <div :if="!aliasApplication()">
+      <p :if="clipboardSnippet()" class="help">Keep this text as a reusable snippet. Clearing clipboard history or its retention limit will not remove your saved snippet.</p>
       <label for="command-kind">Type</label>
-      <select id="command-kind" x-model="kind"><option value="quicklink">Quicklink</option><option value="snippet">Snippet</option></select>
+      <select id="command-kind" x-model="kind" :disabled="clipboardSnippet()"><option value="quicklink">Quicklink</option><option value="snippet">Snippet</option></select>
       <label for="command-title">Name</label>
       <input ref="commandTitle" id="command-title" x-model="title" required maxlength="120" placeholder="Something you use every day">
       <label for="command-content">{{ kind() === 'quicklink' ? 'URL' : 'Text to copy' }}</label>
@@ -1787,7 +1880,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       </div>
       <p :if="error()" class="error" role="alert">{{ error() }}</p>
       </div>
-<div class="dialog-footer"><button type="button" class="secondary-button" @click="closeEditor()">Cancel</button><button class="save-button" type="submit" :disabled="saving()">{{ saving() ? 'Saving...' : aliasApplication() ? 'Save aliases' : editId() === null ? 'Create command' : 'Save changes' }}</button></div>
+<div class="dialog-footer"><button type="button" class="secondary-button" @click="closeEditor()">Cancel</button><button class="save-button" type="submit" :disabled="saving()">{{ saving() ? 'Saving...' : aliasApplication() ? 'Save aliases' : clipboardSnippet() ? 'Save snippet' : editId() === null ? 'Create command' : 'Save changes' }}</button></div>
     </form>
   </div>
 </main>
@@ -2003,13 +2096,21 @@ header input:focus-visible { outline: none; }
 .clipboard-preview-heading strong { font-weight: 600; }
 .clipboard-preview-heading span, .clipboard-preview-time { font-size: 10px; color: var(--muted); }
 .clipboard-preview-time { margin: 5px 0 12px; }
+.history-label { gap: 8px; padding-left: 12px; padding-right: 12px; }
+.history-label > span:first-child { flex: 1; min-width: 0; white-space: nowrap; }
+.history-source { max-width: 150px; min-width: 60px; font-size: 10px; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 5px; padding: 2px 5px; }
+.clipboard-preview-actions { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding-top: 10px; margin-top: 8px; border-top: 1px solid var(--line); }
+.clipboard-preview-actions button { display: inline-flex; gap: 5px; align-items: center; }
+.clipboard-action-status { margin: 6px 0 0; color: var(--muted); font-size: 10px; }
 .clipboard-preview pre { flex: 1; min-height: 0; overflow: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.6 ui-monospace, monospace; }
 .history-tools > span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .history-tools button { flex: none; }
 @media (max-width: 560px) {
   .history-region { flex-direction: column; }
-  .clipboard-preview { flex: 0 0 32%; margin: 0 12px 8px; padding: 8px 10px; }
+  .clipboard-preview { flex: 0 0 42%; margin: 0 12px 8px; padding: 8px 10px; }
   .clipboard-preview-time { margin: 3px 0 6px; }
+  .history-source { max-width: 110px; }
+  .clipboard-preview-actions { padding-top: 6px; margin-top: 6px; }
   .history-region .results { flex: 1; min-height: 80px; }
 }
 .usage-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }

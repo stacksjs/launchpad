@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { clipboardDecision, clipboardResult, clipboardResults, clipboardSelection, clipboardSummary, clipboardTime, clipboardTitle, maxClipboardText } from '../resources/functions/clipboard'
+import { clipboardDecision, clipboardResult, clipboardResults, clipboardSelection, clipboardSummary, clipboardTime, clipboardTitle, clipboardWithSources, clipboardSources, clipboardSnippetTitle, maxClipboardText } from '../resources/functions/clipboard'
 
 test('only usable text within the model limit is saved', () => {
   expect(clipboardDecision('copied')).toBe('save')
@@ -66,4 +66,31 @@ test('live history follows newest at the top and preserves the entry being revie
   expect(clipboardSelection(copied(3), 0, next, true)).toBe(1)
   expect(clipboardSelection(copied(8), 3, next.slice(0, 2))).toBe(1)
   expect(clipboardSelection(copied(8), 3, [])).toBe(0)
+})
+
+
+test('source filters resolve installed app identities and search their display names', () => {
+  const apps = [{ key: '/Code.app', title: 'Visual Studio Code', subtitle: 'Application', content: '/Code.app', kind: 'application', bundleId: 'com.microsoft.VSCode' }]
+  const entries = [clipboardResult({ id: 1, content: 'Editor text', sourceApp: 'com.microsoft.VSCode' }), clipboardResult({ id: 2, content: 'Browser text', sourceApp: 'com.apple.Safari' }), copied(3)]
+  const rows = clipboardWithSources([...apps, ...entries])
+  expect(rows[0]).toBe(apps[0])
+  expect(rows[1]).toMatchObject({ sourceAppName: 'Visual Studio Code', sourceAppPath: '/Code.app' })
+  expect(rows[2]).toMatchObject({ sourceAppName: 'Safari', sourceAppPath: '' })
+  expect(rows[3]).toMatchObject({ sourceAppName: 'Unknown source', sourceAppPath: '' })
+  expect(clipboardResults(rows, 'studio', 'com.microsoft.VSCode').map(row => row.id)).toEqual([1])
+  expect(clipboardResults(rows, '', '').map(row => row.id)).toEqual([3])
+  expect(clipboardResults(rows, 'editor', 'com.apple.Safari')).toEqual([])
+  expect(clipboardSources(rows)).toEqual([
+    { id: 'com.apple.Safari', title: 'Safari', path: '', count: 1 },
+    { id: '', title: 'Unknown source', path: '', count: 1 },
+    { id: 'com.microsoft.VSCode', title: 'Visual Studio Code', path: '/Code.app', count: 1 },
+  ])
+})
+
+
+test('clipboard snippet names obey the command model limit without splitting emoji', () => {
+  expect(clipboardSnippetTitle('😀'.repeat(100))).toBe('😀'.repeat(60))
+  expect(clipboardSnippetTitle('a' + '😀'.repeat(100))).toBe('a' + '😀'.repeat(59))
+  expect(clipboardSnippetTitle('Saved\ntext')).toBe('Saved text')
+  expect(clipboardSnippetTitle('   ')).toBe('Clipboard snippet')
 })

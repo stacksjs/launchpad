@@ -14,7 +14,7 @@ export function resultWindow(count: number, scrollTop: number, height: number) {
 export function createResultPresentation() {
   const decorated = new WeakMap<Result, { icon: string, result: Result }>()
   return (items: readonly Result[], icons: Record<string, string>): Result[] => items.map((item) => {
-    const icon = item.icon || icons[item.content]
+    const icon = item.icon || icons[item.kind === 'clipboard' ? item.sourceAppPath || '' : item.content]
     if (!icon || item.icon === icon) return item
     const previous = decorated.get(item)
     if (previous?.icon === icon) return previous.result

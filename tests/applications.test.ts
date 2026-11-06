@@ -17,6 +17,7 @@ test.skipIf(process.platform !== 'darwin')('localized app names display correctl
     await writeFile(join(path, 'Contents/Resources/en.lproj/InfoPlist.strings'), '"CFBundleDisplayName" = "Things"; "CFBundleName" = "Things";')
     const apps = await createApplicationDiscovery([root])()
     expect(apps[0]?.title).toBe('Things')
+    expect(apps[0]?.bundleId).toBe('com.example.things')
     expect(apps[0]?.key).toBe(path)
     expect(apps[0]?.content).toBe(path)
     expect(rankResults(apps, 'Things3')[0]?.title).toBe('Things')
@@ -171,4 +172,14 @@ test('a root that is a file does not discard apps from the other roots', async (
     expect(apps.map(app => app.title)).toEqual(['Things3'])
   }
   finally { await rm(root, { recursive: true, force: true }) }
+})
+
+
+test('clipboard source icons load only verified source paths in the visible viewport', () => {
+  const rows = [
+    { key: 'clipboard:1', title: 'One', subtitle: '', content: '/Untrusted.app', kind: 'clipboard' },
+    { key: 'clipboard:2', title: 'Two', subtitle: '', content: 'Copied text', kind: 'clipboard', sourceAppPath: '/Trusted.app' },
+    { key: 'clipboard:3', title: 'Three', subtitle: '', content: 'Text', kind: 'clipboard', sourceAppPath: '/Cached.app', icon: 'data:cached' },
+  ]
+  expect(visibleApplicationPaths(rows, 0, 260)).toEqual(['/Trusted.app'])
 })

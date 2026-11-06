@@ -1,6 +1,7 @@
 import ClipboardEntry from '../Models/ClipboardEntry'
 import AppPreference from '../Models/AppPreference'
 import LaunchRecord from '../Models/LaunchRecord'
+import { clipboardCapturedAt } from '../../resources/functions/clipboard'
 
 /** Keep a bounded local text history. Credential material never belongs here. */
 export async function pruneClipboardHistory(days?: number, now = Date.now()) {
@@ -15,7 +16,7 @@ export async function pruneClipboardHistory(days?: number, now = Date.now()) {
   const page = 1000
   let rows = await ClipboardEntry.orderBy('id', 'desc').limit(page).get()
   for (const [index, row] of rows.entries()) {
-    const captured = Number(row.capturedAt ?? row.captured_at ?? 0)
+    const captured = clipboardCapturedAt(row)
     if (index >= 200 || (captured > 0 && captured < now - days! * 86400000)) await remove(row.id)
   }
   // Anything older than the newest page is past the 200 entry cap, however it got there.

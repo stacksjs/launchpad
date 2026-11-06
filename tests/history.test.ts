@@ -52,3 +52,15 @@ test('history prunes entries beyond the newest thousand', async () => {
   }
   finally { database.close() }
 })
+
+test('legacy entries with missing capture times expire using their model creation timestamps', async () => {
+  const database = openNativeDatabase({ path: ':memory:', models: { ClipboardEntry, AppPreference, LaunchRecord } })
+  try {
+    const legacy = await ClipboardEntry.create({ content: 'Legacy copy', capturedAt: 0 })
+    await LaunchRecord.create({ key: `clipboard:${legacy.id}`, favorite: true })
+    await pruneClipboardHistory(1, Date.now() + 2 * 86400000)
+    expect(await ClipboardEntry.find(legacy.id)).toBeUndefined()
+    expect(await LaunchRecord.where('key', `clipboard:${legacy.id}`).first()).toBeUndefined()
+  }
+  finally { database.close() }
+})

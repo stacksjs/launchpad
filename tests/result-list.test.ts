@@ -59,3 +59,11 @@ test('quiet result kinds stay out of the idle list but remain searchable', () =>
   expect(idleVisible(item('emoji', 'emoji:🚀'))).toBe(false)
   expect(idleVisible(item('snippet', 'extension:Pack:a'))).toBe(false)
 })
+
+
+test('clipboard row icons come from source metadata, never the copied text', () => {
+  const present = createResultPresentation()
+  const row = { key: 'clipboard:1', title: 'A path', subtitle: '', content: '/Copied.app', kind: 'clipboard' }
+  expect(present([row], { '/Copied.app': 'data:wrong' })[0]!.icon).toBeUndefined()
+  expect(present([{ ...row, sourceAppPath: '/Source.app' }], { '/Copied.app': 'data:wrong', '/Source.app': 'data:right' })[0]!.icon).toBe('data:right')
+})

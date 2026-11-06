@@ -14,6 +14,7 @@ type Search = (input: string, category?: string) => Result[]
 export interface ComposeInputs {
   category: string
   query: string
+  clipboardSource?: string
   /** Applications, saved commands, clipboard, installed packages, system commands and extension commands. */
   searchLocal: Search
   /** Emoji search, already weighted by the person's own use. */
@@ -60,7 +61,7 @@ const calculatorRow = (answer: string): Result => ({ key: 'calculator', title: a
 export function composeResults(input: ComposeInputs): Result[] {
   const { category, query } = input
   const text = query.trim()
-  if (category === 'clipboard') return clipboardResults(input.searchLocal('', 'clipboard'), query)
+  if (category === 'clipboard') return clipboardResults(input.searchLocal('', 'clipboard'), query, input.clipboardSource)
   if (category === 'emoji') return input.searchEmoji(query, 'emoji')
   if (category === 'file') return input.browsing || text.length >= fileTabMinimum ? narrowFiles(input.files, query) : []
   if (category === 'contact') return text.length >= 2 ? [...input.contacts] : []

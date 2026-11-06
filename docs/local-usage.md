@@ -32,6 +32,11 @@ events and hides the palette without waiting for their HTTP persistence. The
 existing queue retries failed writes with the same UUIDs while Launchpad runs.
 Slow usage writes must not hold the palette over the launched application.
 
+Copy in the clipboard preview (Command Return) records a successful clipboard
+command while leaving the palette open; it does not record a dismissal. Saving a
+clipboard entry as a snippet records `command_created` only after the native
+Command API accepts the save. Neither action includes the text in usage records.
+
 ## API and persistence
 
 - `POST /api/activity-events` validates an event through the generated model API.
