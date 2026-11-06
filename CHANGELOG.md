@@ -1,5 +1,46 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.3...v1.1.4)
+
+## ✨ Features
+
+- **settings**: add a Sync screen for carrying a setup between Macs ([3513a93](https://github.com/stacksjs/launchpad/commit/3513a93)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **transfer**: keep the file up to date in a folder the person named ([a2416a5](https://github.com/stacksjs/launchpad/commit/a2416a5)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **transfer**: write and read the settings file on a path the person picked ([674170b](https://github.com/stacksjs/launchpad/commit/674170b)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **transfer**: describe a setup as one file that another Mac can read ([24e824b](https://github.com/stacksjs/launchpad/commit/24e824b)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **modes**: search for a mode instead of naming them all at once ([f52d4aa](https://github.com/stacksjs/launchpad/commit/f52d4aa)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **passwords**: show saved logins and hand them back to open ([b0d663e](https://github.com/stacksjs/launchpad/commit/b0d663e)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **passwords**: ask the 1Password CLI for titles, behind a setting ([da8a8d2](https://github.com/stacksjs/launchpad/commit/da8a8d2)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **passwords**: find a saved login without opening the manager ([cc74bd8](https://github.com/stacksjs/launchpad/commit/cc74bd8)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **grid**: show the Emoji tab as a grid ([de02d10](https://github.com/stacksjs/launchpad/commit/de02d10)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **grid**: lay results out as a grid where a column wastes the window ([1802736](https://github.com/stacksjs/launchpad/commit/1802736)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **detail**: open a long result as a page with Command Y ([b88f3b9](https://github.com/stacksjs/launchpad/commit/b88f3b9)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **detail**: read a long result into blocks worth a page ([604f81e](https://github.com/stacksjs/launchpad/commit/604f81e)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **selection**: act on what another app handed over ([25f29ef](https://github.com/stacksjs/launchpad/commit/25f29ef)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **selection**: declare the Services menu entry in the bundle ([597546e](https://github.com/stacksjs/launchpad/commit/597546e)) _(by glennmichael123 <gtorregosa@gmail.com>)_ ([stacksjs/stx#2152](https://github.com/stacksjs/stx/issues/2152))
+- read a selection handed over by macOS ([782cbae](https://github.com/stacksjs/launchpad/commit/782cbae)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **pantry**: wait for installed inventory before offering repair ([067c677](https://github.com/stacksjs/launchpad/commit/067c677)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **pantry**: show verified app readiness and recover incomplete installs ([b53bfc4](https://github.com/stacksjs/launchpad/commit/b53bfc4)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **backend**: serve the themes and extensions the interface asks for ([8e18f0c](https://github.com/stacksjs/launchpad/commit/8e18f0c)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+- **startup**: start with a fresh store rather than not at all ([f3684f7](https://github.com/stacksjs/launchpad/commit/f3684f7)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 📝 Documentation
+
+- describe the settings file and correct the sync claim ([9be9982](https://github.com/stacksjs/launchpad/commit/9be9982)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🔧 Chores
+
+- release v1.1.4 ([4343088](https://github.com/stacksjs/launchpad/commit/4343088)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **deps**: align Pantry runtime and publishing at 0.11.171 ([1b0caf4](https://github.com/stacksjs/launchpad/commit/1b0caf4)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.2...v1.1.3)
 
 ## ✨ Features
