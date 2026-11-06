@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.4...v1.1.5)
+
+## 🐛 Bug Fixes
+
+- **ui**: compact search header and polish update downloads ([c502679](https://github.com/stacksjs/launchpad/commit/c502679)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.5 ([3d56117](https://github.com/stacksjs/launchpad/commit/3d56117)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.3...v1.1.4)
 
 ## ✨ Features
