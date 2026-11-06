@@ -169,3 +169,26 @@ test('a folder that is not an absolute path is refused like any other', async ()
   expect(await failure(await post('/api/transfer/export', { folder: 'Dropbox' }))).toBe('That is not a usable file path.')
   expect(Object.keys(written)).toEqual([])
 })
+
+test('a preview carries what each conflicting field holds on both sides', async () => {
+  await seed()
+  await post('/api/transfer/export', { path: '/file.json' })
+  const docs = await Command.where('alias', 'docs').first()
+  await Command.update(docs!.id, { content: 'https://docs.internal/?q={query}', shortcut: '⌘⌥D' })
+  const preview = await data(await post('/api/transfer/preview', { path: '/file.json' }))
+  expect(preview.conflicts).toHaveLength(1)
+  expect(preview.conflicts[0].label).toBe('Docs')
+  expect(preview.conflicts[0].differences).toEqual([
+    { field: 'content', label: 'Address', mine: 'https://docs.internal/?q={query}', theirs: 'https://example.com/?q={query}', opaque: false },
+    { field: 'shortcut', label: 'Shortcut', mine: '⌘⌥D', theirs: '', opaque: false },
+  ])
+})
+
+test('a theme conflict reports its colours as differing without dumping them', async () => {
+  await seed()
+  await post('/api/transfer/export', { path: '/file.json' })
+  const theme = await Theme.where('name', 'Midnight').first()
+  await Theme.update(theme!.id, { dark: '{"ink":"#111111"}' })
+  const preview = await data(await post('/api/transfer/preview', { path: '/file.json' }))
+  expect(preview.conflicts[0].differences).toEqual([{ field: 'dark', label: 'Dark colours', mine: '', theirs: '', opaque: true }])
+})

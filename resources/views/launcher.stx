@@ -1052,6 +1052,16 @@ function importedOn(stamp) {
   return stamp ? ', exported ' + stamp.slice(0, 10) : ''
 }
 
+/** Detail for the first few conflicts only; a file that disagrees about fifty things should not fill the screen. */
+const shownConflicts = 6
+function conflictsInDetail(entries) {
+  return (entries || []).slice(0, shownConflicts)
+}
+function conflictsBeyondDetail(entries) {
+  const extra = (entries || []).length - shownConflicts
+  return extra > 0 ? `and ${plural(extra, 'other item')} not shown here` : ''
+}
+
 /** The first few names from one side of a plan, so the template holds no logic of its own. */
 function importLabels(entries) {
   const names = (entries || []).slice(0, 8).map(entry => entry.label).join(', ')
@@ -1814,7 +1824,19 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           <h2>Before importing</h2>
           <p class="help">From Launchpad {{ importPlan().from || 'an earlier version' }}{{ importedOn(importPlan().exportedAt) }}. {{ importPlan().summary }}</p>
           <div :if="importPlan().add.length" class="setting-row"><div><strong>{{ plural(importPlan().add.length, 'new item') }}</strong><p class="help">{{ importLabels(importPlan().add) }}</p></div></div>
-          <div :if="importPlan().conflicts.length" class="setting-row"><div><strong>{{ plural(importPlan().conflicts.length, 'item') }} already different here</strong><p class="help">{{ importLabels(importPlan().conflicts) }}</p></div></div>
+          <div :if="importPlan().conflicts.length" class="conflicts">
+            <strong>{{ plural(importPlan().conflicts.length, 'item') }} already different here</strong>
+            <div :for="(entry, index) in conflictsInDetail(importPlan().conflicts)" :key="entry.kind + ':' + entry.label" class="conflict">
+              <div class="conflict-name">{{ entry.label }}</div>
+              <div :for="(field, fieldIndex) in entry.differences" :key="field.field" class="conflict-field">
+                <div class="conflict-label">{{ field.label }}</div>
+                <p :if="field.opaque" class="help">Differs. Too long to show here.</p>
+                <div :if="!field.opaque" class="conflict-side"><span>This Mac</span><span :class="field.mine ? 'conflict-value' : 'conflict-value absent'">{{ field.mine || 'Not set' }}</span></div>
+                <div :if="!field.opaque" class="conflict-side"><span>The file</span><span :class="field.theirs ? 'conflict-value' : 'conflict-value absent'">{{ field.theirs || 'Not set' }}</span></div>
+              </div>
+            </div>
+            <p :if="conflictsBeyondDetail(importPlan().conflicts)" class="help">{{ conflictsBeyondDetail(importPlan().conflicts) }}</p>
+          </div>
           <p :if="importPlan().conflicts.length" class="help">Adding leaves these as they are on this Mac. Replacing takes the file's version instead. Either way, nothing is deleted.</p>
           <div class="button-row">
             <button type="button" class="save-button" @click="applyImport('mine')" :disabled="syncBusy()">{{ importPlan().add.length ? 'Add ' + plural(importPlan().add.length, 'item') : 'Keep everything as it is' }}</button>
@@ -2058,6 +2080,19 @@ header input:focus-visible { outline: none; }
 /* A row of buttons stands together. `.setting-actions` spreads its children apart, which suits one help text and one
    action but leaves two buttons pushed to opposite edges, reading as unrelated. */
 .button-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.conflicts { margin-top: 12px; }
+.conflict { padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--line); }
+.conflict:first-of-type { border-top: 0; }
+.conflict-name { font-weight: 600; }
+.conflict-field { margin-top: 7px; }
+.conflict-label { font-size: 11px; letter-spacing: .3px; text-transform: uppercase; color: var(--muted); }
+/* Naming the side on every line, because the one thing a person must not have to infer is which value is theirs. */
+.conflict-side { display: grid; grid-template-columns: 68px 1fr; gap: 10px; align-items: baseline; font-size: 12px; margin-top: 2px; }
+.conflict-side > span:first-child { color: var(--muted); }
+/* A quicklink has no spaces to break at, so it must be allowed to break anywhere rather than widen the panel. */
+.conflict-value { overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+/* An absent value drops the monospace, so "Not set" can never be mistaken for a value that reads like it. */
+.conflict-value.absent { font-family: inherit; font-size: 12px; font-style: italic; color: var(--muted); }
 /* `.settings h2` sets `margin: 0 0 6px`, and an element-plus-class selector outranks a utility class, so `mt-5` on a
    settings subheading never applied and every one of them sat flush against whatever came before it. */
 .settings h2.mt-5 { margin-top: 20px; }

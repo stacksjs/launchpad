@@ -3,6 +3,7 @@ import {
   buildDocument,
   carriedPreferences,
   describePlan,
+  describeDifference,
   describeReport,
   documentName,
   documentVersion,
@@ -135,4 +136,42 @@ test('a report says what happened, including the conflicts nothing happened to',
   expect(describeReport({ added: 0, replaced: 2, unchanged: 0, conflicts: 2 })).toBe('Imported · 2 replaced')
   expect(describeReport({ added: 1, replaced: 1, unchanged: 0, conflicts: 3 })).toBe('Imported · 1 added · 1 replaced · 2 kept as it was here')
   expect(describeReport({ added: 0, replaced: 0, unchanged: 0, conflicts: 0 })).toBe('Nothing in that file was new to this Mac.')
+})
+
+test('a conflict says which fields differ and what each side holds', () => {
+  const mine = { ...docs, content: 'https://docs.internal/?q={query}', shortcut: '⌘⌥D' }
+  const difference = describeDifference('command', mine, docs)
+  expect(difference).toEqual([
+    { field: 'content', label: 'Address', mine: 'https://docs.internal/?q={query}', theirs: 'https://example.com/?q={query}', opaque: false },
+    { field: 'shortcut', label: 'Shortcut', mine: '⌘⌥D', theirs: '', opaque: false },
+  ])
+  // A snippet's body is text, not an address, and the label says so.
+  expect(describeDifference('command', { ...signature, content: 'Best wishes' }, signature)[0]).toMatchObject({ label: 'Text' })
+})
+
+test('rows that match report no difference at all', () => {
+  expect(describeDifference('command', docs, { ...docs })).toEqual([])
+  expect(describeDifference('favorite', { key: '/a', aliases: 'x', favorite: true }, { key: '/a', aliases: 'x', favorite: true })).toEqual([])
+})
+
+test('a document-valued field is reported as differing rather than printed', () => {
+  const difference = describeDifference('theme', { ...midnight, dark: '{"ink":"#111"}' }, midnight)
+  expect(difference).toEqual([{ field: 'dark', label: 'Dark colours', mine: '', theirs: '', opaque: true }])
+  const manifest = describeDifference('extension', { name: 'Pack', manifest: '{"schema":1}', enabled: true }, { name: 'Pack', manifest: '{"schema":1,"more":true}', enabled: false })
+  expect(manifest.map(entry => [entry.label, entry.opaque, entry.mine])).toEqual([['Manifest', true, ''], ['Enabled', false, 'yes']])
+})
+
+test('a long value is cut rather than filling the screen, and emptiness is visible', () => {
+  const long = 'x'.repeat(200)
+  const [difference] = describeDifference('command', { ...signature, content: long }, signature)
+  expect(difference!.mine).toHaveLength(90)
+  expect(difference!.mine.endsWith('…')).toBe(true)
+  // An absent value is empty, not the word "nothing": a snippet whose text is literally "nothing" must look different.
+  expect(describeDifference('favorite', { key: '/a', aliases: '', favorite: true }, { key: '/a', aliases: 'post', favorite: true })[0]).toMatchObject({ mine: '', theirs: 'post' })
+  expect(describeDifference('favorite', { key: '/a', aliases: 'nothing', favorite: true }, { key: '/a', aliases: '', favorite: true })[0]).toMatchObject({ mine: 'nothing', theirs: '' })
+})
+
+test('whitespace in a value is flattened so one line stays one line', () => {
+  const [difference] = describeDifference('command', { ...signature, content: 'Kind\n\nregards,\n  Glenn' }, signature)
+  expect(difference!.mine).toBe('Kind regards, Glenn')
 })

@@ -213,6 +213,65 @@ export function readDocument(value: string): DocumentRead {
   }
 }
 
+/**
+ * How two rows of the same identity actually differ.
+ *
+ * Without this an import says "3 items already different here" and then asks someone to choose. That is the one
+ * screen in the feature where a person has to decide something they cannot undo by reading it back, so it should
+ * show the difference rather than assert it.
+ *
+ * Some fields are not worth printing. A theme's colours and an extension's manifest are documents in their own right,
+ * and ninety characters of minified JSON tells nobody anything; those are reported as differing and left at that.
+ */
+export interface FieldDifference { field: string, label: string, mine: string, theirs: string, opaque: boolean }
+
+/** Long enough to recognise a quicklink or the opening of a snippet, short enough to sit on one line. */
+const maxShown = 90
+
+/** Fields whose value is a document: worth knowing it changed, not worth printing. */
+const opaqueFields = new Set(['light', 'dark', 'font', 'manifest'])
+
+function fieldLabel(kind: TransferKind, field: string, row: TransferRow): string {
+  if (kind === 'command' && field === 'content') return (row as TransferCommand).kind === 'snippet' ? 'Text' : 'Address'
+  if (kind === 'command' && field === 'kind') return 'Type'
+  if (kind === 'favorite' && field === 'favorite') return 'Favourite'
+  if (kind === 'theme' && field === 'light') return 'Light colours'
+  if (kind === 'theme' && field === 'dark') return 'Dark colours'
+  const spaced = field.replace(/([a-z])([A-Z])/g, '$1 $2')
+  return spaced.charAt(0).toLocaleUpperCase() + spaced.slice(1)
+}
+
+/**
+ * One line a person can read: booleans as words, anything long cut with an ellipsis.
+ *
+ * An empty value returns an empty string rather than a word like "nothing", so that the interface can mark the
+ * absence in its own way. A snippet whose text is literally "nothing" has to look different from one with no text.
+ */
+function showValue(value: unknown): string {
+  if (typeof value === 'boolean') return value ? 'yes' : 'no'
+  const text = typeof value === 'string' ? value : String(value ?? '')
+  const flat = text.replace(/\s+/g, ' ').trim()
+  if (!flat) return ''
+  return flat.length > maxShown ? `${flat.slice(0, maxShown - 1)}\u2026` : flat
+}
+
+export function describeDifference(kind: TransferKind, mine: TransferRow, theirs: TransferRow): FieldDifference[] {
+  const here = mine as unknown as Record<string, unknown>
+  const incoming = theirs as unknown as Record<string, unknown>
+  return compared[kind]
+    .filter(field => here[field] !== incoming[field])
+    .map((field) => {
+      const opaque = opaqueFields.has(field)
+      return {
+        field,
+        label: fieldLabel(kind, field, theirs),
+        mine: opaque ? '' : showValue(here[field]),
+        theirs: opaque ? '' : showValue(incoming[field]),
+        opaque,
+      }
+    })
+}
+
 export interface TransferEntry { kind: TransferKind, label: string, row: TransferRow }
 /** Both sides of a disagreement, kept whole so the interface can show what it would be replacing. */
 export interface TransferConflict extends TransferEntry { mine: TransferRow }

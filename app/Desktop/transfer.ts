@@ -8,6 +8,7 @@ import Theme from '../Models/Theme'
 import {
   buildDocument,
   carriedPreferences,
+  describeDifference,
   describePlan,
   documentName,
   folderPath,
@@ -241,7 +242,8 @@ export function createTransferApi(options: TransferPorts = {}) {
             from: parsed.document.launchpad,
             exportedAt: parsed.document.exportedAt,
             add: plan.add.map(entry => ({ kind: entry.kind, label: entry.label })),
-            conflicts: plan.conflicts.map(entry => ({ kind: entry.kind, label: entry.label })),
+            // Both sides travel with the conflict so the screen can show the difference rather than assert it.
+            conflicts: plan.conflicts.map(entry => ({ kind: entry.kind, label: entry.label, differences: describeDifference(entry.kind, entry.mine, entry.row) })),
             unchanged: plan.unchanged,
             summary: describePlan(plan),
           },
