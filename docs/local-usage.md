@@ -74,8 +74,8 @@ remain available without estimating old durations.
 
 The backend reconciles job responses from the connected Pantry desktop service.
 A job ID uniquely identifies a receipt, so repeated polling, retries and frontend
-reloads cannot add another install. Only successful terminal jobs increase install
-counts. Failed terminal jobs are retained separately. A successful reinstall is a
+reloads cannot add another install. Only successful terminal installation jobs increase install
+counts. Uninstall jobs are excluded from install receipts, failures, timing and active days. Failed terminal jobs are retained separately. A successful reinstall is a
 new job; retrying the same job is not another install.
 
 Receipts retain the package identifier, kind, result, request/start/finish times,

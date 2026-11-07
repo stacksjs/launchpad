@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { Database } from 'bun:sqlite'
@@ -13,6 +13,14 @@ let child: ReturnType<typeof Bun.spawn> | undefined
 try {
   const database = join(root, 'usage.sqlite')
   const entry = join(root, 'api.ts')
+  const removalHome = join(root, 'user')
+  const removalStore = join(root, 'store')
+  const removalDomain = 'fixture.example/removable'
+  const removalVersion = join(removalStore, 'packages', removalDomain, 'v1.0.0')
+  mkdirSync(join(removalVersion, 'bin'), { recursive: true })
+  mkdirSync(join(removalStore, 'bin'), { recursive: true })
+  writeFileSync(join(removalVersion, 'bin/tool'), 'native removal fixture')
+  symlinkSync(join(removalVersion, 'bin/tool'), join(removalStore, 'bin/tool'))
   const packages = ['app', 'cli', 'library', 'font'].map(kind => bundledPackageCatalog().find(item => item.kind === kind)!)
   await Bun.write(entry, `import { createNativeUpdateApi } from ${JSON.stringify(Bun.resolveSync('@stacksjs/desktop', app))}
 import { openNativeDatabase, createNativeModelApi } from ${JSON.stringify(Bun.resolveSync('@stacksjs/orm/native', app))}
@@ -34,7 +42,7 @@ const api = createActivityApi(modelApi)
 const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: '1.0.10' })
 const stopUsage = startActivityRuntime(api)
 const packages = ${JSON.stringify(packages)}
-const service = startDesktopBridge({ stateDirectory: ${JSON.stringify(join(root, 'pantry'))}, port: 0, catalog: packages, applications: () => packages.filter(entry => entry.kind === 'app').map(entry => ({ name: entry.domain, version: '1', applicationPath: '/Applications/UsageFixture.app' })), run: async (args) => { await Bun.sleep(20); return args.at(-1) === packages[3].domain ? 7 : 0 } })
+const service = startDesktopBridge({ removal: ${JSON.stringify({ store: join(root, 'store'), home: join(root, 'user') })}, stateDirectory: ${JSON.stringify(join(root, 'pantry'))}, port: 0, catalog: packages, applications: () => packages.filter(entry => entry.kind === 'app').map(entry => ({ name: entry.domain, version: '1', applicationPath: '/Applications/UsageFixture.app' })), run: async (args, output) => { if (args[0] === 'list') { output('[]'); return 0 }; await Bun.sleep(20); return args.at(-1) === packages[3].domain ? 7 : 0 } })
 const baseUrl = 'http://127.0.0.1:' + service.server.port
 const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(${JSON.stringify(join(root, 'pantry'))}), 'Usage fixture')
 export const shutdown = async () => { await stopUsage(); await service.close() }
@@ -104,6 +112,21 @@ export default async (request: Request) => await updates(request) ?? await pantr
   assert.equal(pantry.failed, 1)
   assert.deepEqual(pantry.byKind, { app: 1, cli: 1, library: 1, font: 0 })
   assert.equal(pantry.timedInstalls, 3)
+  assert.equal((await request('pantry-installations')).data.length, 4)
+  assert.ok((await request('pantry/desktop/health')).capabilities.includes('uninstall:user'))
+  const submittedRemoval = await request('pantry/desktop/v1/uninstall', { domain: removalDomain, requestId: crypto.randomUUID() })
+  let removal = submittedRemoval.job
+  for (let index = 0; index < 100 && ['queued', 'running'].includes(removal.status); index++) {
+    await Bun.sleep(10)
+    removal = (await request(`pantry/desktop/v1/jobs/${removal.id}`)).job
+  }
+  assert.equal(removal.operation, 'uninstall')
+  assert.equal(removal.status, 'succeeded', removal.error)
+  assert.equal(existsSync(removalVersion), false)
+  assert.equal(existsSync(join(removalStore, 'bin/tool')), false)
+  assert.equal(existsSync(join(removalHome, '.Trash')), true)
+  await request('pantry/desktop/v1/jobs')
+  assert.deepEqual((await request('activity-summary')).data.pantry, pantry, 'Uninstall must not add install receipts or time')
   assert.equal((await request('pantry-installations')).data.length, 4)
   backend.stdin.end()
   assert.equal(await Promise.race([backend.exited, Bun.sleep(5000).then(() => 'timeout')]), 0)

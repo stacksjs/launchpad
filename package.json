@@ -22,7 +22,7 @@
     "@stacksjs/ts-svg": "0.1.7",
     "@stacksjs/validation": "0.75.323",
     "ts-images": "0.2.32",
-    "ts-pantry": "0.11.171"
+    "ts-pantry": "0.11.180"
   },
   "scripts": {
     "dev": "./buddy dev",

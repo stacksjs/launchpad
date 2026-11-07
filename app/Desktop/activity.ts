@@ -114,7 +114,7 @@ export function createActivityApi(modelApi: ModelApi, clock: { now?: () => numbe
     }
   }
   function receiptFrom(job: DesktopInstallJob): Receipt | null {
-    if (!job || !['succeeded', 'failed'].includes(job.status) || !pantryPackageKinds.includes(job.kind as PantryPackageKind)) return null
+    if (!job || (job.operation && job.operation !== 'install') || !['succeeded', 'failed'].includes(job.status) || !pantryPackageKinds.includes(job.kind as PantryPackageKind)) return null
     if (typeof job.id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(job.id)) return null
     if (typeof job.domain !== 'string' || !job.domain || job.domain.length > 255 || /\s|:\/\/|[?#]/.test(job.domain)) return null
     const requestedAt = Date.parse(job.createdAt)

@@ -59,7 +59,7 @@ export async function pantryApi(request: Request, options: { fetch?: DesktopFetc
   if (!url.pathname.startsWith(`${prefix}/`)) return null
   const path = url.pathname.slice(prefix.length)
   const allowed = (request.method === 'GET' && (path === '/health' || path === '/v1/installed' || path === '/v1/jobs' || /^\/v1\/jobs\/[a-f0-9-]{36}$/i.test(path)))
-    || (request.method === 'POST' && ['/pair', '/v1/install'].includes(path))
+    || (request.method === 'POST' && ['/pair', '/v1/install', '/v1/uninstall'].includes(path))
     || (request.method === 'DELETE' && path === '/v1/connection')
   if (!allowed) return Response.json({ error: 'Unsupported Pantry request.' }, { status: 404 })
   try {
@@ -73,7 +73,7 @@ export async function pantryApi(request: Request, options: { fetch?: DesktopFetc
     if (body && body.length > 4096) return Response.json({ error: 'Pantry request is too large.' }, { status: 413 })
     const response = await (options.fetch ?? fetch)(`http://127.0.0.1:46473${path}`, { method: request.method, headers, body, signal: AbortSignal.timeout(15000), redirect: 'error' })
     const text = await response.text()
-    if (response.ok && options.onJobs && (path === '/v1/install' || path.startsWith('/v1/jobs'))) {
+    if (response.ok && options.onJobs && (path === '/v1/install' || path === '/v1/uninstall' || path.startsWith('/v1/jobs'))) {
       try {
         const payload = JSON.parse(text)
         const candidates = Array.isArray(payload.jobs) ? payload.jobs : [payload.job]

@@ -5,7 +5,7 @@ import { bundledPackageCatalog } from 'ts-pantry/catalog'
 import AppPreference from '../app/Models/AppPreference'
 import CatalogPackage from '../app/Models/CatalogPackage'
 import { pantryApi } from '../app/Desktop/pantry'
-import { createPackageCatalogSearch, installedCatalog, packageInstallState, pantryResults } from '../resources/functions/pantry'
+import { createPackageCatalogSearch, installedCatalog, packageInstallState, pantryInventoryCatalog, pantryResults } from '../resources/functions/pantry'
 import { rankResults } from '../resources/functions/search'
 
 test('the complete public catalog persists through a read-only native model API', async () => {
@@ -92,4 +92,52 @@ test('app installation readiness requires a bundle and permits repair of old suc
 
 test('the shipped Pantry catalog routes GitHub Desktop through native app installation', () => {
   expect(bundledPackageCatalog().find(entry => entry.domain === 'github.com/desktop')?.kind).toBe('app')
+})
+
+test('managed packages support uninstall, retry and reinstall without claiming external ownership', () => {
+  for (const kind of ['app', 'cli', 'library', 'font']) {
+    const entry = bundledPackageCatalog().find(item => item.kind === kind)!
+    const installed = [{ name: entry.domain, version: '1', managed: true, ...(kind === 'app' ? { applicationPath: '/Users/test/Applications/Fixture.app' } : {}) }]
+    const job = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), domain: entry.domain, operation: 'uninstall' as const, status: 'running' as const, createdAt: new Date().toISOString(), output: '' }
+    expect(packageInstallState(entry, installed, null, true, false, true)).toMatchObject({ canRemove: true, button: 'Reinstall latest', disabled: false })
+    expect(packageInstallState(entry, installed, null, true).canRemove).toBe(false)
+    expect(packageInstallState(entry, installed, null, false, false, true).canRemove).toBe(false)
+    expect(packageInstallState(entry, installed, job, true, false, true)).toMatchObject({ canRemove: false, active: true, disabled: true, button: 'Uninstalling…' })
+    expect(packageInstallState(entry, installed, { ...job, status: 'failed', error: 'Quit the app first' }, true, false, true)).toMatchObject({ canRemove: true, removeButton: 'Retry uninstall', status: 'Quit the app first' })
+    expect(packageInstallState(entry, [], { ...job, status: 'succeeded' }, true, false, true)).toMatchObject({ removed: true, repair: false, ready: false, canRemove: false, button: 'Install' })
+    expect(packageInstallState(entry, [{ ...installed[0]!, managed: false }], null, true, false, true)).toMatchObject({ external: true, canRemove: false })
+  }
+})
+
+test('a second app copy remains openable after Pantry removal and absent catalog definitions remain manageable', () => {
+  const app = bundledPackageCatalog().find(item => item.kind === 'app')!
+  const installed = [{ name: app.domain, version: '1', managed: false, applicationPath: '/Applications/External.app' }]
+  expect(packageInstallState(app, [{ ...installed[0]!, managed: true }], null, true, false, true).removalNote).toContain('separate copy in /Applications will remain')
+  const job = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), domain: app.domain, operation: 'uninstall' as const, status: 'succeeded' as const, createdAt: new Date().toISOString(), output: '' }
+  expect(packageInstallState(app, installed, job, true, false, true)).toMatchObject({ removed: true, external: true, applicationPath: '/Applications/External.app', canRemove: false })
+  const inventory = [{ name: 'removed.example/tool', version: '2', managed: true }]
+  const entries = pantryInventoryCatalog([app], inventory)
+  expect(entries).toHaveLength(2)
+  const unknown = entries[1]!
+  expect(createPackageCatalogSearch(entries)('removed.example/tool')[0]?.domain).toBe(inventory[0]!.name)
+  expect(pantryResults(entries, [], inventory, 'all', true)).toHaveLength(2)
+  expect(pantryResults(entries, [], inventory, 'library', true)).toHaveLength(0)
+  expect(packageInstallState(unknown, inventory, null, true, false, true, false)).toMatchObject({ ready: true, canRemove: true, disabled: true, button: 'Not in catalog' })
+})
+
+test('the uninstall proxy forwards only the allowed endpoint and reconciles typed jobs', async () => {
+  const job = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), domain: 'example.com', operation: 'uninstall', status: 'queued', kind: 'cli', output: '' }
+  let reconciled: unknown
+  const response = await pantryApi(new Request('http://localhost/api/pantry/desktop/v1/uninstall', { method: 'POST', headers: { authorization: 'Bearer fixture' }, body: JSON.stringify({ domain: job.domain, requestId: job.requestId }) }), {
+    fetch: async (input, init) => {
+      expect(String(input)).toBe('http://127.0.0.1:46473/v1/uninstall')
+      expect(init?.method).toBe('POST')
+      expect(new Headers(init?.headers).get('authorization')).toBe('Bearer fixture')
+      return Response.json({ job })
+    },
+    onJobs: async jobs => { reconciled = jobs },
+  })
+  expect(response?.status).toBe(200)
+  expect(reconciled).toEqual([job])
+  expect((await pantryApi(new Request('http://localhost/api/pantry/desktop/v1/uninstall')))!.status).toBe(404)
 })

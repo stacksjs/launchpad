@@ -92,7 +92,11 @@ You can browse the catalog before connecting the installer. To install through L
 pantry desktop setup --yes
 ```
 
-Open **Settings → Pantry** and enter the single-use pairing code. Launchpad stores the connection token in macOS Keychain. Package details show original logos, upstream links, installed versions and job status. The separately installed Pantry CLI performs installations under your user account.
+Open **Settings → Pantry** and enter the single-use pairing code. Launchpad stores the connection token in macOS Keychain. Package details show original logos, upstream links, installed versions and job status. The separately installed Pantry service manages packages under your user account.
+
+Choose **Pantry → Installed**, or **Settings → Pantry → Manage installed packages**, to review your apps, CLI tools, libraries and fonts. Package details offer **Reinstall latest** and, with Pantry Desktop 0.11.180 or later, **Uninstall**. Removal requires confirmation and moves Pantry-managed user files to Trash while keeping app data, preferences and other packages. Quit a running app before removing it. Apps installed outside Pantry remain openable; their files are kept. Packages missing from the public catalog remain removable.
+
+To enable uninstall on an existing connection, run `pantry upgrade` and `pantry desktop setup --yes`, then refresh the connection in Launchpad.
 
 ## Keyboard shortcuts
 

@@ -175,3 +175,18 @@ test('year-review install totals use the completion calendar day and recorded ti
   }
   finally { f.db.close() }
 })
+
+test('successful and failed uninstalls never become installation receipts or active days', async () => {
+  const f = fixture()
+  try {
+    await f.api.checkpoint()
+    f.advance(4000)
+    await f.api.recordPantryJobs(['succeeded', 'failed'].map(status => ({ ...job('cli', start + 1000, status as 'succeeded' | 'failed'), operation: 'uninstall' as const })))
+    const summary = await totals(f.api)
+    expect(summary.pantry.installed).toBe(0)
+    expect(summary.pantry.failed).toBe(0)
+    expect(await PantryInstallation.count()).toBe(0)
+    expect(summary.activeDays).toBe(0)
+  }
+  finally { f.db.close() }
+})

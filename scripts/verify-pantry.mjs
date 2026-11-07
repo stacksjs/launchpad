@@ -8,7 +8,7 @@ const html = source.replace('return { get "actionLabel"()', 'return window.__lau
 const { chromium } = await import(process.env.LAUNCHPAD_PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ headless: true, ...(process.env.LAUNCHPAD_BROWSER_EXECUTABLE ? { executablePath: process.env.LAUNCHPAD_BROWSER_EXECUTABLE } : {}) })
 try {
-  const page = await browser.newPage({ viewport: { width: 720, height: 450 } })
+  const page = await browser.newPage({ viewport: { width: 720, height: 450 }, colorScheme: process.env.LAUNCHPAD_UI_DARK ? 'dark' : 'light' })
   const errors = []
   const requests = []
   page.on('pageerror', error => errors.push(error.stack || String(error)))
@@ -24,10 +24,12 @@ try {
   })
   await page.goto('http://localhost/')
   await page.waitForFunction(() => window.__launcher)
+  await page.evaluate(dark => { window.__launcher.colorMode.set(dark ? 'dark' : 'light'); window.__launcher.applyTheme() }, Boolean(process.env.LAUNCHPAD_UI_DARK))
   await page.evaluate(() => {
     const s = window.__launcher
     const entry = { domain: 'github.com/desktop', name: 'GitHub Desktop', description: 'A desktop application for contributing to projects on GitHub.', kind: 'app', aliases: ['gh-desktop'], programs: ['github-desktop'], latestVersion: '3.5.12', homepageUrl: 'https://desktop.github.com', githubUrl: null, platforms: ['darwin'], logo: null }
     const job = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), domain: entry.domain, status: 'succeeded', createdAt: new Date().toISOString(), output: 'Package downloaded into Pantry storage' }
+    s.catalog.set([entry])
     s.paletteVisible.set(true)
     s.pantryReady.set(true)
     s.pantryInstalled.set([{ name: entry.domain, version: '3.5.12' }])
@@ -37,9 +39,9 @@ try {
   await page.getByRole('button', { name: 'Repair installation', exact: true }).waitFor()
   assert.equal(await page.getByText('Mac application · github.com/desktop', { exact: true }).count(), 1)
   assert.equal(await page.getByRole('button', { name: 'Installed', exact: true }).count(), 0)
-  assert.equal(await page.getByLabel('Pantry installation output').isVisible(), false, 'Logs begin collapsed')
-  await page.getByText('Installation details', { exact: true }).click()
-  assert.equal(await page.getByLabel('Pantry installation output').isVisible(), true)
+  assert.equal(await page.getByLabel('Pantry operation output').isVisible(), false, 'Logs begin collapsed')
+  await page.getByText('Operation details', { exact: true }).click()
+  assert.equal(await page.getByLabel('Pantry operation output').isVisible(), true)
   await page.getByRole('button', { name: 'Repair installation', exact: true }).click()
   await page.getByText('Pantry service is unavailable', { exact: true }).waitFor()
   assert.equal(await page.getByRole('button', { name: 'Repair installation', exact: true }).isEnabled(), true)

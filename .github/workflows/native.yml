@@ -15,9 +15,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      - uses: pantry-pm/pantry/packages/action@v0.11.171
+      - uses: pantry-pm/pantry/packages/action@v0.11.180
         with:
-          version: '0.11.171'
+          version: '0.11.180'
           packages: bun.sh@1.4.3
           install: 'false'
       - run: bun install --frozen-lockfile
@@ -39,7 +39,7 @@ jobs:
           fetch-depth: 0
       # Use the same Pantry build as the native release; acceptance reads its compiled app HTML.
       - name: Build and qualify native app
-        uses: pantry-pm/pantry/packages/action@v0.11.171
+        uses: pantry-pm/pantry/packages/action@v0.11.180
         with:
           native-app: check
           release-token: ${{ github.token }}
@@ -49,7 +49,7 @@ jobs:
         run: bun run test:clipboard-native
       - name: Install pinned browser
         run: bunx playwright install chromium
-      - name: Verify icons, clipboard, updates and installs in both appearances
+      - name: Verify icons, clipboard, updates and package management in both appearances
         run: bun run test:ui
       - name: Preserve browser evidence
         if: always()
@@ -61,7 +61,7 @@ jobs:
           retention-days: 7
   native:
     needs: browser
-    uses: pantry-pm/pantry/.github/workflows/native-app.yml@v0.11.171
+    uses: pantry-pm/pantry/.github/workflows/native-app.yml@v0.11.180
     with:
       release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     secrets:
