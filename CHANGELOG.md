@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.9...v1.1.10)
+
+## ✨ Features
+
+- **pantry**: manage installed packages with recoverable uninstall ([e8b30e7](https://github.com/stacksjs/launchpad/commit/e8b30e7)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.10 ([8a63d0b](https://github.com/stacksjs/launchpad/commit/8a63d0b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.8...v1.1.9)
 
 ## ✨ Features
