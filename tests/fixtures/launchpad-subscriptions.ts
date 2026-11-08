@@ -4,6 +4,7 @@ import { db } from '@stacksjs/database/runtime'
 import { lists, subscribe } from '@stacksjs/newsletter'
 import { subscribeToLaunchpad } from '../../app/Services/launchpad-subscriptions'
 import { models } from '../../app/Desktop/models'
+import { tsCloud } from '../../config/cloud'
 async function verify() {
   const migrate = Bun.spawn(['./buddy', 'migrate', '--generate'], { cwd: join(import.meta.dir, '../..'), env: process.env, stdout: 'pipe', stderr: 'pipe' })
   const [status, output, error] = await Promise.all([migrate.exited, new Response(migrate.stdout).text(), new Response(migrate.stderr).text()])
@@ -14,7 +15,7 @@ async function verify() {
   const probe = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('port probe') })
   const port = probe.port
   probe.stop(true)
-  const server = Bun.spawn(['./buddy', 'serve:api'], { cwd: join(import.meta.dir, '../..'), env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), PORT_API: String(port) }, stdout: 'pipe', stderr: 'pipe' })
+  const server = Bun.spawn(['./buddy', 'serve:api'], { cwd: join(import.meta.dir, '../..'), env: { ...process.env, APP_ENV: 'production', NODE_ENV: 'production', HOST: '127.0.0.1', PORT: String(port), PORT_API: String(port) }, stdout: 'pipe', stderr: 'pipe' })
   const outputLog = new Response(server.stdout).text()
   const errorLog = new Response(server.stderr).text()
   const origin = `http://127.0.0.1:${port}`
@@ -25,7 +26,7 @@ async function verify() {
     let ready = false
     for (let attempt = 0; attempt < 200 && server.exitCode === null; attempt++) {
       try {
-        const health = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(1000) })
+        const health = await fetch(`${origin}${tsCloud.sites!.api.healthCheck!.path}`, { signal: AbortSignal.timeout(1000) })
         if (health.ok && (await health.json()).service === 'launchpad-api') {
           ready = true
           break

@@ -28,7 +28,7 @@
     "@stacksjs/router": "0.75.519",
     "@stacksjs/actions": "0.75.519",
     "@stacksjs/database": "0.75.519",
-    "@stacksjs/ts-cloud": "0.16.109"
+    "@stacksjs/ts-cloud": "0.16.114"
   },
   "scripts": {
     "dev": "./buddy dev",
