@@ -7,8 +7,8 @@
   },
   "devDependencies": {
     "@buddysh/buddy": "^0.11.13",
-    "@stacksjs/buddy": "0.75.450",
-    "@stacksjs/types": "0.75.334",
+    "@stacksjs/buddy": "0.75.519",
+    "@stacksjs/types": "0.75.519",
     "better-dx": "^0.2.38",
     "playwright": "1.64.1"
   },
@@ -17,12 +17,18 @@
     "@stacksjs/desktop": "0.2.800",
     "@stacksjs/github": "0.75.323",
     "@stacksjs/image": "0.75.334",
-    "@stacksjs/orm": "0.75.324",
+    "@stacksjs/orm": "0.75.519",
     "@stacksjs/stx": "0.2.800",
     "@stacksjs/ts-svg": "0.1.7",
-    "@stacksjs/validation": "0.75.323",
+    "@stacksjs/validation": "0.75.519",
     "ts-images": "0.2.32",
-    "ts-pantry": "0.11.180"
+    "ts-pantry": "0.11.188",
+    "@stacksjs/defaults": "0.75.519",
+    "@stacksjs/newsletter": "0.75.519",
+    "@stacksjs/router": "0.75.519",
+    "@stacksjs/actions": "0.75.519",
+    "@stacksjs/database": "0.75.519",
+    "@stacksjs/ts-cloud": "0.16.109"
   },
   "scripts": {
     "dev": "./buddy dev",
@@ -39,7 +45,10 @@
     "test": "./buddy test",
     "test:usage-native": "bun scripts/verify-native-usage.ts",
     "test:ui": "bun scripts/verify-ui.mjs",
-    "test:clipboard-native": "bun scripts/verify-native-clipboard.ts"
+    "test:clipboard-native": "bun scripts/verify-native-clipboard.ts",
+    "serve:api": "./buddy serve:api",
+    "deploy:website": "./buddy deploy --prod --env-file .env.web --yes",
+    "test:newsletter": "bun test ./tests/unit/launchpad-subscriptions.test.ts ./tests/unit/launchpad-subscriptions.native.test.ts"
   },
   "type": "module",
   "author": "Chris Breuer <chris@stacksjs.com>",

@@ -2,12 +2,31 @@ import type { Result } from './search'
 
 export const resultRowHeight = 52
 
-/** Keep only the viewport and two overscan rows mounted while retaining absolute indexes. */
-export function resultWindow(count: number, scrollTop: number, height: number) {
+export interface ResultSection { index: number, title: string }
+export const sectionRowHeight = 28
+
+export function resultOffset(index: number, sections: readonly ResultSection[] = []): number {
+  return index * resultRowHeight + sections.filter(section => section.index <= index).length * sectionRowHeight
+}
+
+/** Section labels occupy real scroll space but never become selectable commands. */
+export function resultWindow(count: number, scrollTop: number, height: number, sections: readonly ResultSection[] = []) {
   const offset = Math.max(0, scrollTop)
-  const start = Math.max(0, Math.min(Math.floor(offset / resultRowHeight) - 2, Math.max(0, count - 1)))
-  const end = Math.min(count, Math.ceil((offset + height) / resultRowHeight) + 2)
-  return { start, end, top: start * resultRowHeight, bottom: (count - end) * resultRowHeight }
+  const find = (pixel: number) => {
+    let low = 0
+    let high = count
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2)
+      if (resultOffset(middle, sections) < pixel) low = middle + 1
+      else high = middle
+    }
+    return low
+  }
+  const start = Math.max(0, Math.min(find(offset + resultRowHeight) - 3, Math.max(0, count - 1)))
+  const end = Math.min(count, find(offset + height) + 2)
+  const before = (index: number) => index * resultRowHeight + sections.filter(section => section.index < index).length * sectionRowHeight
+  const total = count * resultRowHeight + sections.length * sectionRowHeight
+  return { start, end, top: before(start), bottom: total - before(end) }
 }
 
 /** Unchanged keyed rows keep their objects when query results or unrelated icons change. */
@@ -36,6 +55,7 @@ export function createResultSlots(minimum = 13) {
 
 /** The row a navigation key selects, or null when the key is not navigation. Control N and P match macOS text fields. */
 export function selectionTarget(event: { key: string, ctrlKey?: boolean, metaKey?: boolean, altKey?: boolean }, index: number, count: number, page = 8): number | null {
+  if (!event.metaKey && !event.altKey && !event.ctrlKey && (event.key === 'Home' || event.key === 'End')) return event.key === 'Home' ? 0 : Math.max(0, count - 1)
   const control = event.ctrlKey && !event.metaKey && !event.altKey ? event.key.toLowerCase() : ''
   const step = event.key === 'ArrowDown' || control === 'n' ? 1 : event.key === 'ArrowUp' || control === 'p' ? -1 : event.key === 'PageDown' ? page : event.key === 'PageUp' ? -page : 0
   if (!step) return null

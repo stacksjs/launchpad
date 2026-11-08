@@ -3,6 +3,7 @@ import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
 import { models } from '../app/Desktop/models'
+import { subscriptionModelNames } from '../app/Services/subscription-models'
 
 const directory = join(import.meta.dir, '..', 'app', 'Models')
 
@@ -10,9 +11,10 @@ const directory = join(import.meta.dir, '..', 'app', 'Models')
  * A model file with no entry in the registry has no table and no endpoints. The interface asks for them by name and
  * fails at the first request, so the only thing standing between a new model and a broken feature is this list.
  */
-test('every model file is in the backend registry', () => {
+test('every model belongs to the native registry or the web subscription scope', () => {
   const files = readdirSync(directory).filter(name => name.endsWith('.ts')).map(name => name.slice(0, -3)).sort()
-  expect(Object.keys(models).sort()).toEqual(files)
+  expect([...Object.keys(models), ...subscriptionModelNames].sort()).toEqual(files)
+  for (const name of subscriptionModelNames) expect(models).not.toHaveProperty(name)
 })
 
 test('the registry serves the endpoints the interface asks for', async () => {

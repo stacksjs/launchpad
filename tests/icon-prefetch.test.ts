@@ -94,3 +94,25 @@ test('lookahead follows scroll direction, handles short lists and deduplicates s
   expect(iconPrefetchPaths(apps.slice(0, 2), -52, NaN)).toEqual(['/app0', '/app1'])
   expect(iconPrefetchPaths([apps[0]!, { ...apps[0]!, kind: 'clipboard', content: 'Copied text', sourceAppPath: '/app0' }])).toEqual(['/app0'])
 })
+
+test('an application handoff pauses queued icons and resumes without rereading active work', async () => {
+  const active = deferred<string | null>()
+  const started = deferred()
+  const reads: string[] = []
+  const prefetch = createIconPrefetcher({ concurrency: 1, load: path => {
+    reads.push(path)
+    if (path === 'active') { started.resolve(); return active.promise }
+    return Promise.resolve('data:icon')
+  }, publish: () => {} })
+  prefetch.update(['active', 'queued'])
+  await started.promise
+  prefetch.pause(true)
+  active.resolve('data:active')
+  await Bun.sleep(0)
+  expect(reads).toEqual(['active'])
+  prefetch.update(['next', 'active'])
+  expect(reads).toEqual(['active'])
+  prefetch.pause(false)
+  await prefetch.idle()
+  expect(reads).toEqual(['active', 'next'])
+})

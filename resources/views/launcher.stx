@@ -13,7 +13,8 @@ import type { Result } from '../functions/search'
 import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functions/search'
 import { parseApplicationAliases } from '../functions/search-text'
 import { historyPreference as readHistoryPreference, parsePreference } from '../functions/preferences'
-import { createResultPresentation, createResultSlots, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
+import { createResultPresentation, createResultSlots, resultOffset, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
+import { suggestedResults } from '../functions/suggestions'
 import { iconPrefetchPaths, createIconPrefetcher, decodeApplicationIcon } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
 import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execute, captureClipboard, applicationIcons, clipboard, shell, windowEvents, menu, standardMenus, behavior, sources, revealInFinder, openPrivacySettings, applyCommandShortcuts, onCommandShortcut, commandShortcutId, readBookmarks, homeDirectory, readDirectory, onSelectionService, chooseSaveFile, chooseOpenFile, chooseFolder } from '../functions/native'
@@ -34,7 +35,7 @@ import { builtInTheme, parseThemeDocument, readStoredTheme, readThemeFont, seria
 import { formatShortcut, launcherShortcut, normalizeShortcut, shortcutError } from '../functions/shortcuts'
 import { largeTypeFontSize, largeTypeText, minLargeTypeSize } from '../functions/large-type'
 import { detailFor } from '../functions/detail'
-import { gridColumns, gridScrollTop, gridTarget, gridTileSize, usesGrid } from '../functions/grid'
+import { gridColumns, gridScrollTop, gridTarget, gridTileSize, gridWindow, usesGrid } from '../functions/grid'
 import { vaultResults } from '../functions/passwords'
 import { modeById, modeResults } from '../functions/modes'
 import { describeReport, readTransferSettings } from '../functions/transfer'
@@ -102,7 +103,6 @@ const selectionRows = derived(() => {
 const items = state<Result[]>([])
 const records = state<Record<string, any>>({})
 const selected = state(0)
-const visibleLimit = state(100)
 const resultScrollTop = state(0)
 const resultViewportHeight = state(450)
 const loading = state(true)
@@ -273,23 +273,31 @@ const githubCommands = derived(() => githubItems().map(item => ({ ...item, ...re
 // Built the first time emoji are searched, not while typing anything else.
 const emojiIndex = derived(() => createResultSearch(emojiResults(records())))
 const searchEmoji = (input, scope) => emojiIndex()(input, scope)
-const allResults = derived(() => {
+const matchedResults = derived(() => {
   if (category() === 'pantry') return searchPackages()(query())
   if (category() === 'github') return githubCommands()
   return composeResults({ category: category(), query: query(), clipboardSource: historySource(), searchLocal: searchLocal(), searchEmoji, files: fileItems(), windows: windowItems(), contacts: contactItems(), events: eventItems(), music: musicItems(), selection: selectionRows(), passwords: passwordRows(), rates: ratesState(), settings: searchSettings(), calculate, browsing: Boolean(browsePath()) })
 })
+const showSuggested = derived(() => category() === 'all' && !query().trim() && !selectionRows().length)
+const suggested = derived(() => showSuggested() ? suggestedResults(matchedResults()) : { items: matchedResults(), count: 0 })
+const allResults = derived(() => suggested().items)
+const resultSections = derived(() => showSuggested() && suggested().count ? [
+  { index: 0, title: 'Suggested' },
+  ...(allResults().length > suggested().count ? [{ index: suggested().count, title: 'Applications and commands' }] : []),
+] : [])
+const sectionTitle = index => resultSections().find(section => section.index === index)?.title || ''
 const presentResults = createResultPresentation()
-const results = derived(() => presentResults(allResults().slice(0, visibleLimit()), icons()))
-const viewport = derived(() => resultWindow(results().length, resultScrollTop(), resultViewportHeight()), { equals: (a, b) => a.start === b.start && a.end === b.end && a.bottom === b.bottom })
+const results = allResults
+const gridMode = derived(() => usesGrid(category()))
+const gridColumnCount = state(gridColumns(0))
+const viewport = derived(() => gridMode() ? gridWindow(results().length, resultScrollTop(), resultViewportHeight(), gridColumnCount()) : resultWindow(results().length, resultScrollTop(), resultViewportHeight(), resultSections()), { equals: (a, b) => a.start === b.start && a.end === b.end && a.top === b.top && a.bottom === b.bottom })
 const resultSlots = derived(() => {
   items(); records(); catalog(); pantryInstalled(); githubItems(); fileItems(); windowItems(); contactItems(); eventItems(); extensionRows(); searchSettings()
   return createResultSlots()
 })
-// A grid bypasses the virtualised rows: the categories that use one are bounded by `visibleLimit`, so every tile
-// can be drawn, and the row windowing has nothing useful to say about a layout that wraps.
-const gridMode = derived(() => usesGrid(category()))
-const gridColumnCount = state(gridColumns(0))
-const renderedResults = derived(() => gridMode() ? [] : resultSlots()(results(), viewport().start, viewport().end))
+// Emoji and symbols use a compact grid; ordinary results retain their complete virtualized list.
+const renderedResults = derived(() => gridMode() ? [] : presentResults(resultSlots()(results(), viewport().start, viewport().end), icons()))
+const gridResults = derived(() => gridMode() ? results().slice(viewport().start, viewport().end) : [])
 const active = derived(() => results()[selected()])
 const actionLabel = derived(() => actionLabelFor(active()?.kind))
 const secondary = derived(() => secondaryActions(active()))
@@ -374,7 +382,7 @@ async function openPackageApplication() {
   const item = packageDetail()
   if (!item || !packageAppPath()) return
   try {
-    await execute({ ...item, kind: 'application', content: packageAppPath() }, '', duration => recordExecution({ kind: 'application', title: item.title }, duration))
+    await execute({ ...item, kind: 'application', content: packageAppPath() }, '', duration => recordExecution({ kind: 'application', title: item.title }, duration), () => paletteVisibility(false))
   }
   catch (reason) { fail(reason) }
 }
@@ -450,6 +458,7 @@ const iconPrefetcher = createIconPrefetcher({
   prepare: decodeApplicationIcon,
   publish: (path, icon) => { icons.set({ ...icons(), [path]: icon }) },
 })
+effect(() => iconPrefetcher.pause(saving()))
 let previousIconScrollTop = 0
 effect(() => {
   const top = resultScrollTop()
@@ -566,7 +575,6 @@ function paletteVisibility(visible) { paletteVisible.set(visible); track(visible
 async function dismissLauncher() { paletteVisibility(false); void flushUsage(); await nativeWindow.hide() }
 function recordExecution(target, duration) {
   track('command_executed', target, duration)
-  paletteVisibility(false)
 }
 async function openLink(url, kind) {
   try { await recordSuccessfulOperation(() => shell.openExternal(url), async duration => { track('link_opened', { kind }, duration); await flushUsage() }) }
@@ -633,7 +641,7 @@ function replaceItems(next) {
   const before = selected()
   const index = clipboardSelection(active(), before, clipboardResults(clipboardWithSources(next), query(), historySource()), before > 0 || resultScrollTop() > 0)
   const top = Math.max(0, resultScrollTop() + (index - before) * resultRowHeight)
-  batch(() => { items.set(next); selected.set(index); visibleLimit.set(Math.max(visibleLimit(), index + 1)); resultScrollTop.set(top) })
+  batch(() => { items.set(next); selected.set(index); resultScrollTop.set(top) })
   void nextTick(() => { if (list.current) list.current.scrollTop = top })
 }
 async function reloadHistory(duringClear = false) {
@@ -1247,7 +1255,7 @@ async function removeShortcut(item) {
 async function runShortcut(commandId) {
   const item = savedCommands().find(entry => String(entry.id) === String(commandId))
   if (!item) return
-  try { await execute(item, '', duration => recordExecution(item, duration)) }
+  try { await execute(item, '', duration => recordExecution(item, duration), () => paletteVisibility(false)) }
   catch (reason) { fail(reason) }
 }
 async function run(item = active()) {
@@ -1276,10 +1284,11 @@ async function run(item = active()) {
   clearError()
   saving.set(true)
   try {
-    await execute(item, query(), duration => recordExecution(item, duration))
+    await execute(item, query(), duration => recordExecution(item, duration), () => paletteVisibility(false))
     if (isRankable(item.kind)) {
-      const saved = await api('ranking', 'POST', { key: item.key, action: 'launch' })
-      records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
+      void api('ranking', 'POST', { key: item.key, action: 'launch' }).then(saved => {
+        records.set({ ...records(), [item.key]: { ...saved, lastUsed: saved.lastUsed ?? saved.last_used } })
+      }).catch(fail)
     }
   }
   catch (reason) { fail(reason) }
@@ -1463,14 +1472,14 @@ function key(event) {
     // A grid scrolls by the row a tile sits on; a list scrolls by the row itself, kept two rows off the top edge.
     const top = gridMode()
       ? Math.max(0, gridScrollTop(index, gridColumnCount(), gridTileSize) - gridTileSize)
-      : Math.max(0, index * resultRowHeight - 2 * resultRowHeight)
+      : Math.max(0, resultOffset(index, resultSections()) - 2 * resultRowHeight)
     batch(() => { selected.set(index); resultScrollTop.set(top) })
     void nextTick(() => { if (selected() === index) list.current?.scrollTo({ top }) })
   }
   if (event.key === 'Enter') { event.preventDefault(); void run() }
 }
 
-function resetResultPosition() { selected.set(0); visibleLimit.set(100); resultScrollTop.set(0); if (list.current) list.current.scrollTop = 0 }
+function resetResultPosition() { selected.set(0); resultScrollTop.set(0); if (list.current) list.current.scrollTop = 0 }
 // History refreshes preserve the selected key. A new query or mode still starts at the first match.
 effect(() => { query(); category(); historySource(); resetResultPosition() })
 let historyActionKey = ''
@@ -1489,7 +1498,7 @@ onMount(() => {
 onMount(async () => {
   try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
   homePath.set(await homeDirectory())
-  try { cleanupTray = await configureTray(activate, openSettings, checkForUpdates) } catch (reason) { fail(reason) }
+  try { cleanupTray = await configureTray(activate, openSettings, checkForUpdates, () => { settingsSection.set('general'); openSettings(true) }, fail) } catch (reason) { fail(reason) }
   const firstSetup = preferencesReady() && !preferences().loginInitialized
   await refreshLogin(true)
   if (firstSetup) openSettings()
@@ -1594,7 +1603,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <span class="help">{{ plural(pantryEntries().length, 'package') }}</span><button type="button" class="ml-auto text-action" @click="refreshCatalog()" :disabled="packageBusy()">Refresh catalog</button>
   </div>
   <section class="flex flex-1 flex-col min-h-0" aria-label="Search results">
-    <div class="flex items-center justify-between px-6 section-label" :class="{ 'history-label': category() === 'clipboard' }">
+    <div :if="!showSuggested()" class="flex items-center justify-between px-6 section-label" :class="{ 'history-label': category() === 'clipboard' }">
       <span>{{ category() === 'clipboard' ? 'Newest first · ' + plural(allResults().length, query().trim() ? 'match' : 'entry', query().trim() ? 'matches' : 'entries') : category() === 'github' ? 'GitHub' : category() === 'pantry' ? pantryView() === 'installed' ? 'Installed packages' : 'Pantry catalog' : query() ? 'Results' : 'Your launchpad' }}</span>
       <select :if="category() === 'clipboard'" x-model="historySource" class="history-source" aria-label="Filter by source app"><option value="all">All apps</option><option :for="source in historySourceOptions()" :key="source.id" :value="source.id">{{ source.title + ' (' + source.count + ')' }}</option></select>
       <button :if="category() === 'clipboard'" type="button" class="text-action" aria-label="Save current clipboard" @click="saveClipboard()" :disabled="historySaving() || historyClearing() || historyPreferenceBusy()">{{ historySaving() ? 'Saving…' : 'Save clipboard' }}</button>
@@ -1610,7 +1619,9 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       </div>
       <div aria-hidden="true" :style="'height:' + viewport().top + 'px;flex-shrink:0'"></div>
       <!-- Park unused slots so fast typing and backspacing never need to recreate result rows. -->
-      <button :for="(item, index) in renderedResults()" :key="index" x-show="index < viewport().end - viewport().start" :disabled="index >= viewport().end - viewport().start" :aria-hidden="index >= viewport().end - viewport().start" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="index < viewport().end - viewport().start && viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
+      <div :for="(item, index) in renderedResults()" :key="index" x-show="index < viewport().end - viewport().start" class="result-slot">
+      <div :if="index < viewport().end - viewport().start && sectionTitle(viewport().start + index)" class="result-section" role="heading" aria-level="2">{{ sectionTitle(viewport().start + index) }}</div>
+      <button x-show="index < viewport().end - viewport().start" :disabled="index >= viewport().end - viewport().start" :aria-hidden="index >= viewport().end - viewport().start" :id="'result-' + (viewport().start + index)" type="button" role="option" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="index < viewport().end - viewport().start && viewport().start + index === selected()" :class="viewport().start + index === selected() ? 'result selected' : 'result'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
         <span class="item-icon" aria-hidden="true">
           <img :if="['application', 'pantry', 'clipboard'].includes(item.kind) && item.icon" :src="item.icon" :class="item.package ? 'package-logo' : ''" alt="" width="34" height="34" loading="eager" decoding="async">
           <span :if="item.kind === 'application' && !item.icon" class="i-f7-square-grid-2x2"></span>
@@ -1635,8 +1646,9 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <span :if="item.favorite" class="star" aria-label="Favorite">★</span>
         <span :if="viewport().start + index === selected()" class="return-key" aria-hidden="true">↵</span>
       </button>
+      </div>
       <div :if="gridMode()" class="result-grid" :style="'grid-template-columns:repeat(' + gridColumnCount() + ',minmax(0,1fr))'">
-        <button :for="(item, index) in results()" :key="item.key" type="button" role="option" :id="'result-' + index" :aria-posinset="index + 1" :aria-setsize="results().length" :aria-selected="index === selected()" :aria-label="item.subtitle ? item.title + ', ' + item.subtitle : item.title" :title="item.subtitle" :class="index === selected() ? 'tile selected' : 'tile'" @click="selected.set(index); run(item)" @mousemove="selected.set(index)">
+        <button :for="(item, index) in gridResults()" :key="item.key" type="button" role="option" :id="'result-' + (viewport().start + index)" :aria-posinset="viewport().start + index + 1" :aria-setsize="results().length" :aria-selected="viewport().start + index === selected()" :aria-label="item.subtitle ? item.title + ', ' + item.subtitle : item.title" :title="item.subtitle" :class="viewport().start + index === selected() ? 'tile selected' : 'tile'" @click="selected.set(viewport().start + index); run(item)" @mousemove="selected.set(viewport().start + index)">
           <span class="tile-glyph" aria-hidden="true">{{ item.title }}</span>
         </button>
       </div>
@@ -1659,7 +1671,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
   </div>
   <p :if="category() === 'github'" class="px-5 github-status" role="status">{{ githubLoading() ? 'Searching GitHub...' : githubStatus() }}</p>
   <p :if="category() === 'pantry'" class="px-5 github-status" role="status">{{ pantryStatus() }}</p>
-  <div :if="allResults().length > results().length" class="flex items-center justify-center history-tools"><button type="button" class="text-action" @click="visibleLimit.set(visibleLimit() + 100)">Show {{ Math.min(100, allResults().length - results().length) }} more</button></div>
+
   <footer class="flex gap-3 items-center px-5">
     <span class="wordmark">Launchpad</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
     <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'clipboard' ? '↑↓ Review · ⌘↵ Copy here' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
@@ -1960,6 +1972,8 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
 </main>
 </body>
 <style>
+.result-slot { flex-shrink: 0; }
+.result-section { height: 28px; display: flex; align-items: center; padding: 0 10px; color: var(--muted); font-size: 11px; font-weight: 500; }
 :root { --font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; --font-size: 13px; }
 :root { color-scheme: light; --surface: #ffffff; --ink: #202735; --muted: #566173; --line: #d9e0e9; --accent: #245eb7; --selected: #e7edf6; --icon-surface: #e8eef7; --footer: #f3f5f8; --key: #e0e6ee; --field: #ffffff; --border: #8391a5; --outline: #b8c3d3; --selected-border: #b6c9e4; --error-bg: #fde9e9; --error-ink: #922634; }
 :root.dark { color-scheme: dark; --surface: #202226; --ink: #f2f3f5; --muted: #b2b8c4; --line: #35383f; --accent: #a9cbff; --selected: #343943; --icon-surface: #2d323c; --footer: #1c1e22; --key: #32363e; --field: #272a31; --border: #657185; --outline: #525a68; --selected-border: #53627a; --error-bg: #432b2e; --error-ink: #ffccd1; }

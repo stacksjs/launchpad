@@ -1,5 +1,18 @@
 <script client>
+import { subscribeForUpdates, subscriptionEndpoint } from '../../functions/subscription'
 const preview = state('light')
+const subscriberEmail = state('')
+const subscriptionBusy = state(false)
+const subscriptionComplete = state(false)
+const subscriptionError = state('')
+async function subscribeUpdates() {
+  if (subscriptionBusy() || subscriptionComplete()) return
+  subscriptionBusy.set(true)
+  subscriptionError.set('')
+  try { await subscribeForUpdates(subscriberEmail()); subscriptionComplete.set(true) }
+  catch (reason) { subscriptionError.set(reason.message || 'Could not subscribe. Please try again.') }
+  finally { subscriptionBusy.set(false) }
+}
 </script>
 
 <!doctype html>
@@ -120,11 +133,25 @@ const preview = state('light')
         </div>
       </div>
     </section>
+    <section id="updates" class="border-slate-200 border-t" aria-labelledby="updates-title">
+      <div class="grid gap-8 grid-cols-1 md:grid-cols-[0.8fr_1.2fr] mx-auto px-5 py-16 md:px-10 md:py-20 max-w-[1280px]">
+        <div><h2 id="updates-title" class="m-0 font-semibold text-3xl tracking-[-0.035em]">A note when something’s new.</h2><p class="mb-0 mt-4 max-w-[36ch] leading-relaxed text-base text-slate-600">Subscribe for Launchpad releases and useful improvements. Unsubscribe at any time.</p></div>
+        <div class="self-center min-w-0">
+          <form :if="!subscriptionComplete()" method="post" :action="subscriptionEndpoint" @submit.prevent="subscribeUpdates()" aria-label="Subscribe for Launchpad updates">
+            <label for="subscriber-email" class="block mb-3 font-medium text-slate-900 text-sm">Email address</label>
+            <div class="subscription-fields"><input id="subscriber-email" x-model="subscriberEmail" type="email" name="email" autocomplete="email" inputmode="email" required maxlength="255" placeholder="you@example.com" :disabled="subscriptionBusy()" :aria-describedby="subscriptionError() ? 'subscription-error' : 'subscription-privacy'"><button type="submit" class="button" :disabled="subscriptionBusy()">{{ subscriptionBusy() ? 'Subscribing…' : 'Subscribe for updates' }}</button></div>
+            <p id="subscription-privacy" class="mb-0 mt-3 leading-relaxed text-slate-600 text-xs">Only Launchpad updates. Your email stays with Launchpad. <a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md" class="underline">Privacy</a></p>
+            <p :if="subscriptionError()" id="subscription-error" class="subscription-error" role="alert">{{ subscriptionError() }}</p>
+          </form>
+          <p :if="subscriptionComplete()" class="subscription-success" role="status" aria-live="polite">You’re subscribed to Launchpad updates. Thanks for being here.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="flex flex-col gap-5 justify-between sm:flex-row mx-auto px-5 py-8 md:px-10 max-w-[1280px] text-slate-600 text-sm">
     <span>Launchpad. Built with <a href="https://stacksjs.com" class="font-medium text-slate-900">Stacks</a>.</span>
-    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="https://pantry.dev">Pantry</a><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Issues</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
+    <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="#updates">Subscribe for updates</a><a href="https://bsky.app/profile/stacksjs.com">Follow Stacks</a><a href="https://pantry.dev">Pantry</a><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Issues</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
   </footer>
 </body>
 </html>
@@ -140,6 +167,13 @@ const preview = state('light')
   .skip-link { position: fixed; top: 8px; left: 8px; z-index: 20; padding: 12px 18px; background: white; color: #0f172a; border: 1px solid #94a3b8; border-radius: 8px; transform: translateY(-150%); }
   .skip-link:focus { transform: translateY(0); }
   .button { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 48px; padding: 12px 20px; border: 1px solid #1d4ed8; border-radius: 10px; background: #1d4ed8; color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background 160ms ease; }
+  .subscription-fields { display: flex; gap: 10px; }
+  .subscription-fields input { min-width: 0; flex: 1; padding: 12px 14px; border: 1px solid #b8c2d0; border-radius: 10px; background: white; color: #0f172a; font: inherit; font-size: 15px; }
+  .subscription-fields input:focus-visible { outline-offset: 2px; }
+  .subscription-fields button:disabled { cursor: wait; opacity: .7; }
+  .subscription-error { color: #b91c1c; font-size: 14px; }
+  .subscription-success { padding: 18px 20px; border: 1px solid #b8c9bf; border-radius: 10px; background: #f4f8f5; color: #24422f; font-size: 16px; line-height: 1.6; }
+  @media (max-width: 540px) { .subscription-fields { flex-direction: column; } }
   .button:hover { background: #1e40af; }
   .button-small { min-height: 38px; padding: 9px 14px; font-size: 12px; }
   .product-frame { overflow: hidden; border: 1px solid #b8c2d0; border-radius: 14px; box-shadow: 0 16px 48px -20px #283c5b50, 0 2px 5px #283c5b0a; }

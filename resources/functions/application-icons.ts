@@ -34,9 +34,10 @@ export function createIconPrefetcher(options: {
   const active = new Set<string>()
   let queue: string[] = []
   let disposed = false
+  let paused = false
   let waiters: (() => void)[] = []
   function pump() {
-    while (!disposed && active.size < concurrency && queue.length) {
+    while (!disposed && !paused && active.size < concurrency && queue.length) {
       const path = queue.shift()!
       active.add(path)
       void Promise.resolve().then(() => options.load(path)).then(async (icon) => {
@@ -62,6 +63,10 @@ export function createIconPrefetcher(options: {
       if (disposed) return
       queue = [...new Set(paths)].filter(path => path && !settled.has(path) && !active.has(path))
       pump()
+    },
+    pause(value: boolean) {
+      paused = value
+      if (!paused) pump()
     },
     idle(): Promise<void> {
       return !active.size && !queue.length ? Promise.resolve() : new Promise(resolve => waiters.push(resolve))

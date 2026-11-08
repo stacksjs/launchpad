@@ -72,7 +72,8 @@ try {
   assert.equal(await page.evaluate(() => window.__peakIcons), 4)
   assert.equal(await page.evaluate(() => window.__bridge.calls.filter(call => call.ns === 'app' && call.method === 'icon').length), 122, 'Every native source is fetched once, including failed icons.')
   for (const index of [60, 4, 80, 12, 90, 0]) await scrollAndCheck(index)
-  await page.getByRole('button', { name: 'Show 22 more', exact: true }).click()
+  assert.equal(await page.getByRole('button', { name: /^Show \d+ more$/ }).count(), 0)
+  assert.equal(await page.evaluate(() => window.__launcher.results().length), 122)
   await scrollAndCheck(108)
   const search = page.getByRole('combobox', { name: 'Search applications and commands' })
   await search.fill('Fixture app 118')
@@ -84,6 +85,6 @@ try {
   await page.evaluate(() => window.__launcher.iconPrefetcher.idle())
   assert.equal(await page.evaluate(() => window.__bridge.calls.filter(call => call.ns === 'app' && call.method === 'icon').length), 122, 'Scrolling, searching and reopening cannot reread missing icons.')
   assert.deepEqual(errors, [])
-  console.log('Icon UI acceptance passed: hidden warmup, offscreen decoding, progressive updates, scrolling in both directions, fast jumps, next-page readiness, bounded native reads, and stable missing-icon fallbacks.')
+  console.log('Icon UI acceptance passed: hidden warmup, offscreen decoding, progressive updates, scrolling in both directions, fast jumps, continuous scrolling past 100 results, bounded native reads, and stable missing-icon fallbacks.')
 }
 finally { await browser.close() }

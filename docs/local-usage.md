@@ -27,9 +27,13 @@ cannot establish whether a destination website finished loading or an applicatio
 subsequently crashed. A failed bridge call does not count. Opening an already
 running application still counts as an application command.
 
-After a successful command, the interface queues the command and visibility
-events and hides the palette without waiting for their HTTP persistence. The
-existing queue retries failed writes with the same UUIDs while Launchpad runs.
+Application launches hide the palette before handing off to the operating
+system, so a cold launch cannot hold the palette onscreen. A rejected launch
+restores the palette and records no command. Other successful commands queue
+the command and visibility events and hide the palette without waiting for
+their HTTP persistence. A late launch acknowledgement never hides a newly
+opened palette. Ranking writes also run after dismissal without blocking the
+next command. The existing queue retries failed writes with the same UUIDs while Launchpad runs.
 Slow usage writes must not hold the palette over the launched application.
 
 Copy in the clipboard preview (Command Return) records a successful clipboard
@@ -140,3 +144,5 @@ text or address. They are also never added to favorites or launch counts, so the
 ranking database never holds a path or a contact either. System commands and emoji
 are ordinary ranked items. Exchange rates, file results and contact results are not
 usage records and are not kept beyond the exchange rate table.
+
+Website subscriptions use a separate hosted database scoped to User, Subscriber, EmailList and EmailListSubscriber. Desktop activity, clipboard and ranking models are excluded from that schema and its generated APIs. The native backend retains its explicit local model registry.

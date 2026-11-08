@@ -13,7 +13,7 @@ test('the real dispatcher queues successful applications, quicklinks, GitHub lin
     const item = { key: kind, title: 'Example', subtitle: '', kind, content: kind === 'application' ? '/Applications/Example.app' : 'https://example.com/' }
     const before = effects.length
     await execute(item, '', () => { effects.push('recorded') })
-    expect(effects.slice(before + 1)).toEqual(['recorded', 'hidden'])
+    expect(effects.slice(before)).toEqual(kind === 'application' ? ['hidden', 'app:/Applications/Example.app', 'recorded'] : [effects[before], 'recorded', 'hidden'])
   }
 })
 
@@ -33,10 +33,10 @@ test('a stalled recording write never delays hiding after the OS accepts a launc
   })
   try {
     await new Promise<void>(resolve => setImmediate(resolve))
-    expect(effects).toEqual(['opened', 'queued', 'hidden'])
+    expect(effects).toEqual(['hidden', 'opened', 'queued'])
   }
   finally { release(); await pending }
-  expect(effects).toEqual(['opened', 'queued', 'hidden', 'saved'])
+  expect(effects).toEqual(['hidden', 'opened', 'queued', 'saved'])
 })
 
 test('recording errors cannot leave a successfully launched command covering the screen', async () => {
@@ -49,7 +49,7 @@ test('recording errors cannot leave a successfully launched command covering the
   expect(hidden).toBe(2)
 })
 
-test('denied app and link launches are not counted, while a later hide failure cannot erase a successful launch', async () => {
+test('denied app and link launches are not counted, and a refused dismissal prevents handing off an application', async () => {
   let recorded = 0
   let hidden = 0
   const reject = async () => { throw new Error('Denied') }
@@ -58,10 +58,10 @@ test('denied app and link launches are not counted, while a later hide failure c
     await expect(failing({ key: kind, title: '', subtitle: '', kind, content: 'https://example.com' }, '', () => { recorded++ })).rejects.toThrow('Denied')
   }
   expect(recorded).toBe(0)
-  expect(hidden).toBe(0)
+  expect(hidden).toBe(1)
   const opened = createExecutor({ openApplication: async () => {}, openLink: async () => {}, copyText: async () => {}, dismiss: reject })
   await expect(opened({ key: 'app', title: '', subtitle: '', kind: 'application', content: '/Applications/Example.app' }, '', () => { recorded++ })).rejects.toThrow('Denied')
-  expect(recorded).toBe(1)
+  expect(recorded).toBe(0)
 })
 
 test('web, file, system, window, contact, event and emoji results each take their own path', async () => {
@@ -125,4 +125,34 @@ test('a track plays through the music port, and says so when there is none', asy
   // Without the port the track must not fall through to copying its database ID to the clipboard.
   const failed = await createExecutor(base)(track, '').catch(reason => reason.message)
   expect(failed).toBe('Music is not available.')
+})
+
+
+test('a cold application launch hides immediately and never hides a palette reopened while waiting', async () => {
+  const effects: string[] = []
+  let accept!: () => void
+  const opening = new Promise<void>(resolve => { accept = resolve })
+  const execute = createExecutor({
+    openApplication: async () => { effects.push('opening'); await opening; effects.push('accepted') },
+    openLink: async () => {}, copyText: async () => {},
+    dismiss: async () => { effects.push('hidden') },
+  })
+  const pending = execute({ key: 'cold', title: 'Cold app', kind: 'application', content: '/Applications/Cold.app', subtitle: '' }, '', () => { effects.push('recorded') }, () => { effects.push('invisible') })
+  await new Promise<void>(resolve => setImmediate(resolve))
+  expect(effects).toEqual(['hidden', 'invisible', 'opening'])
+  effects.push('reopened')
+  accept()
+  await pending
+  expect(effects).toEqual(['hidden', 'invisible', 'opening', 'reopened', 'accepted', 'recorded'])
+})
+
+test('an application refusal restores the palette without recording success', async () => {
+  const effects: string[] = []
+  const execute = createExecutor({
+    openApplication: async () => { throw new Error('Application missing') },
+    openLink: async () => {}, copyText: async () => {},
+    dismiss: async () => { effects.push('hidden') }, restore: async () => { effects.push('restored') },
+  })
+  await expect(execute({ key: 'missing', title: 'Missing', kind: 'application', content: '/Applications/Missing.app', subtitle: '' }, '', () => { effects.push('recorded') })).rejects.toThrow('Application missing')
+  expect(effects).toEqual(['hidden', 'restored'])
 })

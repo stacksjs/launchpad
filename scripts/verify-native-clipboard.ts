@@ -19,7 +19,7 @@ async function start() {
   const cookie = login.headers.get('set-cookie')!.split(';')[0]!
   return async (path: string, body?: unknown, method = body ? 'POST' : 'GET', expected?: number) => {
     const response = await fetch(`${origin}/api/${path}`, { signal: AbortSignal.timeout(5000), method, headers: { cookie, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
-    if (expected) assert.equal(response.status, expected)
+    if (expected) assert.equal(response.status, expected, `${method} ${path}: ${await response.clone().text()}`)
     else assert.ok(response.ok, `API status ${response.status} for ${method} ${path}`)
     return response.status === 204 ? null : await response.json()
   }

@@ -13,9 +13,10 @@ for (const mode of ['light', 'dark']) {
     LAUNCHPAD_CLIPBOARD_SCREENSHOT: resolve(evidence, `clipboard-${mode}.png`),
     LAUNCHPAD_UPDATE_SCREENSHOT: resolve(evidence, `updates-${mode}.png`),
     LAUNCHPAD_HEADER_SCREENSHOT: resolve(evidence, `header-${mode}.png`),
+    LAUNCHPAD_SUGGESTED_SCREENSHOT: resolve(evidence, `suggested-${mode}.png`),
     LAUNCHPAD_PANTRY_SCREENSHOT: resolve(evidence, `pantry-${mode}.png`),
   }
-  for (const script of ['verify-icons', 'verify-clipboard', 'verify-clipboard-reliability', 'verify-updates', 'verify-pantry', 'verify-pantry-management']) {
+  for (const script of ['verify-launcher', 'verify-icons', 'verify-clipboard', 'verify-clipboard-reliability', 'verify-updates', 'verify-pantry', 'verify-pantry-management']) {
     console.log(`UI acceptance: ${script} (${mode})`)
     const result = spawnSync(process.execPath, [`scripts/${script}.mjs`, bundle], { env, stdio: 'inherit', timeout: 120000 })
     if (result.error) throw result.error

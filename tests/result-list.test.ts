@@ -67,3 +67,13 @@ test('clipboard row icons come from source metadata, never the copied text', () 
   expect(present([row], { '/Copied.app': 'data:wrong' })[0]!.icon).toBeUndefined()
   expect(present([{ ...row, sourceAppPath: '/Source.app' }], { '/Copied.app': 'data:wrong', '/Source.app': 'data:right' })[0]!.icon).toBe('data:right')
 })
+
+test('section headings preserve scroll geometry and absolute command indices across the whole list', () => {
+  const sections = [{ index: 0, title: 'Suggested' }, { index: 5, title: 'Applications and commands' }]
+  for (const top of [0, 220, 300, 520, 10400, 51600]) {
+    const view = resultWindow(1000, top, 300, sections)
+    const headings = sections.filter(section => section.index >= view.start && section.index < view.end).length
+    expect(view.top + (view.end - view.start) * 52 + headings * 28 + view.bottom).toBe(52056)
+    expect(view.end - view.start).toBeLessThan(13)
+  }
+})

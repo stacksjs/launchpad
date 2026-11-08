@@ -8,3 +8,15 @@ dist/
 !.env.production
 storage/framework/stx/
 *.log
+
+!.env.web
+storage/cloud/
+storage/framework/defaults/
+storage/framework/runtime/
+storage/framework/database/
+database/*.sqlite*
+storage/framework/auto-imports/
+storage/framework/api/
+storage/framework/types/
+storage/framework/discovered-packages.json
+storage/framework/server-auto-imports.json

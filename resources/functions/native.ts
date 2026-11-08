@@ -1,4 +1,5 @@
 import { app, appleScript, clipboard, fs, globalShortcuts, nativeWindow, nativeTray, nativeAutoLaunch, permissions, serviceMenu, shell, showOpenDialog, showSaveDialog, windowEvents, menu, standardMenus } from '@stacksjs/desktop/browser'
+import { launcherDiagnostics, launcherTrayMenu, supportLinks } from './tray-menu'
 import { createExecutor } from './execution'
 import { createApplicationIconLoader } from './application-icons'
 import { bookmarkBrowsers, bookmarkFile, bookmarkRoot, maxBookmarks, orderProfiles, parseChromiumBookmarks } from './bookmarks'
@@ -21,24 +22,29 @@ import { windowFocusScript } from './windows'
 
 export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
 
-export async function configureTray(show: () => void, settings: () => void, updates: () => void): Promise<() => void> {
+export async function configureTray(show: () => void, settings: () => void, updates: () => void, about: () => void = settings, failed: (reason: unknown) => void = () => {}): Promise<() => void> {
   const stopClick = nativeTray.onClick(() => { void nativeWindow.show().then(() => nativeWindow.focus()).then(show) })
+  const open = async () => {
+    await nativeWindow.show()
+    await nativeWindow.focus()
+    show()
+  }
   const stopMenu = nativeTray.onMenuAction(event => {
-    if (event.action === 'launchpad.settings') settings()
-    if (event.action === 'launchpad.updates') updates()
+    const action = event.action.replace(/^launchpad\./, '')
+    if (action === 'open') void open().catch(failed)
+    else if (action === 'settings') settings()
+    else if (action === 'updates') updates()
+    else if (action === 'about') about()
+    else if (action === 'console') void shell.openPath('/System/Applications/Utilities/Console.app').catch(failed)
+    else if (action === 'diagnostics') void app.getInfo().then(info => clipboard.writeText(launcherDiagnostics(info))).catch(failed)
+    else if (supportLinks[action]) void shell.openExternal(supportLinks[action]!).catch(failed)
   })
   try {
     await nativeWindow.center()
     await nativeTray.setIcon('command')
     await nativeTray.setTitle('')
     await nativeTray.setTooltip('Launchpad · Command + Space')
-    await nativeTray.setMenu([
-      { label: 'Open Launchpad', action: 'show' },
-      { label: 'Settings...', action: 'launchpad.settings' },
-      { label: 'Check for Updates...', action: 'launchpad.updates' },
-      { type: 'separator' },
-      { label: 'Quit Launchpad', action: 'quit' },
-    ])
+    await nativeTray.setMenu(launcherTrayMenu)
     return () => {
       stopClick()
       stopMenu()
@@ -185,6 +191,10 @@ export async function pasteIntoFrontmost(): Promise<void> {
 
 export const execute = createExecutor({
   openApplication: path => shell.openPath(path), openLink: url => shell.openExternal(url), copyText: text => clipboard.writeText(text), dismiss: () => nativeWindow.hide(),
+  restore: async () => {
+    await nativeWindow.show()
+    await nativeWindow.focus()
+  },
   openPath: path => shell.openPath(path),
   runSystem: command => runSystemPlan(command, {
     appleScript: runScript,

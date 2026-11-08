@@ -15,19 +15,36 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      - uses: pantry-pm/pantry/packages/action@v0.11.180
+      - uses: pantry-pm/pantry/packages/action@v0.11.188
         with:
-          version: '0.11.180'
-          packages: bun.sh@1.4.3
+          version: '0.11.188'
+          packages: bun.com@1.4.4
           install: 'false'
       - run: bun install --frozen-lockfile
       - run: bun run build:site
+      - run: bunx playwright install --with-deps chromium
+      - run: bun scripts/verify-subscription.mjs
       - uses: actions/upload-artifact@v6
         with:
           name: marketing-site
           path: dist/site/
           if-no-files-found: error
           retention-days: 7
+  subscriptions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: ./buddy generate
+      - run: ./buddy lint
+      - run: ./buddy typecheck
+      - run: ./buddy test
+      - run: ./buddy deploy --prod --dry-run --json
   browser:
     runs-on: macos-15
     timeout-minutes: 30
@@ -39,7 +56,7 @@ jobs:
           fetch-depth: 0
       # Use the same Pantry build as the native release; acceptance reads its compiled app HTML.
       - name: Build and qualify native app
-        uses: pantry-pm/pantry/packages/action@v0.11.180
+        uses: pantry-pm/pantry/packages/action@v0.11.188
         with:
           native-app: check
           release-token: ${{ github.token }}
@@ -60,10 +77,63 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
   native:
-    needs: browser
-    uses: pantry-pm/pantry/.github/workflows/native-app.yml@v0.11.180
+    needs: [browser, website, subscriptions]
+    uses: pantry-pm/pantry/.github/workflows/native-app.yml@v0.11.188
     with:
       release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     secrets:
       PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
       DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+  deploy-website:
+    name: Deploy Launchpad website and API
+    needs: [website, subscriptions, browser]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: website-production
+      url: https://launchpad.stacksjs.com
+    permissions:
+      contents: read
+      deployments: write
+    concurrency:
+      group: launchpad-website-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Install website and service dependencies
+        run: |
+          bun install --frozen-lockfile
+      - name: Prepare deployment identity
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+          fi
+      - name: Attach and deploy Launchpad with native Stacks
+        run: bun run deploy:website
+        env:
+          APP_ENV: production
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DOTENV_PRIVATE_KEY_WEB: ${{ secrets.DOTENV_PRIVATE_KEY_WEB }}
+      - name: Verify the owned website and service
+        run: |
+          curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://launchpad.stacksjs.com/api/health -o /tmp/launchpad-health.json
+          curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://launchpad.stacksjs.com/ -o /tmp/launchpad-site.html
+          bun -e 'const health=await Bun.file("/tmp/launchpad-health.json").json();const html=await Bun.file("/tmp/launchpad-site.html").text();if(health.service!=="launchpad-api"||health.ok!==true||!html.includes("subscriber-email"))throw new Error("Launchpad website deployment is incomplete")'
