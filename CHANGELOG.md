@@ -1,5 +1,24 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.10...v1.1.11)
+
+## ✨ Features
+
+- add local suggestions and own website subscriptions ([26bfca5](https://github.com/stacksjs/launchpad/commit/26bfca5)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- qualify native releases without touching local history ([51965da](https://github.com/stacksjs/launchpad/commit/51965da)) _(by Chris Breuer <chris@stacksjs.com>)_
+- qualify the owned API service during deployment ([f2d0f5e](https://github.com/stacksjs/launchpad/commit/f2d0f5e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.11 ([03e89e1](https://github.com/stacksjs/launchpad/commit/03e89e1)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.9...v1.1.10)
 
 ## ✨ Features
