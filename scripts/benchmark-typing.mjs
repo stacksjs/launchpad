@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { bundledPackageCatalog } from 'ts-pantry/catalog'
+import { launcherPage } from './launcher-page.mjs'
 
 // Playwright is an optional development tool; no browser code ships in the app.
 assert.ok(process.argv.length > 2, 'Usage: node scripts/benchmark-typing.mjs <built index.html> [baseline index.html]')
@@ -28,9 +29,8 @@ const terms = {
 try {
   for (const path of process.argv.slice(2)) {
     const source = readFileSync(path, 'utf8')
-    assert.ok(source.includes('return { get "actionLabel"()') && source.includes('onMount(async () => {'), 'Build the native launcher before running the browser fixture.')
     // Expose only this isolated fixture's state and skip native startup. Never contact the user's backend.
-    const html = source.replace('return { get "actionLabel"()', 'return window.__launcher = { get "actionLabel"()').replace('onMount(async () => {', 'onMount(async () => { return;')
+    const html = launcherPage(source)
     for (const category of (process.env.LAUNCHPAD_TYPING_CATEGORIES || Object.keys(terms).join(',')).split(',')) {
       const page = await browser.newPage({ viewport: { width: 720, height: 450 } })
       const errors = []
