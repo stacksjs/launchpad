@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.11...v1.1.12)
+
+## ✨ Features
+
+- **startup**: ask once whether Launchpad should start with the Mac ([9b886c6](https://github.com/stacksjs/launchpad/commit/9b886c6)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🔧 Chores
+
+- release v1.1.12 ([9b80e5e](https://github.com/stacksjs/launchpad/commit/9b80e5e)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## Contributors
+
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.10...v1.1.11)
 
 ## ✨ Features
