@@ -21,7 +21,7 @@ import { registerLauncher, configureTray, nativeAutoLaunch, nativeWindow, execut
 import { bookmarkBrowsers, bookmarkResults } from '../functions/bookmarks'
 import { selectionActions } from '../functions/selection'
 import type { Selection } from '../functions/selection'
-import { initializeLogin, setLoginEnabled } from '../functions/startup'
+import { initializeLogin, setLoginEnabled, shouldOfferLogin } from '../functions/startup'
 import { createClipboardQueue } from '../functions/clipboard-queue'
 import { clipboardDecision, clipboardResult, clipboardResults, clipboardSelection, clipboardSummary, clipboardTime, clipboardWithSources, clipboardSources, clipboardSourceName, clipboardSnippetTitle } from '../functions/clipboard'
 import { pairingDigits, plural } from '../functions/format'
@@ -179,6 +179,8 @@ async function changeAutomaticUpdates(enabled) {
 }
 function chooseSettings(value) { settingsSection.set(value); clearError(); if (value === 'general') void refreshLogin(); if (value === 'updates') void refreshUpdate() }
 const loginEnabled = state(false)
+// Shown once, on the run that first set Launchpad up, and answered either way before it goes.
+const loginOffer = state(false)
 const loginBusy = state(false)
 const loginStatus = state('Checking macOS Login Items...')
 const settingsTitle = useRef('settingsTitle')
@@ -558,6 +560,16 @@ async function refreshLogin(initialize = false) {
   catch (reason) { loginStatus.set(reason.message) }
   finally { loginBusy.set(false) }
 }
+async function acceptLoginOffer() {
+  await changeLogin(true)
+  // Dismissed either way: a failure leaves its reason in the status line, where the toggle is now the way to retry.
+  loginOffer.set(false)
+}
+
+function declineLoginOffer() {
+  loginOffer.set(false)
+}
+
 async function changeLogin(enabled) {
   if (loginBusy()) return
   loginBusy.set(true)
@@ -1501,7 +1513,12 @@ onMount(async () => {
   try { cleanupTray = await configureTray(activate, openSettings, checkForUpdates, () => { settingsSection.set('general'); openSettings(true) }, fail) } catch (reason) { fail(reason) }
   const firstSetup = preferencesReady() && !preferences().loginInitialized
   await refreshLogin(true)
-  if (firstSetup) openSettings()
+  // `refreshLogin(true)` has already remembered the setup, so the question has to be decided from what was true before it.
+  if (shouldOfferLogin(!firstSetup, loginEnabled())) {
+    loginOffer.set(true)
+    chooseSettings('general')
+    openSettings()
+  }
   await reload()
   try { cleanup = await registerLauncher(activate) }
   catch (reason) { fail(reason) }
@@ -1700,6 +1717,15 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <div class="dialog-body settings-detail" :class="{ 'settings-detail-updates': settingsSection() === 'updates' }">
       <div class="settings-heading" :class="{ 'settings-heading-compact': settingsSection() === 'updates' }"><span class="settings-hero-icon" :style="'background:' + currentSettings().color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="currentSettings().icon" /></svg></span><h2>{{ currentSettings().title }}</h2><p class="help">{{ currentSettings().description }}</p></div>
       <section :if="settingsSection() === 'general'">
+        <div :if="loginOffer()" class="login-offer settings-group">
+          <h2>Start Launchpad with your Mac?</h2>
+          <p class="help">Launchpad lives in the menu bar and opens with Command Space. It can only answer that shortcut while it is running, so unless it starts when you sign in you would have to open it by hand first — which is the thing it is here to save you.</p>
+          <p class="help">It starts hidden. Nothing appears until you ask for it. You can change this at any time below.</p>
+          <div class="button-row">
+            <button type="button" class="save-button" :disabled="loginBusy()" @click="acceptLoginOffer()">Start at login</button>
+            <button type="button" class="text-action" :disabled="loginBusy()" @click="declineLoginOffer()">Not now</button>
+          </div>
+        </div>
         <div class="settings-group">
           <label class="toggle-row"><span>Open at Login</span><input type="checkbox" role="switch" :checked="loginEnabled()" :disabled="loginBusy()" @change="changeLogin($event.target.checked)"></label>
           <p class="help" role="status">{{ loginStatus() }}</p>
@@ -2133,6 +2159,9 @@ header input:focus-visible { outline: none; }
 /* A row of buttons stands together. `.setting-actions` spreads its children apart, which suits one help text and one
    action but leaves two buttons pushed to opposite edges, reading as unrelated. */
 .button-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+/* The one question first run asks. It has to read as a question, not as another row of settings. */
+.login-offer { border-color: var(--accent); }
+.login-offer h2 { margin-bottom: 8px; }
 .conflicts { margin-top: 12px; }
 .conflict { padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--line); }
 .conflict:first-of-type { border-top: 0; }

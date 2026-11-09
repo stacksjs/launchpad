@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { initializeLogin, setLoginEnabled } from '../resources/functions/startup'
+import { initializeLogin, setLoginEnabled, shouldOfferLogin } from '../resources/functions/startup'
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
 import AppPreference from '../app/Models/AppPreference'
 
@@ -39,4 +39,14 @@ test('login initialization persists through the generated Stacks preference API'
     expect((await AppPreference.where('key', 'loginInitialized').first())?.value).toBe('true')
   }
   finally { db.close() }
+})
+
+test('first run asks about launching at login, and only then', () => {
+  // Never set up, and macOS has no login item: the one moment worth asking.
+  expect(shouldOfferLogin(false, false)).toBe(true)
+  // Already starting with the Mac, perhaps set outside Launchpad: nothing to ask.
+  expect(shouldOfferLogin(false, true)).toBe(false)
+  // Asked before. Someone who said no keeps the toggle in General and is not nagged at every launch.
+  expect(shouldOfferLogin(true, false)).toBe(false)
+  expect(shouldOfferLogin(true, true)).toBe(false)
 })
