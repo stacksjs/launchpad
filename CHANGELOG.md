@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.12...v1.1.13)
+
+## 🐛 Bug Fixes
+
+- **scripts**: find the launcher component by a binding, not by its first one ([64cf0bc](https://github.com/stacksjs/launchpad/commit/64cf0bc)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 🔧 Chores
+
+- release v1.1.13 ([66604cd](https://github.com/stacksjs/launchpad/commit/66604cd)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## Contributors
+
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.11...v1.1.12)
 
 ## ✨ Features
