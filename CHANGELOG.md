@@ -1,5 +1,19 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.14...v1.1.15)
+
+## 🐛 Bug Fixes
+
+- **system**: open System Settings panes through the shell bridge ([646e516](https://github.com/stacksjs/launchpad/commit/646e516)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.15 ([2c12b8c](https://github.com/stacksjs/launchpad/commit/2c12b8c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.13...v1.1.14)
 
 ## ✨ Features
