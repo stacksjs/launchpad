@@ -1,5 +1,23 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.13...v1.1.14)
+
+## ✨ Features
+
+- **system**: add Wi-Fi, VPN, Storage and the Privacy & Security lists ([815d604](https://github.com/stacksjs/launchpad/commit/815d604)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **system**: open System Settings panes through open ([9000e9f](https://github.com/stacksjs/launchpad/commit/9000e9f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.14 ([3999ec0](https://github.com/stacksjs/launchpad/commit/3999ec0)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.12...v1.1.13)
 
 ## 🐛 Bug Fixes
