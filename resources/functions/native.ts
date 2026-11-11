@@ -190,10 +190,10 @@ export async function pasteIntoFrontmost(): Promise<void> {
 }
 
 /**
- * The shell bridge opens web and file links only and drops every other scheme without an error, so a System Settings
- * address is handed to `open` instead. Nothing a user typed reaches it: the addresses are the fixed ones in this app.
+ * A System Settings address goes through the shell bridge like any other link. Craft 0.0.499 opens the scheme and
+ * rejects a link it refuses or cannot open, so a pane that fails to open is reported instead of doing nothing.
  */
-const openSettings = (url: string) => shell.spawn(`settings-${Date.now()}`, '/usr/bin/open', [url])
+const openSettings = (url: string) => shell.openExternal(url)
 
 export const execute = createExecutor({
   openApplication: path => shell.openPath(path), openLink: url => shell.openExternal(url), copyText: text => clipboard.writeText(text), dismiss: () => nativeWindow.hide(),
