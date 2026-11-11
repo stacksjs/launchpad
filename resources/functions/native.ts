@@ -189,6 +189,12 @@ export async function pasteIntoFrontmost(): Promise<void> {
   await script('tell application "System Events" to keystroke "v" using command down', 'System Events', 'Launchpad could not paste.')
 }
 
+/**
+ * The shell bridge opens web and file links only and drops every other scheme without an error, so a System Settings
+ * address is handed to `open` instead. Nothing a user typed reaches it: the addresses are the fixed ones in this app.
+ */
+const openSettings = (url: string) => shell.spawn(`settings-${Date.now()}`, '/usr/bin/open', [url])
+
 export const execute = createExecutor({
   openApplication: path => shell.openPath(path), openLink: url => shell.openExternal(url), copyText: text => clipboard.writeText(text), dismiss: () => nativeWindow.hide(),
   restore: async () => {
@@ -199,7 +205,7 @@ export const execute = createExecutor({
   runSystem: command => runSystemPlan(command, {
     appleScript: runScript,
     spawn: (program, args) => shell.spawn(`system-${command.id}-${Date.now()}`, program, [...args]),
-    openUrl: url => shell.openExternal(url),
+    openUrl: openSettings,
     openPath: path => shell.openPath(path),
   }),
   focusWindow: token => script(windowFocusScript(token), 'System Events', 'Launchpad could not switch to that window.'),
@@ -239,7 +245,7 @@ export async function chooseFolder(): Promise<string> {
   const result = await showOpenDialog({ title: 'Choose a Folder for Launchpad Settings', buttonLabel: 'Choose', canChooseFiles: false, canChooseDirectories: true, canCreateDirectories: true })
   return result.canceled ? '' : result.filePaths[0] ?? ''
 }
-export const openPrivacySettings = (name: 'accessibility' | 'automation') => name === 'accessibility' ? permissions.openSettings('accessibility') : shell.openExternal('x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Automation')
+export const openPrivacySettings = (name: 'accessibility' | 'automation') => name === 'accessibility' ? permissions.openSettings('accessibility') : openSettings('x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Automation')
 
 export async function captureClipboard(): Promise<string> {
   const content = await clipboard.readText()
