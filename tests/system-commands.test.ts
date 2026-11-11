@@ -8,7 +8,7 @@ test('every system command is unique, fixed, and described', () => {
   for (const command of systemCommands) {
     expect(command.title.length).toBeGreaterThan(0)
     expect(command.subtitle).toMatch(/^(System|System Settings|Music) · /)
-    if (command.plan.type === 'url') expect(command.plan.url).toMatch(/^x-apple\.systempreferences:[\w.-]+$/)
+    if (command.plan.type === 'url') expect(command.plan.url).toMatch(/^x-apple\.systempreferences:com\.apple\.[\w.-]+(\?\w+)?$/)
     if (command.plan.type === 'spawn') expect(command.plan.command).toStartWith('/usr/bin/')
     if (command.plan.type === 'path') expect(command.plan.path).toMatch(/^\/System\/.+\.app$/)
     if (command.plan.type === 'applescript') expect(command.plan.source).not.toContain('${')
@@ -30,7 +30,14 @@ test('familiar phrases find the right command', () => {
   const first = (query: string) => search(query)[0]?.content
   expect(first('reboot')).toBe('restart')
   expect(first('dark mode')).toBe('toggle-dark-mode')
-  expect(first('wifi')).toBe('settings-network')
+  expect(first('wifi')).toBe('settings-wifi')
+  expect(first('ethernet')).toBe('settings-network')
+  expect(first('full disk access')).toBe('privacy-full-disk-access')
+  expect(first('screen recording')).toBe('privacy-screen-recording')
+  expect(first('storage')).toBe('settings-storage')
+  expect(first('privacy')).toBe('settings-privacy')
+  expect(first('accessibility')).toBe('settings-accessibility')
+  expect(first('camera')).toBe('privacy-camera')
   expect(first('empty trash')).toBe('empty-trash')
   expect(first('lock')).toBe('lock-screen')
   expect(first('backup')).toBe('settings-time-machine')
@@ -43,4 +50,11 @@ test('familiar phrases find the right command', () => {
   expect(first('play')).toBe('music-play-pause')
   expect(first('pause')).toBe('music-play-pause')
   expect(systemCommandResults().every(item => item.kind === 'system' && item.key === `system:${item.content}`)).toBe(true)
+})
+
+test('settings panes that macOS no longer ships are not offered', () => {
+  // Passwords became its own app in macOS 15, and its pane identifier now opens nothing.
+  expect(systemCommand('settings-passwords')).toBeNull()
+  const targets = systemCommands.flatMap(command => command.plan.type === 'url' ? [command.plan.url] : [])
+  expect(new Set(targets).size).toBe(targets.length)
 })

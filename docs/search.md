@@ -51,7 +51,8 @@ Results are never stored, ranked by use or counted as launches.
 mode, mute, eject and the System Settings panes are found by their names and familiar
 phrases (`reboot`, `wifi`, `dark mode`). They come from a fixed table: a result can only
 name a command in that table, never carry code. Restart, shut down, log out and Empty
-Trash ask first. They stay out of the idle list.
+Trash ask first. They stay out of the idle list. The lists inside Privacy & Security
+open directly too: `full disk access`, `screen recording`, `automation`, `camera`.
 
 **Conversions and the web.** `5 km in miles`, `72 f to c`, `1.5 gb in mb`, `100 usd to
 eur`. Units and temperatures work offline. Currencies need the opt-in exchange rates in

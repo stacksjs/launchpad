@@ -54,14 +54,21 @@ const music: readonly SystemCommand[] = [
   { id: 'music-previous', title: 'Previous Track', subtitle: 'Music · Go back to the previous track', aliases: ['previous song', 'back a track', 'rewind'], plan: script('tell application "Music" to previous track', 'Music') },
 ]
 
+/**
+ * Each target is the identifier of a System Settings extension, optionally followed by `?` and one of its anchors.
+ * They are checked against the extensions macOS ships, because an identifier that no longer exists opens nothing.
+ */
 const panes: readonly [id: string, title: string, aliases: readonly string[], pane: string][] = [
-  ['general', 'General Settings', ['about this mac', 'storage'], 'com.apple.systempreferences.GeneralSettings'],
+  ['general', 'General Settings', ['about this mac'], 'com.apple.systempreferences.GeneralSettings'],
+  ['apple-account', 'Apple Account Settings', ['apple id', 'icloud', 'subscriptions'], 'com.apple.systempreferences.AppleIDSettings'],
+  ['family', 'Family Settings', ['family sharing', 'parental controls'], 'com.apple.Family-Settings.extension'],
+  ['storage', 'Storage Settings', ['disk space', 'free space'], 'com.apple.settings.Storage'],
   ['appearance', 'Appearance Settings', ['theme', 'accent color'], 'com.apple.Appearance-Settings.extension'],
-  ['accessibility', 'Accessibility Settings', ['voiceover', 'zoom', 'a11y'], 'com.apple.Accessibility-Settings.extension'],
+  ['accessibility', 'Accessibility Settings', ['accessibility', 'voiceover', 'zoom', 'a11y'], 'com.apple.Accessibility-Settings.extension'],
   ['control-center', 'Control Center Settings', ['menu bar'], 'com.apple.ControlCenter-Settings.extension'],
   ['siri', 'Siri Settings', ['dictation'], 'com.apple.Siri-Settings.extension'],
   ['spotlight', 'Spotlight Settings', ['search settings'], 'com.apple.Spotlight-Settings.extension'],
-  ['privacy', 'Privacy & Security Settings', ['permissions', 'security', 'full disk access', 'camera access'], 'com.apple.settings.PrivacySecurity.extension'],
+  ['privacy', 'Privacy & Security Settings', ['permissions', 'security'], 'com.apple.settings.PrivacySecurity.extension'],
   ['desktop-dock', 'Desktop & Dock Settings', ['dock', 'stage manager', 'mission control'], 'com.apple.Desktop-Settings.extension'],
   ['displays', 'Displays Settings', ['monitor', 'resolution', 'night shift', 'brightness'], 'com.apple.Displays-Settings.extension'],
   ['wallpaper', 'Wallpaper Settings', ['background', 'desktop picture'], 'com.apple.Wallpaper-Settings.extension'],
@@ -69,9 +76,10 @@ const panes: readonly [id: string, title: string, aliases: readonly string[], pa
   ['lock-screen-settings', 'Lock Screen Settings', ['password', 'require password'], 'com.apple.Lock-Screen-Settings.extension'],
   ['touch-id', 'Touch ID & Password Settings', ['fingerprint', 'biometrics'], 'com.apple.Touch-ID-Settings.extension'],
   ['users-groups', 'Users & Groups Settings', ['accounts', 'login options'], 'com.apple.Users-Groups-Settings.extension'],
-  ['passwords', 'Passwords Settings', ['keychain', 'autofill'], 'com.apple.Passwords-Settings.extension'],
-  ['internet-accounts', 'Internet Accounts Settings', ['icloud', 'email accounts'], 'com.apple.Internet-Accounts-Settings.extension'],
-  ['network', 'Network Settings', ['wifi', 'wi-fi', 'ethernet', 'vpn', 'dns', 'internet'], 'com.apple.Network-Settings.extension'],
+  ['internet-accounts', 'Internet Accounts Settings', ['email accounts'], 'com.apple.Internet-Accounts-Settings.extension'],
+  ['wifi', 'Wi-Fi Settings', ['wifi', 'wireless', 'internet'], 'com.apple.wifi-settings-extension'],
+  ['network', 'Network Settings', ['ethernet', 'dns', 'proxy', 'firewall'], 'com.apple.Network-Settings.extension'],
+  ['vpn', 'VPN Settings', ['virtual private network'], 'com.apple.NetworkExtensionSettingsUI.NESettingsUIExtension'],
   ['bluetooth', 'Bluetooth Settings', ['pair', 'headphones'], 'com.apple.BluetoothSettings'],
   ['sound', 'Sound Settings', ['volume', 'audio', 'microphone', 'output'], 'com.apple.Sound-Settings.extension'],
   ['notifications', 'Notifications Settings', ['alerts', 'banners'], 'com.apple.Notifications-Settings.extension'],
@@ -80,20 +88,38 @@ const panes: readonly [id: string, title: string, aliases: readonly string[], pa
   ['keyboard', 'Keyboard Settings', ['shortcuts', 'text replacement', 'input sources'], 'com.apple.Keyboard-Settings.extension'],
   ['mouse', 'Mouse Settings', ['scroll', 'pointer'], 'com.apple.Mouse-Settings.extension'],
   ['trackpad', 'Trackpad Settings', ['gestures', 'tap to click'], 'com.apple.Trackpad-Settings.extension'],
+  ['game-center', 'Game Center Settings', ['games'], 'com.apple.Game-Center-Settings.extension'],
   ['printers', 'Printers & Scanners Settings', ['printing', 'scanner'], 'com.apple.Print-Scan-Settings.extension'],
-  ['sharing', 'Sharing Settings', ['airdrop', 'file sharing', 'remote login', 'hostname'], 'com.apple.Sharing-Settings.extension'],
+  ['sharing', 'Sharing Settings', ['file sharing', 'remote login', 'hostname'], 'com.apple.Sharing-Settings.extension'],
+  ['airdrop-handoff', 'AirDrop & Handoff Settings', ['airplay', 'continuity'], 'com.apple.AirDrop-Handoff-Settings.extension'],
   ['date-time', 'Date & Time Settings', ['clock', 'timezone', 'time zone'], 'com.apple.Date-Time-Settings.extension'],
   ['language-region', 'Language & Region Settings', ['locale', 'language'], 'com.apple.Localization-Settings.extension'],
   ['login-items', 'Login Items Settings', ['startup', 'launch at login', 'background items'], 'com.apple.LoginItems-Settings.extension'],
   ['software-update', 'Software Update Settings', ['upgrade', 'macos update', 'updates'], 'com.apple.Software-Update-Settings.extension'],
   ['time-machine', 'Time Machine Settings', ['backup'], 'com.apple.Time-Machine-Settings.extension'],
   ['startup-disk', 'Startup Disk Settings', ['boot'], 'com.apple.Startup-Disk-Settings.extension'],
+  ['transfer-reset', 'Transfer or Reset Settings', ['erase all content', 'migration assistant', 'factory reset'], 'com.apple.Transfer-Reset-Settings.extension'],
+]
+
+/** The lists inside Privacy & Security that people are sent to by name, each opened directly instead of three clicks deep. */
+const privacy: readonly [id: string, title: string, aliases: readonly string[], anchor: string][] = [
+  ['accessibility', 'Accessibility Permissions', ['control your computer'], 'Privacy_Accessibility'],
+  ['automation', 'Automation Permissions', ['apple events', 'applescript'], 'Privacy_Automation'],
+  ['full-disk-access', 'Full Disk Access', ['disk access'], 'Privacy_AllFiles'],
+  ['files-folders', 'Files & Folders Permissions', ['documents access', 'downloads access'], 'Privacy_FilesAndFolders'],
+  ['screen-recording', 'Screen Recording Permissions', ['system audio recording', 'screen capture'], 'Privacy_ScreenCapture'],
+  ['input-monitoring', 'Input Monitoring Permissions', ['keystrokes', 'keyboard monitoring'], 'Privacy_ListenEvent'],
+  ['camera', 'Camera Permissions', ['webcam'], 'Privacy_Camera'],
+  ['microphone', 'Microphone Permissions', ['mic'], 'Privacy_Microphone'],
+  ['location', 'Location Services', ['gps', 'location access'], 'Privacy_LocationServices'],
+  ['filevault', 'FileVault Settings', ['disk encryption', 'encrypt'], 'FileVault'],
 ]
 
 export const systemCommands: readonly SystemCommand[] = [
   ...actions,
   ...music,
   ...panes.map(([id, title, aliases, target]): SystemCommand => ({ id: `settings-${id}`, title, subtitle: 'System Settings · Open this pane', aliases: ['system settings', 'preferences', ...aliases], plan: pane(target) })),
+  ...privacy.map(([id, title, aliases, anchor]): SystemCommand => ({ id: `privacy-${id}`, title, subtitle: 'System Settings · Privacy & Security', aliases: ['app permissions', ...aliases], plan: pane(`com.apple.settings.PrivacySecurity.extension?${anchor}`) })),
 ]
 
 const byId = new Map(systemCommands.map(command => [command.id, command]))
