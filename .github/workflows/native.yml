@@ -15,7 +15,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      - uses: pantry-pm/pantry/packages/action@v0.11.191
+      - uses: pantry-pm/pantry/packages/action@v0.11.206
         with:
           version: '0.11.191'
           packages: bun.com@1.4.4
@@ -56,7 +56,7 @@ jobs:
           fetch-depth: 0
       # Use the same Pantry build as the native release; acceptance reads its compiled app HTML.
       - name: Build and qualify native app
-        uses: pantry-pm/pantry/packages/action@v0.11.191
+        uses: pantry-pm/pantry/packages/action@v0.11.206
         with:
           native-app: check
           release-token: ${{ github.token }}
@@ -78,7 +78,7 @@ jobs:
           retention-days: 7
   native:
     needs: [browser, website, subscriptions]
-    uses: pantry-pm/pantry/.github/workflows/native-app.yml@v0.11.191
+    uses: pantry-pm/pantry/.github/workflows/native-app.yml@v0.11.206
     with:
       release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     secrets:
