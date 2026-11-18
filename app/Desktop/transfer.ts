@@ -35,10 +35,10 @@ const maxBytes = 4 * 1024 * 1024
 const page = 1000
 
 /** Read a whole table by paging on the identifier, so one long table cannot be silently cut off at a page. */
-async function allRows<T extends { id: number }>(fetch: (cursor: number) => Promise<T[]>): Promise<T[]> {
+function allRows<T extends { id: number }>(fetch: (cursor: number) => T[]): T[] {
   const rows: T[] = []
   for (let cursor = 0; ;) {
-    const part = await fetch(cursor)
+    const part = fetch(cursor)
     rows.push(...part)
     if (part.length < page) return rows
     cursor = part.at(-1)!.id
@@ -47,13 +47,11 @@ async function allRows<T extends { id: number }>(fetch: (cursor: number) => Prom
 
 /** The configuration as it stands on this Mac, with the row identifiers an import needs to update anything. */
 async function readLocal(): Promise<{ source: TransferSource, ids: Map<string, number> }> {
-  const [commands, themes, extensions, preferences, favorites] = await Promise.all([
-    allRows(cursor => Command.where('id', '>', cursor).orderBy('id').limit(page).get()),
-    allRows(cursor => Theme.where('id', '>', cursor).orderBy('id').limit(page).get()),
-    allRows(cursor => Extension.where('id', '>', cursor).orderBy('id').limit(page).get()),
-    allRows(cursor => AppPreference.where('id', '>', cursor).orderBy('id').limit(page).get()),
-    allRows(cursor => LaunchRecord.where('id', '>', cursor).orderBy('id').limit(page).get()),
-  ])
+  const commands = allRows(cursor => Command.where('id', '>', cursor).orderBy('id').limit(page).get())
+  const themes = allRows(cursor => Theme.where('id', '>', cursor).orderBy('id').limit(page).get())
+  const extensions = allRows(cursor => Extension.where('id', '>', cursor).orderBy('id').limit(page).get())
+  const preferences = allRows(cursor => AppPreference.where('id', '>', cursor).orderBy('id').limit(page).get())
+  const favorites = allRows(cursor => LaunchRecord.where('id', '>', cursor).orderBy('id').limit(page).get())
   const source: TransferSource = {
     commands: commands.map(row => ({ title: row.title, kind: row.kind, content: row.content, alias: row.alias ?? '', shortcut: row.shortcut ?? '' })),
     themes: themes.map(row => ({ name: row.name, light: row.light, dark: row.dark, font: row.font ?? '' })),
