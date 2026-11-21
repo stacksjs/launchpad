@@ -200,6 +200,8 @@ bun run release:patch
 
 Release patch versions until the project policy changes. Buddy qualifies a clean `main` checkout and creates the version tag. [Pantry's reusable native workflow](https://github.com/pantry-pm/pantry/blob/main/.github/workflows/native-app.yml) handles runtime provisioning, signing, notarization, packaging and registry delivery. Apple packaging and submission also run through Buddy. App Store availability follows Apple's review and release process.
 
+For App Store packaging, put the Bun build with upstream ICU first in `PATH` before running Buddy. The native build uses that Bun executable to compile `Contents/MacOS/stx-backend`. Verify the final signed bundle with `otool -L` and `nm -um` before upload. Both the Craft executable and the helper must pass without an import from Apple's `libicucore`. Keep the ICU license with the release. [Stacks desktop packaging guide](https://github.com/stacksjs/stacks/blob/main/docs/packages/desktop.md).
+
 Release inputs are encrypted in `.env.production`; `.env.keys` remains private. Keep credentials and signing material out of source changes and issue reports.
 
 ## Contributing
