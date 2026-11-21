@@ -41,7 +41,24 @@ function openDatabase(path: string): string {
 }
 
 // Craft/stx owns the authenticated loopback session and backend process.
-const databaseSetAside = openDatabase(join(applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' }), 'launchpad.sqlite'))
+function openApplicationDatabase(): string {
+  const standard = applicationDataDirectory('Launchpad')
+  const preferred = applicationDataDirectory('Launchpad', { bundleIdentifier: 'com.stacksjs.launchpad' })
+  try {
+    return openDatabase(join(preferred, 'launchpad.sqlite'))
+  }
+  catch (reason) {
+    // A pre-existing App Store container may be inaccessible to a Developer ID build.
+    // Keep using the previous database wherever this copy of Launchpad can open it.
+    const code = (reason as NodeJS.ErrnoException)?.code
+    const denied = code === 'SQLITE_AUTH' || code === 'EACCES' || code === 'EPERM'
+    if (!denied || preferred === standard || process.env.APP_SANDBOX_CONTAINER_ID)
+      throw reason
+    return openDatabase(join(standard, 'launchpad.sqlite'))
+  }
+}
+
+const databaseSetAside = openApplicationDatabase()
 if (databaseSetAside) console.warn(recoveryNotice(databaseSetAside))
 const modelApi = createNativeModelApi({ models, authorize: () => true })
 const updates = createNativeUpdateApi({ repository: 'stacksjs/launchpad', currentVersion: pkg.version })
