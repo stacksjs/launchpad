@@ -3,7 +3,7 @@ import type { Result } from './search'
 /**
  * Bookmarks are a set of links someone has already curated, so the palette reads them rather than asking for the
  * same links again. Chromium browsers keep theirs as a JSON file under a profile directory, which is what this
- * understands. Reading is the whole of it: Launchpad never writes to a browser's bookmarks.
+ * understands. Reading is the whole of it: Scout never writes to a browser's bookmarks.
  */
 export const bookmarkBrowsers = [
   { id: 'chrome', name: 'Chrome', support: 'Google/Chrome' },

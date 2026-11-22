@@ -1,8 +1,6 @@
-Launchpad uses a white Command glyph on a blue key. Its vector source is
-assets/brand/launchpad.svg, with glyph attribution in assets/brand/NOTICE.md.
+Scout uses a white compass needle on a blue plate. Its vector source is
+assets/brand/scout.svg.
 
-bun run generate:brand renders the native SVG through ts-images, produces the
-app and website PNGs, and packages the macOS icon sizes with Apple iconutil.
-
-The menu bar uses the matching native Command symbol. Social cards declared in
-config/images.ts are generated through buddy generate:images --social.
+bun run generate:brand renders the app and website PNGs and packages the
+macOS icon sizes with Apple iconutil. The menu bar uses a native compass
+symbol. Buddy generates the social card from config/images.ts.

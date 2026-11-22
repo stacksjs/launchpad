@@ -30,8 +30,8 @@ test('records split on lines and tabs and drop malformed rows', () => {
   expect(cleanField(undefined)).toBe('')
 })
 
-test('windows parse, hide Launchpad, and produce focus scripts only from valid tokens', () => {
-  const entries = parseWindows(['501\t1\tSafari\tApple', '501\t2\tSafari\tmissing value', 'x\t1\tBad\tpid', '0\t1\tBad\tzero', '77\t1\tLaunchpad\tSelf', '88\t1000\tToo\tmany', '90\t1\tNotes\tShopping\tlist', ''].join('\n'))
+test('windows parse, hide Scout, and produce focus scripts only from valid tokens', () => {
+  const entries = parseWindows(['501\t1\tSafari\tApple', '501\t2\tSafari\tmissing value', 'x\t1\tBad\tpid', '0\t1\tBad\tzero', '77\t1\tLaunchpad\tSelf', '78\t1\tScout\tSelf', '88\t1000\tToo\tmany', '90\t1\tNotes\tShopping\tlist', ''].join('\n'))
   expect(entries).toEqual([{ pid: 501, index: 1, app: 'Safari', title: 'Apple' }, { pid: 501, index: 2, app: 'Safari', title: '' }])
   const results = windowResults(entries)
   expect(results.map(item => item.title)).toEqual(['Apple', 'Untitled window'])
@@ -83,7 +83,7 @@ test('a failed script is explained by its error number, and one that never ran s
   // wrong instruction: there is nothing to allow, because nothing was ever asked.
   expect(failure()).toEqual({ message: 'The script never reached Contacts, so no permission is missing.' })
   // The Automation pane cannot add an app, so the advice has to name the prompt as well as the switch.
-  expect(failure(-1743).message).toBe("Launchpad needs your permission to control Contacts. Choose OK when macOS asks, or, if you answered Don't Allow before, switch Contacts on under Launchpad in System Settings > Privacy & Security > Automation.")
+  expect(failure(-1743).message).toBe("Scout needs your permission to control Contacts. Choose OK when macOS asks, or, if you answered Don't Allow before, switch Contacts on under Scout in System Settings > Privacy & Security > Automation.")
   expect(failure(-1743)).toMatchObject({ permission: 'automation' })
   expect(failure(-1744)).toMatchObject({ permission: 'automation' })
   expect(failure(-25211)).toMatchObject({ permission: 'accessibility', message: expect.stringContaining('Accessibility') })
@@ -106,7 +106,7 @@ test('a failed script is explained by its error number, and one that never ran s
 // Compiling catches syntax errors without running anything or reading any data. It does not validate app terms:
 // those were checked against the Contacts, Calendar and System Events dictionaries with `sdef`.
 const compile = test.skipIf(process.platform !== 'darwin')
-compile('every AppleScript Launchpad runs compiles on this macOS', async () => {
+compile('every AppleScript Scout runs compiles on this macOS', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'launchpad-osa-'))
   try {
     const scripts: Record<string, string> = {

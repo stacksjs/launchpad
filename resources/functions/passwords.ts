@@ -3,7 +3,7 @@ import type { Result } from './search'
 /**
  * Finding a saved login without switching to the password manager and searching again.
  *
- * The boundary is the point of this file. Launchpad asks the 1Password CLI for a list of item titles and identifiers,
+ * The boundary is the point of this file. Scout asks the 1Password CLI for a list of item titles and identifiers,
  * and nothing else. It never runs `op item get`, never reads a field, never holds a vault credential, and never keeps
  * what it was told. Choosing a result hands the identifier back to 1Password, which decides what to reveal and asks
  * for whatever it needs first.

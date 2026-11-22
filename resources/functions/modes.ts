@@ -11,18 +11,18 @@ import type { Result } from './search'
 export interface Mode { id: string, title: string, subtitle: string, aliases: readonly string[] }
 
 export const modes: readonly Mode[] = [
-  { id: 'application', title: 'Search Applications', subtitle: 'Launchpad · Every app installed on this Mac', aliases: ['apps', 'applications', 'programs'] },
-  { id: 'file', title: 'Search Files', subtitle: 'Launchpad · Find a file by name, or browse a folder', aliases: ['files', 'documents', 'folders', 'finder'] },
-  { id: 'quicklink', title: 'Search Links', subtitle: 'Launchpad · Your saved quicklinks', aliases: ['links', 'quicklinks', 'bookmarks', 'urls'] },
-  { id: 'snippet', title: 'Search Snippets', subtitle: 'Launchpad · Your saved text', aliases: ['snippets', 'text', 'templates'] },
-  { id: 'clipboard', title: 'Clipboard History', subtitle: 'Launchpad · What you have copied', aliases: ['clipboard', 'copied', 'paste', 'history'] },
-  { id: 'emoji', title: 'Search Emoji', subtitle: 'Launchpad · Find an emoji and copy it', aliases: ['emoji', 'emoticon', 'symbols'] },
-  { id: 'window', title: 'Switch Windows', subtitle: 'Launchpad · Every open window, by title', aliases: ['windows', 'switch', 'open windows'] },
-  { id: 'contact', title: 'Search People', subtitle: 'Launchpad · Your contacts', aliases: ['people', 'contacts', 'address book'] },
-  { id: 'event', title: 'Search Calendar', subtitle: 'Launchpad · What is coming up', aliases: ['calendar', 'events', 'meetings', 'schedule'] },
-  { id: 'music', title: 'Music', subtitle: 'Launchpad · What is playing, and your library', aliases: ['music', 'songs', 'tracks', 'library'] },
-  { id: 'github', title: 'Search GitHub', subtitle: 'Launchpad · Repositories, issues and pull requests', aliases: ['github', 'repos', 'issues', 'pull requests'] },
-  { id: 'pantry', title: 'Browse Pantry', subtitle: 'Launchpad · Find and install packages', aliases: ['pantry', 'packages', 'install'] },
+  { id: 'application', title: 'Search Applications', subtitle: 'Scout · Every app installed on this Mac', aliases: ['apps', 'applications', 'programs'] },
+  { id: 'file', title: 'Search Files', subtitle: 'Scout · Find a file by name, or browse a folder', aliases: ['files', 'documents', 'folders', 'finder'] },
+  { id: 'quicklink', title: 'Search Links', subtitle: 'Scout · Your saved quicklinks', aliases: ['links', 'quicklinks', 'bookmarks', 'urls'] },
+  { id: 'snippet', title: 'Search Snippets', subtitle: 'Scout · Your saved text', aliases: ['snippets', 'text', 'templates'] },
+  { id: 'clipboard', title: 'Clipboard History', subtitle: 'Scout · What you have copied', aliases: ['clipboard', 'copied', 'paste', 'history'] },
+  { id: 'emoji', title: 'Search Emoji', subtitle: 'Scout · Find an emoji and copy it', aliases: ['emoji', 'emoticon', 'symbols'] },
+  { id: 'window', title: 'Switch Windows', subtitle: 'Scout · Every open window, by title', aliases: ['windows', 'switch', 'open windows'] },
+  { id: 'contact', title: 'Search People', subtitle: 'Scout · Your contacts', aliases: ['people', 'contacts', 'address book'] },
+  { id: 'event', title: 'Search Calendar', subtitle: 'Scout · What is coming up', aliases: ['calendar', 'events', 'meetings', 'schedule'] },
+  { id: 'music', title: 'Music', subtitle: 'Scout · What is playing, and your library', aliases: ['music', 'songs', 'tracks', 'library'] },
+  { id: 'github', title: 'Search GitHub', subtitle: 'Scout · Repositories, issues and pull requests', aliases: ['github', 'repos', 'issues', 'pull requests'] },
+  { id: 'pantry', title: 'Browse Pantry', subtitle: 'Scout · Find and install packages', aliases: ['pantry', 'packages', 'install'] },
 ]
 
 const byId = new Map(modes.map(mode => [mode.id, mode]))

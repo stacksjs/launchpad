@@ -32,11 +32,11 @@ export class PermissionError extends Error {
 }
 
 /**
- * The Automation pane has no way to add an app: a row for Launchpad appears only once macOS has asked, and each app
- * Launchpad controls is a separate switch underneath it. So the advice names both the prompt and the switch, instead of
+ * The Automation pane has no way to add an app: a row for Scout appears only once macOS has asked, and each app
+ * Scout controls is a separate switch underneath it. So the advice names both the prompt and the switch, instead of
  * sending someone to a pane that may still be empty.
  */
-const automationAdvice = (app: string) => `Launchpad needs your permission to control ${app}. Choose OK when macOS asks, or, if you answered Don't Allow before, switch ${app} on under Launchpad in System Settings > Privacy & Security > Automation.`
+const automationAdvice = (app: string) => `Scout needs your permission to control ${app}. Choose OK when macOS asks, or, if you answered Don't Allow before, switch ${app} on under Scout in System Settings > Privacy & Security > Automation.`
 
 /**
  * What to tell someone when a script did not run. The pinned Craft runtime reports what the Apple event itself did, as an
@@ -54,7 +54,7 @@ export function describeScriptFailure(app: string, outcome: ScriptOutcome): Scri
     return { message: `The script never reached ${app}${because}, so no permission is missing.` }
   }
   if (code === -1743 || code === -1744) return { message: automationAdvice(app), permission: 'automation' }
-  if (code === -25211 || code === -1719) return { message: 'Allow Launchpad under System Settings > Privacy & Security > Accessibility, then try again.', permission: 'accessibility' }
+  if (code === -25211 || code === -1719) return { message: 'Allow Scout under System Settings > Privacy & Security > Accessibility, then try again.', permission: 'accessibility' }
   if (code === -128) return { message: 'The request was cancelled.' }
   if (code === -600) return { message: `${app} is not running and could not be opened.` }
   // A dialog of the app's own, such as the Finder warning before the Trash is emptied, holds the event open until it times out.

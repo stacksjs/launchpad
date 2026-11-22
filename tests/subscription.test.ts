@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import { subscribeForUpdates, subscriptionEndpoint } from '../resources/functions/subscription'
 
-test('submits only the chosen address to the native Launchpad subscriber endpoint', async () => {
+test('submits only the chosen address to the native Scout subscriber endpoint', async () => {
   const calls: { url: string, init?: RequestInit }[] = []
   const send = (async (url: string, init?: RequestInit) => { calls.push({ url, init }); return Response.json({ success: true }) }) as unknown as typeof fetch
   await subscribeForUpdates(' Person@example.com ', send)

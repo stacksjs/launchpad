@@ -46,16 +46,16 @@ test('a global shortcut has to carry a modifier that is not Shift alone', () => 
   // Without one it would swallow an ordinary keystroke in every other app.
   expect(shortcutError('K')).toContain('Add Command, Control or Option')
   expect(shortcutError('Shift+K')).toContain('Shift on its own')
-  expect(shortcutError('nope')).toBe('That is not a shortcut Launchpad can use.')
+  expect(shortcutError('nope')).toBe('That is not a shortcut Scout can use.')
 })
 
 test('the app\'s own keys cannot be taken', () => {
-  expect(shortcutError(launcherShortcut)).toContain("Launchpad's own")
-  for (const reserved of reservedShortcuts) expect(shortcutError(reserved)).toContain("Launchpad's own")
+  expect(shortcutError(launcherShortcut)).toContain("Scout's own")
+  for (const reserved of reservedShortcuts) expect(shortcutError(reserved)).toContain("Scout's own")
   // The same key written differently is still the same key.
-  expect(shortcutError('shift+cmd+v')).toContain("Launchpad's own")
+  expect(shortcutError('shift+cmd+v')).toContain("Scout's own")
   // Large type is one of them, so a command shortcut cannot shadow it.
-  expect(shortcutError('Cmd+L')).toContain("Launchpad's own")
+  expect(shortcutError('Cmd+L')).toContain("Scout's own")
 })
 
 test('two commands cannot share a shortcut, but a command keeps its own', () => {

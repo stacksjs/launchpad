@@ -1,10 +1,10 @@
 # App discovery and search performance
 
-Launchpad discovers applications in `/Applications`, `/System/Applications` and
+Scout discovers applications in `/Applications`, `/System/Applications` and
 `~/Applications`, up to four folder levels below those roots. It does not walk
 inside app bundles, follow directory symlinks or index document contents.
 Application search does not use Spotlight's index. File search asks it (see
-[File search](#file-search)); Launchpad builds no file index of its own.
+[File search](#file-search)); Scout builds no file index of its own.
 
 The palette checks the application list on activation, focus and every five
 seconds while visible. The backend reuses its last snapshot until a filesystem
@@ -55,11 +55,11 @@ updating 100 mounted rows on each keystroke.
 Search ranks exact names first, then exact aliases, name prefixes and literal
 identity matches. Trailing version numbers do not demote an app such as Things3
 when searching for Things. Within the same relevance tier and fuzzy distance,
-explicit favorites lead, followed by total successful Launchpad launches, then
+explicit favorites lead, followed by total successful Scout launches, then
 most recent use. Launch frequency has no 25-use ceiling: with Mail launched 400
 times and Maps 80 times, `M` puts Mail first even if Maps was used more recently.
 An exact `Maps` search still puts Maps first. This history measures commands
-launched through Launchpad, not application activity elsewhere in macOS. It
+launched through Scout, not application activity elsewhere in macOS. It
 persists through the native LaunchRecord API, and updated records invalidate
 cached search results immediately. Compact application abbreviations and initials count as
 name matches. Other weak fuzzy matches are hidden when a literal identity
@@ -180,7 +180,7 @@ after slot reuse. With Playwright available in the development environment:
 
 ```sh
 ./buddy build
-node scripts/benchmark-typing.mjs dist/Launchpad.app/Contents/Resources/index.html
+node scripts/benchmark-typing.mjs dist/Scout.app/Contents/Resources/index.html
 ```
 
 `LAUNCHPAD_PLAYWRIGHT_MODULE` can select an installed Playwright module and
@@ -219,7 +219,7 @@ asynchronous. These browser observations are not timing guarantees on every Mac.
 
 Suggested wording:
 
-> Launchpad keeps a small app and command index and builds no index of your files:
+> Scout keeps a small app and command index and builds no index of your files:
 > file search asks the Spotlight index macOS already maintains. It caches discovery,
 > reuses prepared search data and pauses discovery polling when hidden. That keeps
 > its own indexing work limited. We haven't run a controlled
@@ -227,10 +227,10 @@ Suggested wording:
 
 [Apple describes Spotlight](https://support.apple.com/en-us/102321) as system-wide
 search backed by a regularly updated index of device data. The difference in
-scope explains why Launchpad has less to index; it does not prove lower total
+scope explains why Scout has less to index; it does not prove lower total
 CPU usage. A comparison needs the same Mac, idle and active-search workloads,
 fresh and steady-state indexing, all related processes, and the same optional
-clipboard, integration and usage settings. Launchpad does not turn off macOS's
+clipboard, integration and usage settings. Scout does not turn off macOS's
 own Spotlight indexing.
 
 ## File search
@@ -250,7 +250,7 @@ arranged to ask Spotlight as rarely as possible:
   contains query runs. Case and accent folding (`cd`) costs nothing noticeable.
 - **A line limit of 1000.** `mdfind` prints nothing until the query is evaluated, so
   stopping early does not save time, and most of the first 300 lines are caches,
-  dependencies and other files Launchpad hides. A 1000 line limit costs the same
+  dependencies and other files Scout hides. A 1000 line limit costs the same
   time and returns two to five times more usable candidates.
 - **Answers are remembered.** A finished answer is kept for 30 seconds. Typing more
   letters (`budg` to `budget`), adding a word or backspacing derives the new answer

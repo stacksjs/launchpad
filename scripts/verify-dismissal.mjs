@@ -4,7 +4,7 @@ import { installMockBridge } from '@stacksjs/desktop/test-utils'
 import { bundledPackageCatalog } from 'ts-pantry/catalog'
 import { launcherPage } from './launcher-page.mjs'
 
-const path = process.argv[2] || 'dist/Launchpad.app/Contents/Resources/index.html'
+const path = process.argv[2] || 'dist/Scout.app/Contents/Resources/index.html'
 const source = readFileSync(path, 'utf8')
 const html = launcherPage(source)
 const { chromium } = await import(process.env.LAUNCHPAD_PLAYWRIGHT_MODULE || 'playwright')

@@ -24,7 +24,7 @@ export const defaultFontStack = '-apple-system, BlinkMacSystemFont, system-ui, s
 
 /** The values the stylesheet ships with. A new theme starts here, and any value a saved theme omits falls back here. */
 export const builtInTheme: Theme = {
-  name: 'Launchpad',
+  name: 'Scout',
   light: {
     'surface': '#ffffff', 'ink': '#202735', 'muted': '#566173', 'line': '#d9e0e9', 'accent': '#245eb7',
     'selected': '#e7edf6', 'icon-surface': '#e8eef7', 'footer': '#f3f5f8', 'key': '#e0e6ee', 'field': '#ffffff',

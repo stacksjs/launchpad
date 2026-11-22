@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { installMockBridge } from '@stacksjs/desktop/test-utils'
 import { launcherPage } from './launcher-page.mjs'
-const source = readFileSync(process.argv[2] || 'dist/Launchpad.app/Contents/Resources/index.html', 'utf8')
+const source = readFileSync(process.argv[2] || 'dist/Scout.app/Contents/Resources/index.html', 'utf8')
 const html = launcherPage(source)
 assert.notEqual(html, source)
 const { chromium } = await import(process.env.LAUNCHPAD_PLAYWRIGHT_MODULE || 'playwright')
@@ -59,6 +59,11 @@ try {
   assert.deepEqual(await page.evaluate(() => window.__launchEffects), ['hide', 'open-request', 'accepted'])
   assert.equal(await page.evaluate(() => window.__launcher.saving()), false, 'An unresolved ranking write cannot block the next command.')
   await page.evaluate(() => { window.__launcher.category.set('application'); window.__launcher.query.set('') })
+  await page.mouse.move(350, 210)
+  await page.mouse.wheel(0, 420)
+  await page.waitForFunction(() => window.__launcher.resultScrollTop() > 300)
+  await page.mouse.wheel(0, -420)
+  await page.waitForFunction(() => window.__launcher.resultScrollTop() === 0)
   await page.getByRole('combobox', { name: 'Search applications and commands' }).press('End')
   await page.waitForFunction(() => window.__launcher.selected() === 1999)
   await page.locator('#result-1999').waitFor({ state: 'visible' })
@@ -66,6 +71,23 @@ try {
   await page.getByRole('combobox', { name: 'Search applications and commands' }).fill('Fixture app 1998')
   await page.waitForFunction(() => window.__launcher.results().length === 1)
   assert.equal(await page.locator('#result-0 .result-title').textContent(), 'Fixture app 1998')
+  const search = page.getByRole('combobox', { name: 'Search applications and commands' })
+  await page.evaluate(items => {
+    window.__launcher.items.set(items)
+    window.__launcher.query.set('')
+  }, apps.slice(0, 6))
+  await page.waitForFunction(() => window.__launcher.results().length === 6)
+  await search.press('End')
+  await page.waitForFunction(() => window.__launcher.selected() === 5 && window.__launcher.resultScrollTop() === document.querySelector('#result-list').scrollTop)
+  await search.press('End')
+  const scroll = await page.locator('#result-list').evaluate(list => ({
+    actual: list.scrollTop, virtual: window.__launcher.resultScrollTop(),
+    first: list.querySelector('.result-slot:not([style*="display: none"]) .result-title')?.textContent,
+  }))
+  assert.equal(scroll.virtual, scroll.actual, 'Pressing End again at the scroll boundary must not move the virtual window.')
+  assert.equal(scroll.first, 'Fixture app 0000')
+  await search.press('ArrowUp')
+  assert.equal(await page.locator('#result-list').evaluate(list => list.scrollTop), scroll.actual, 'A fully visible row needs no scroll.')
   releaseRanking()
   assert.deepEqual(errors, [])
   if (process.env.LAUNCHPAD_SUGGESTED_SCREENSHOT) {

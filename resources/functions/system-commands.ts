@@ -153,7 +153,7 @@ export async function runSystemPlan(command: SystemCommand, ports: SystemPorts):
     const outcome = await ports.appleScript(plan.source)
     if (!outcome.ok) {
       const { message, permission } = describeScriptFailure(plan.app, outcome)
-      throw new PermissionError(`Launchpad could not run "${command.title}". ${message}`, permission)
+      throw new PermissionError(`Scout could not run "${command.title}". ${message}`, permission)
     }
   }
   else if (plan.type === 'spawn') await ports.spawn(plan.command, plan.args)

@@ -2,7 +2,7 @@ import type { CloudConfig } from '@stacksjs/ts-cloud'
 
 /** An independent Stacks tenant: shared compute, private application state. */
 export const tsCloud: CloudConfig = {
-  project: { name: 'Launchpad', slug: 'launchpad', region: 'us-east-1' },
+  project: { name: 'Scout', slug: 'launchpad', region: 'us-east-1' },
   stateDir: 'storage/cloud',
   cloud: { provider: 'hetzner', attachTo: 'stacks' },
   environments: { production: { type: 'production' } },

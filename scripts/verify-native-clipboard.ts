@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-const executable = resolve(process.argv[2] || 'dist/Launchpad.app/Contents/MacOS/stx-backend')
+const executable = resolve(process.argv[2] || 'dist/Scout.app/Contents/MacOS/stx-backend')
 assert.ok(existsSync(executable), 'Build the native app with ./buddy build first.')
 const profile = mkdtempSync(join(tmpdir(), 'launchpad-clipboard-native-'))
 let child: Bun.Subprocess<'pipe', 'pipe', 'pipe'> | undefined

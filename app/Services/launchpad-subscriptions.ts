@@ -14,7 +14,7 @@ export async function subscribeToLaunchpad(email: string, ports?: { lists: Pick<
   const slug = 'launchpad-updates'
   let list = await native.lists.find(slug)
   if (!list) {
-    try { list = await native.lists.create({ slug, name: 'Launchpad updates', description: 'Launchpad releases and improvements.', isPublic: true }) }
+    try { list = await native.lists.create({ slug, name: 'Scout updates', description: 'Scout releases and improvements.', isPublic: true }) }
     catch (error) {
       // Another request may have created the same native list while this one waited.
       list = await native.lists.find(slug)

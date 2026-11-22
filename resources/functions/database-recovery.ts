@@ -2,7 +2,7 @@
  * Starting when the local database cannot be reconciled with the models this build was compiled against.
  *
  * The native model boot refuses any upgrade that would drop something, which is right for a server migration and
- * wrong for a launcher: it leaves the app unable to start, and because Launchpad has no Dock icon it fails with
+ * wrong for a launcher: it leaves the app unable to start, and because Scout has no Dock icon it fails with
  * nothing on screen at all. Rolling back to an earlier release is enough to cause it.
  *
  * A launcher that will not open is worse than a launcher that has forgotten something, so the store is set aside and
@@ -29,5 +29,5 @@ export function asidePath(path: string, at: Date = new Date()): string {
 
 /** What to tell someone whose history was set aside, naming the file so it can be found again. */
 export function recoveryNotice(movedTo: string): string {
-  return `Launchpad started with a new database because the old one was written by a newer version. The previous one is kept at ${movedTo}.`
+  return `Scout started with a new database because the old one was written by a newer version. The previous one is kept at ${movedTo}.`
 }

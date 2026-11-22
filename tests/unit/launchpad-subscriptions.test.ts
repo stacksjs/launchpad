@@ -4,7 +4,7 @@ import { subscribeToLaunchpad } from '../../app/Services/launchpad-subscriptions
 function fixture() {
   const memberships = new Map<string, { token: string, email: string, listId: number }>()
   const calls: string[] = []
-  const list = { id: 42, slug: 'launchpad-updates', name: 'Launchpad updates', update: async () => {} }
+  const list = { id: 42, slug: 'launchpad-updates', name: 'Scout updates', update: async () => {} }
   let present = false
   const ports = {
     lists: {
@@ -23,7 +23,7 @@ function fixture() {
   return { ports, calls, memberships }
 }
 
-test('existing addresses can join Launchpad with a stable list-specific unsubscribe token', async () => {
+test('existing addresses can join Scout with a stable list-specific unsubscribe token', async () => {
   const { ports, calls, memberships } = fixture()
   const first = await subscribeToLaunchpad(' Person@Example.com ', ports)
   const repeat = await subscribeToLaunchpad('person@example.com', ports)

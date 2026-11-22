@@ -23,7 +23,7 @@ import type { ConflictChoice, TransferCommand, TransferDocument, TransferExtensi
 /**
  * Writing a setup to a file the person chose, and reading one back.
  *
- * The file is the only thing that moves. Launchpad never reaches the network for this and never puts the document
+ * The file is the only thing that moves. Scout never reaches the network for this and never puts the document
  * anywhere the person did not name, so a folder watched by a syncing service is a choice they make rather than a
  * service this app connects to. `resources/functions/transfer.ts` owns the format and the merge; this owns the disk
  * and the database.
@@ -185,7 +185,7 @@ export function createTransferApi(options: TransferPorts = {}) {
   const read = options.read ?? (async (path: string) => {
     const file = Bun.file(path)
     const bytes = file.size
-    if (bytes > maxBytes) throw new Error('That file is too large to be a Launchpad settings file.')
+    if (bytes > maxBytes) throw new Error('That file is too large to be a Scout settings file.')
     return { text: await file.text(), bytes }
   })
   const write = options.write ?? (async (path: string, text: string) => {

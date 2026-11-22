@@ -1,6 +1,6 @@
 # Local usage
 
-Launchpad records usage through its authenticated bundled Stacks API. It uses
+Scout records usage through its authenticated bundled Stacks API. It uses
 `app/Models/LauncherActivity.ts` for events and `app/Models/LauncherUsageDay.ts`
 for cumulative time checkpoints. `PantryInstallation` retains terminal install
 receipts; `UsageRecordingPeriod` records the intervals when usage is enabled. The native model boot creates or upgrades the
@@ -17,12 +17,12 @@ SQLite schema from these definitions. Existing event history is retained.
 | Apps opened | Successful application commands, including Open application in Pantry details. |
 | Links opened | Successful quicklinks, GitHub result commands, web searches, and website links in the interface. |
 | Commands | Successful app, quicklink, GitHub, snippet, clipboard, calculator and conversion commands, and system commands, files, web searches, windows, contacts, events and emoji. |
-| Pantry installs | Successful installation jobs requested through Launchpad, grouped into apps, CLI tools, libraries and fonts. Failed jobs have a separate count. |
+| Pantry installs | Successful installation jobs requested through Scout, grouped into apps, CLI tools, libraries and fonts. Failed jobs have a separate count. |
 | Pantry install time | Time between Pantry's reported start and finish for successful jobs. Jobs without start metadata do not add elapsed time. |
 | Active days | Local calendar days with a palette opening, successful command, successful website link or successful Pantry completion. Background time alone does not create an active day. |
 | Day streak | The longest consecutive sequence of active local calendar days within the requested year. |
 
-An open succeeds when the native operating-system bridge accepts it. Launchpad
+An open succeeds when the native operating-system bridge accepts it. Scout
 cannot establish whether a destination website finished loading or an application
 subsequently crashed. A failed bridge call does not count. Opening an already
 running application still counts as an application command.
@@ -33,7 +33,7 @@ restores the palette and records no command. Other successful commands queue
 the command and visibility events and hide the palette without waiting for
 their HTTP persistence. A late launch acknowledgement never hides a newly
 opened palette. Ranking writes also run after dismissal without blocking the
-next command. The existing queue retries failed writes with the same UUIDs while Launchpad runs.
+next command. The existing queue retries failed writes with the same UUIDs while Scout runs.
 Slow usage writes must not hold the palette over the launched application.
 
 Copy in the clipboard preview (Command Return) records a successful clipboard
@@ -89,7 +89,7 @@ kind, start time and completion offset to its typed job API. Older v1 services c
 use the catalog's classification; missing execution timing stays unknown.
 
 Recording intervals are separate from process sessions. They stay open while
-Launchpad is closed, allowing a previously requested job to be reconciled after
+Scout is closed, allowing a previously requested job to be reconciled after
 restart. A job's request and completion must fall inside the same enabled interval.
 Jobs that cross a paused interval are excluded. Clear history resets these
 intervals, so old service jobs cannot repopulate cleared history.
@@ -97,7 +97,7 @@ intervals, so old service jobs cannot repopulate cleared history.
 Detailed install collection begins with the first enabled interval in the new
 version. Older generic `package_installed` events stay in event history without
 inventing missing type metadata. Terminal Pantry commands and other clients are
-not monitored; this measures jobs requested through Launchpad's own connection.
+not monitored; this measures jobs requested through Scout's own connection.
 
 ## Preferences and privacy
 
@@ -107,7 +107,7 @@ period. Visibility state can still reach the backend while paused, without being
 persisted, so timing resumes with the correct state.
 
 Usage records exclude search queries, URLs, application paths, clipboard text,
-and snippet contents. All records stay in Launchpad's local SQLite database.
+and snippet contents. All records stay in Scout's local SQLite database.
 They provide the source for a future year review without a hosted analytics
 service. Clearing clipboard history and clearing usage history are separate
 operations.
@@ -133,7 +133,7 @@ bun run test:usage-native
 
 For framework development, `CRAFT_BIN` can select a locally built Craft webview
 runtime. The fixture uses its own temporary database and does not modify your
-Launchpad history.
+Scout history.
 
 ## What the newer tools record
 

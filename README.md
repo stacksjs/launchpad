@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/images/launchpad.svg" width="88" height="88" alt="Launchpad Command symbol">
+  <img src="public/images/scout.svg" width="88" height="88" alt="Scout Command symbol">
 </p>
 
-<h1 align="center">Launchpad</h1>
+<h1 align="center">Scout</h1>
 
 <p align="center">
   Your apps, links and tools. One keyboard shortcut.<br>
@@ -20,7 +20,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/applications.jpg">
   <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/applications-light.jpg">
-  <img src="assets/screenshots/applications-light.jpg" width="1440" height="900" alt="Launchpad application search with real Mac icons">
+  <img src="assets/screenshots/applications-light.jpg" width="1440" height="900" alt="Scout application search with real Mac icons">
 </picture>
 
 <p align="center"><sub>Real app icons, light and dark appearance, and a palette that stays out of your way.</sub></p>
@@ -35,15 +35,15 @@ With [Pantry](https://pantry.dev) 0.11.142 or later:
 pantry install launchpad
 ```
 
-Or [download the latest release](https://github.com/stacksjs/launchpad/releases/latest), unzip the download, open the disk image, and drag Launchpad into Applications. Public direct-download builds are signed and notarized.
+Or [download the latest release](https://github.com/stacksjs/launchpad/releases/latest), unzip the download, open the disk image, and drag Scout into Applications. Public direct-download builds are signed and notarized.
 
-Open Launchpad once, then press **Command + Space** from another app to start typing. Use the arrow keys to select a result and Return to open or copy it. Escape or clicking outside dismisses the palette.
+Open Scout once, then press **Command + Space** from another app to start typing. Use the arrow keys to select a result and Return to open or copy it. Escape or clicking outside dismisses the palette.
 
-Launchpad lives in the menu bar with no Dock or app-switcher icon. First launch opens General settings, where you can opt into **Launch at login**. Later starts stay hidden until you open the palette. Click the Command symbol to open it, or right-click for support, updates, community links, settings and diagnostics.
+Scout lives in the menu bar with no Dock or app-switcher icon. First launch opens General settings, where you can opt into **Launch at login**. Later starts stay hidden until you open the palette. Click the Command symbol to open it, or right-click for support, updates, community links, settings and diagnostics.
 
 Software Update in Settings checks for and downloads verified updates automatically. You choose when to install and restart. Automatic Updates can be turned off on this Mac.
 
-If another launcher owns Command + Space, quit it or reassign its shortcut before opening Launchpad.
+If another launcher owns Command + Space, quit it or reassign its shortcut before opening Scout.
 
 ## What you can do
 
@@ -86,23 +86,23 @@ GitHub searches go to GitHub's API. Your app, snippet and clipboard searches sta
 
 ### Pantry
 
-You can browse the catalog before connecting the installer. To install through Launchpad, set up [Pantry](https://pantry.dev)'s local desktop service:
+You can browse the catalog before connecting the installer. To install through Scout, set up [Pantry](https://pantry.dev)'s local desktop service:
 
 ```sh
 pantry desktop setup --yes
 ```
 
-Open **Settings → Pantry** and enter the single-use pairing code. Launchpad stores the connection token in macOS Keychain. Package details show original logos, upstream links, installed versions and job status. The separately installed Pantry service manages packages under your user account.
+Open **Settings → Pantry** and enter the single-use pairing code. Scout stores the connection token in macOS Keychain. Package details show original logos, upstream links, installed versions and job status. The separately installed Pantry service manages packages under your user account.
 
 Choose **Pantry → Installed**, or **Settings → Pantry → Manage installed packages**, to review your apps, CLI tools, libraries and fonts. Package details offer **Reinstall latest** and, with Pantry Desktop 0.11.180 or later, **Uninstall**. Removal requires confirmation and moves Pantry-managed user files to Trash while keeping app data, preferences and other packages. Quit a running app before removing it. Apps installed outside Pantry remain openable; their files are kept. Packages missing from the public catalog remain removable.
 
-To enable uninstall on an existing connection, run `pantry upgrade` and `pantry desktop setup --yes`, then refresh the connection in Launchpad.
+To enable uninstall on an existing connection, run `pantry upgrade` and `pantry desktop setup --yes`, then refresh the connection in Scout.
 
 ## Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
-| <kbd>⌘</kbd> <kbd>Space</kbd> | Open Launchpad and focus search |
+| <kbd>⌘</kbd> <kbd>Space</kbd> | Open Scout and focus search |
 | <kbd>↑</kbd> / <kbd>↓</kbd>, <kbd>Ctrl</kbd> <kbd>P</kbd> / <kbd>Ctrl</kbd> <kbd>N</kbd> | Move through results |
 | <kbd>Page Up</kbd> / <kbd>Page Down</kbd> | Jump eight results |
 | <kbd>Return</kbd> | Open or copy the selected result |
@@ -127,16 +127,16 @@ Saved commands and clipboard entries have a separate Delete control. Command + D
 
 ## Your data
 
-Launchpad works without a Stacks account or hosted API. Its local SQLite database holds commands, preferences, favorites, clipboard entries and usage records in the macOS app container.
+Scout works without a Stacks account or hosted API. Its local SQLite database holds commands, preferences, favorites, clipboard entries and usage records in the macOS app container.
 
 - **Clipboard recording is opt-in.** Keep up to 200 text entries with 1, 7 or 30 day retention. Protected pasteboard types are skipped, but unmarked sensitive text can still be captured. Pause recording before copying private material.
 - **Usage stays local.** Inspect, pause or clear it in Settings. Search queries, URLs, file paths, clipboard text and snippet contents are excluded from activity records. Year-review image export is planned; the current app collects and summarizes the local records.
 - **Files, windows, contacts and events are looked up, not stored.** File names come from Spotlight and are never saved, ranked by use or counted. Windows, contacts and events come from the apps that own them, stay in memory while the tab is open, and never enter usage records. None of it is sent anywhere.
-- **Exchange rates are opt-in.** When you turn them on, Launchpad downloads the European Central Bank's published rates about once a day from `api.frankfurter.dev`. The request carries no search text.
+- **Exchange rates are opt-in.** When you turn them on, Scout downloads the European Central Bank's published rates about once a day from `api.frankfurter.dev`. The request carries no search text.
 - **Credentials use Keychain.** GitHub and Pantry connection tokens are separate from the local database.
 - **Connected services use the network.** GitHub receives GitHub searches. Catalog refreshes and logos come from Pantry's public sources; installations contact the registry and upstream providers through Pantry.
-- **Settings travel as a file, not a service.** Export your commands, themes, extensions, favorites and preferences to one JSON file, and import it on another Mac after reading what it would change. Clipboard history, usage records, launch counts and Keychain tokens are not in it. Keep a copy in a folder you choose — iCloud Drive, Dropbox, anything — and that service, not Launchpad, carries it.
-- **No cloud synchronization of its own.** Launchpad has no account and no hosted service. Local clipboard history and usage history have separate clear controls.
+- **Settings travel as a file, not a service.** Export your commands, themes, extensions, favorites and preferences to one JSON file, and import it on another Mac after reading what it would change. Clipboard history, usage records, launch counts and Keychain tokens are not in it. Keep a copy in a folder you choose — iCloud Drive, Dropbox, anything — and that service, not Scout, carries it.
+- **No cloud synchronization of its own.** Scout has no account and no hosted service. Local clipboard history and usage history have separate clear controls.
 
 Read the [privacy policy](PRIVACY.md) and [local usage contract](docs/local-usage.md) for retention, metric definitions and API behavior.
 
@@ -188,9 +188,9 @@ Model definitions drive native schema upgrades. Keep application features in the
 bun run build:site
 ```
 
-Launchpad owns its website at [launchpad.stacksjs.com](https://launchpad.stacksjs.com). Its own workflow builds `dist/site` and attaches the website and API to the shared host using `config/cloud.ts`. Run `bun run deploy:website` for a native deployment.
+Scout owns its website at [launchpad.stacksjs.com](https://launchpad.stacksjs.com). Its own workflow builds `dist/site` and attaches the website and API to the shared host using `config/cloud.ts`. Run `bun run deploy:website` for a native deployment.
 
-The Command mark starts at `assets/brand/launchpad.svg`. `bun run generate:brand` renders the PNG and macOS icon set with ts-images and the native SVG renderer. `config/images.ts` defines the website's share cards, generated by `./buddy generate:images --social`. Builds reuse the shared mark and licensed Geist fonts.
+The Command mark starts at `assets/brand/scout.svg`. `bun run generate:brand` renders the PNG and macOS icon set with ts-images and the native SVG renderer. `config/images.ts` defines the website's share cards, generated by `./buddy generate:images --social`. Builds reuse the shared mark and licensed Geist fonts.
 
 ### Releases
 
@@ -212,16 +212,16 @@ The [v1 plan](docs/planning/v1.md), [research](docs/planning/research.md) and [c
 
 ## License and credits
 
-Launchpad declares the MIT license in [package.json](package.json). Bundled [fonts](assets/fonts/LICENSE.txt) and the [Command mark's source artwork](assets/brand/NOTICE.md) retain their respective notices.
+Scout declares the MIT license in [package.json](package.json). Bundled [fonts](assets/fonts/LICENSE.txt) and the [Command mark's source artwork](assets/brand/NOTICE.md) retain their respective notices.
 
 ## Website subscription service
 
 The optional website updates form uses `/api/subscribe` on launchpad.stacksjs.com.
 Its models, actions and routes live in the top-level `app/`, `routes/` and `config/`
-directories. `config/cloud.ts` makes Launchpad the owner of both its website and
+directories. `config/cloud.ts` makes Scout the owner of both its website and
 API, attached to the shared Stacks compute host.
 
-Launchpad’s own workflow deploys main through its protected `website-production`
+Scout’s own workflow deploys main through its protected `website-production`
 environment. `bun run deploy:website` reads `.env.web` only, keeping Mac signing
 credentials out of the web service. Native persistent state keeps the subscriber
 database outside release directories. Desktop usage and clipboard data stay on

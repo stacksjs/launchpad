@@ -1,8 +1,8 @@
 import type { ImagesConfig } from '@stacksjs/types'
 
 export default {
-  brand: 'Launchpad',
-  mark: 'assets/brand/launchpad.svg',
+  brand: 'Scout',
+  mark: 'assets/brand/scout.svg',
   markPlate: false,
   fonts: {
     title: 'assets/fonts/Geist-SemiBold.ttf',

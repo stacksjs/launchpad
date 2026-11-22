@@ -2,7 +2,7 @@
 
 Software Update settings and the tray menu offer Check for Updates. Automatic
 Updates is on by default: the native backend checks after the first minute and
-every six hours while Launchpad runs, then downloads available updates. Its
+every six hours while Scout runs, then downloads available updates. Its
 preference is stored by AppPreference on this Mac. Turn it off to check and
 download manually. The launcher shows Update ready when a download completes;
 installation always waits for Install and Restart. Download update verifies the release archive; Install and Restart

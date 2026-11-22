@@ -11,7 +11,8 @@ export function resultOffset(index: number, sections: readonly ResultSection[] =
 
 /** Section labels occupy real scroll space but never become selectable commands. */
 export function resultWindow(count: number, scrollTop: number, height: number, sections: readonly ResultSection[] = []) {
-  const offset = Math.max(0, scrollTop)
+  const total = count * resultRowHeight + sections.length * sectionRowHeight
+  const offset = Math.max(0, Math.min(scrollTop, total - height))
   const find = (pixel: number) => {
     let low = 0
     let high = count
@@ -25,7 +26,6 @@ export function resultWindow(count: number, scrollTop: number, height: number, s
   const start = Math.max(0, Math.min(find(offset + resultRowHeight) - 3, Math.max(0, count - 1)))
   const end = Math.min(count, find(offset + height) + 2)
   const before = (index: number) => index * resultRowHeight + sections.filter(section => section.index < index).length * sectionRowHeight
-  const total = count * resultRowHeight + sections.length * sectionRowHeight
   return { start, end, top: before(start), bottom: total - before(end) }
 }
 

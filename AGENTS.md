@@ -1,10 +1,10 @@
-# Launchpad
+# Scout
 
 Release only patch versions with `bun run release:patch` until Chris explicitly
 changes this policy. This restriction also applies to framework and package
-releases made for Launchpad. Do not run minor or major releases.
+releases made for Scout. Do not run minor or major releases.
 
-Launchpad is a native Stacks app built with stx and Craft. Use Buddy and Pantry's
+Scout is a native Stacks app built with stx and Craft. Use Buddy and Pantry's
 native publishing workflow. Define local data in `app/Models/`; the native model
 boot owns schema upgrades and generated APIs. Do not add hand-written schemas or
 parallel persistence for application features.

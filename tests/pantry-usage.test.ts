@@ -118,7 +118,7 @@ test('the real Pantry proxy reconciles receipts, supports older v1 metadata and 
   let legacy = false
   try {
     await f.api.checkpoint()
-    const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(directory, f.clock.now()), 'Launchpad test')
+    const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(directory, f.clock.now()), 'Scout test')
     const client = new PantryDesktopClient({ token, fetch: async (target, init) => {
       const path = new URL(String(target)).pathname
       const response = await pantryApi(new Request(`http://localhost/api/pantry/desktop${path}`, init), {

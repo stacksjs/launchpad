@@ -24,7 +24,7 @@ tell application "System Events"
 end tell
 return output`
 
-export function parseWindows(output: string, hide = ['Launchpad']): WindowEntry[] {
+export function parseWindows(output: string, hide = ['Scout', 'Launchpad']): WindowEntry[] {
   return parseRecords(output, 4).flatMap(([pid, index, app, title]) => {
     const entry = { pid: Number(pid), index: Number(index), app: cleanField(app), title: cleanField(title) }
     return Number.isInteger(entry.pid) && entry.pid > 0 && Number.isInteger(entry.index) && entry.index > 0 && entry.index < 1000 && entry.app && !hide.includes(entry.app) ? [entry] : []

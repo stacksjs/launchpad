@@ -3,7 +3,7 @@ import { initializeLogin, setLoginEnabled, shouldOfferLogin } from '../resources
 import { createNativeModelApi, openNativeDatabase } from '@stacksjs/orm/native'
 import AppPreference from '../app/Models/AppPreference'
 
-test('startup only reads Login Items and respects changes made outside Launchpad', async () => {
+test('startup only reads Login Items and respects changes made outside Scout', async () => {
   let enabled = false
   let registrations = 0
   let remembered = false
@@ -44,7 +44,7 @@ test('login initialization persists through the generated Stacks preference API'
 test('first run asks about launching at login, and only then', () => {
   // Never set up, and macOS has no login item: the one moment worth asking.
   expect(shouldOfferLogin(false, false)).toBe(true)
-  // Already starting with the Mac, perhaps set outside Launchpad: nothing to ask.
+  // Already starting with the Mac, perhaps set outside Scout: nothing to ask.
   expect(shouldOfferLogin(false, true)).toBe(false)
   // Asked before. Someone who said no keeps the toggle in General and is not nagged at every launch.
   expect(shouldOfferLogin(true, false)).toBe(false)

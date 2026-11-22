@@ -49,7 +49,7 @@ function openApplicationDatabase(): string {
   }
   catch (reason) {
     // A pre-existing App Store container may be inaccessible to a Developer ID build.
-    // Keep using the previous database wherever this copy of Launchpad can open it.
+    // Keep using the previous database wherever this copy of Scout can open it.
     const code = (reason as NodeJS.ErrnoException)?.code
     const denied = code === 'SQLITE_AUTH' || code === 'EACCES' || code === 'EPERM'
     if (!denied || preferred === standard || process.env.APP_SANDBOX_CONTAINER_ID)

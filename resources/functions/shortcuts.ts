@@ -99,17 +99,17 @@ export interface ShortcutHolder { id: unknown, title: string, shortcut?: string 
  */
 export function shortcutError(value: string, taken: readonly ShortcutHolder[] = [], ownId: unknown = null): string | null {
   const normalized = normalizeShortcut(value)
-  if (!normalized) return 'That is not a shortcut Launchpad can use.'
+  if (!normalized) return 'That is not a shortcut Scout can use.'
   const parts = normalized.split('+')
   const key = parts[parts.length - 1]!
   const modifiers = parts.slice(0, -1)
   if (!modifiers.length) return 'Add Command, Control or Option, so the shortcut does not swallow an ordinary key.'
   if (modifiers.length === 1 && modifiers[0] === 'Shift') return 'Shift on its own is not enough. Add Command, Control or Option.'
-  if (reservedShortcuts.includes(normalized)) return `${formatShortcut(normalized)} is one of Launchpad's own shortcuts.`
+  if (reservedShortcuts.includes(normalized)) return `${formatShortcut(normalized)} is one of Scout's own shortcuts.`
   const clash = taken.find(entry => entry.id !== ownId && normalizeShortcut(entry.shortcut) === normalized)
   if (clash) return `${formatShortcut(normalized)} already runs "${clash.title}".`
   // A single letter with only Shift reads as typing that letter, which is caught above; everything else is allowed.
-  return key ? null : 'That is not a shortcut Launchpad can use.'
+  return key ? null : 'That is not a shortcut Scout can use.'
 }
 
 export interface ShortcutRegistration { id: string, accelerator: string }

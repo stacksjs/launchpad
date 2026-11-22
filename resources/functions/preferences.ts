@@ -1,6 +1,6 @@
 export const historyRetentionDays = [1, 7, 30] as const
 
-/** Preferences are stored as JSON text. A damaged value must never keep Launchpad from starting. */
+/** Preferences are stored as JSON text. A damaged value must never keep Scout from starting. */
 export function parsePreference(value: string | undefined): Record<string, unknown> {
   try {
     const parsed = JSON.parse(value || '{}')

@@ -41,9 +41,9 @@ export async function configureTray(show: () => void, settings: () => void, upda
   })
   try {
     await nativeWindow.center()
-    await nativeTray.setIcon('command')
+    await nativeTray.setIcon('location.north.fill')
     await nativeTray.setTitle('')
-    await nativeTray.setTooltip('Launchpad · Command + Space')
+    await nativeTray.setTooltip('Scout · Command + Space')
     await nativeTray.setMenu(launcherTrayMenu)
     return () => {
       stopClick()
@@ -60,7 +60,7 @@ export async function configureTray(show: () => void, settings: () => void, upda
 export const applicationIcons = createApplicationIconLoader(path => app.icon(path))
 
 export async function registerLauncher(show: () => void): Promise<() => void> {
-  if (!nativeWindow.available) throw new Error('Launchpad requires its native Craft window.')
+  if (!nativeWindow.available) throw new Error('Scout requires its native Craft window.')
   const unsubscribe = globalShortcuts.on(async (event) => {
     if (event.id !== 'launchpad.toggle') return
     await nativeWindow.show()
@@ -71,7 +71,7 @@ export async function registerLauncher(show: () => void): Promise<() => void> {
     await globalShortcuts.register('launchpad.toggle', 'Cmd+Space')
     const registered = await globalShortcuts.list()
     if (!registered.some(entry => entry.id === 'launchpad.toggle' && entry.enabled))
-      throw new Error('Command + Space is in use. Quit the other launcher or change its shortcut, then reopen Launchpad.')
+      throw new Error('Command + Space is in use. Quit the other launcher or change its shortcut, then reopen Scout.')
     return () => {
       unsubscribe()
       void globalShortcuts.unregister('launchpad.toggle')
@@ -113,7 +113,7 @@ export const commandShortcutId = shortcutId
 const selectionServiceName = 'searchWithLaunchpad'
 
 /**
- * Offers Launchpad in the Services menu of every app, and reports what was handed over. macOS reads `NSServices` from
+ * Offers Scout in the Services menu of every app, and reports what was handed over. macOS reads `NSServices` from
  * the installed bundle, so a build without that key registers happily here and still never appears in the menu.
  *
  * Returns a function that withdraws the registration and stops listening.
@@ -182,11 +182,11 @@ async function script(source: string | null, app: string, refusal: string) {
 export async function pasteIntoFrontmost(): Promise<void> {
   if (await permissions.check('accessibility') !== 'granted') {
     await permissions.request('accessibility').catch(() => {})
-    throw new Error('Allow Launchpad under System Settings > Privacy & Security > Accessibility to paste snippets into other apps.')
+    throw new Error('Allow Scout under System Settings > Privacy & Security > Accessibility to paste snippets into other apps.')
   }
   // The palette is hiding; wait for macOS to hand focus back before sending the keystroke.
   await new Promise(resolve => setTimeout(resolve, 180))
-  await script('tell application "System Events" to keystroke "v" using command down', 'System Events', 'Launchpad could not paste.')
+  await script('tell application "System Events" to keystroke "v" using command down', 'System Events', 'Scout could not paste.')
 }
 
 /**
@@ -208,10 +208,10 @@ export const execute = createExecutor({
     openUrl: openSettings,
     openPath: path => shell.openPath(path),
   }),
-  focusWindow: token => script(windowFocusScript(token), 'System Events', 'Launchpad could not switch to that window.'),
-  openContact: id => script(contactOpenScript(id), 'Contacts', 'Launchpad could not open that contact.'),
-  openEvent: uid => script(eventOpenScript(uid), 'Calendar', 'Launchpad could not open that event.'),
-  playTrack: id => script(playTrackScript(id), 'Music', 'Launchpad could not play that track.'),
+  focusWindow: token => script(windowFocusScript(token), 'System Events', 'Scout could not switch to that window.'),
+  openContact: id => script(contactOpenScript(id), 'Contacts', 'Scout could not open that contact.'),
+  openEvent: uid => script(eventOpenScript(uid), 'Calendar', 'Scout could not open that event.'),
+  playTrack: id => script(playTrackScript(id), 'Music', 'Scout could not play that track.'),
   expandText: text => expandSnippet(text, { now: new Date(), uuid: () => crypto.randomUUID(), clipboard: () => clipboard.readText().then(value => value ?? '') }),
   pasteText: async () => { if (behavior.paste) await pasteIntoFrontmost() },
 })
@@ -227,22 +227,22 @@ export const revealInFinder = (path: string) => shell.showInFinder(path)
 /**
  * Asking for a file or a folder through the system's own dialog.
  *
- * Launchpad never picks a path on someone's behalf: the place a settings file is written to, or read from, is chosen
+ * Scout never picks a path on someone's behalf: the place a settings file is written to, or read from, is chosen
  * in the dialog macOS puts up, and a cancelled dialog returns nothing rather than a guess. In the sandboxed build
  * this is also what grants access to the place they picked.
  */
 export async function chooseSaveFile(name: string): Promise<string> {
-  const result = await showSaveDialog({ title: 'Export Launchpad Settings', defaultPath: name, buttonLabel: 'Export', filters: [{ name: 'Launchpad Settings', extensions: ['json'] }], canCreateDirectories: true })
+  const result = await showSaveDialog({ title: 'Export Scout Settings', defaultPath: name, buttonLabel: 'Export', filters: [{ name: 'Scout Settings', extensions: ['json'] }], canCreateDirectories: true })
   return result.canceled ? '' : result.filePath ?? ''
 }
 
 export async function chooseOpenFile(): Promise<string> {
-  const result = await showOpenDialog({ title: 'Import Launchpad Settings', buttonLabel: 'Open', filters: [{ name: 'Launchpad Settings', extensions: ['json'] }], canChooseFiles: true, canChooseDirectories: false })
+  const result = await showOpenDialog({ title: 'Import Scout Settings', buttonLabel: 'Open', filters: [{ name: 'Scout Settings', extensions: ['json'] }], canChooseFiles: true, canChooseDirectories: false })
   return result.canceled ? '' : result.filePaths[0] ?? ''
 }
 
 export async function chooseFolder(): Promise<string> {
-  const result = await showOpenDialog({ title: 'Choose a Folder for Launchpad Settings', buttonLabel: 'Choose', canChooseFiles: false, canChooseDirectories: true, canCreateDirectories: true })
+  const result = await showOpenDialog({ title: 'Choose a Folder for Scout Settings', buttonLabel: 'Choose', canChooseFiles: false, canChooseDirectories: true, canCreateDirectories: true })
   return result.canceled ? '' : result.filePaths[0] ?? ''
 }
 export const openPrivacySettings = (name: 'accessibility' | 'automation') => name === 'accessibility' ? permissions.openSettings('accessibility') : openSettings('x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Automation')

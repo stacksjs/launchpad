@@ -1,7 +1,7 @@
 /**
- * Carrying a Launchpad setup to another Mac, as one file.
+ * Carrying a Scout setup to another Mac, as one file.
  *
- * Everything Launchpad knows lives in one local SQLite database on one machine, so a second Mac starts empty and the
+ * Everything Scout knows lives in one local SQLite database on one machine, so a second Mac starts empty and the
  * two drift apart from there. This is the document that moves the configuration across: what it contains, how it is
  * read back, and what merging it into an existing setup would do.
  *
@@ -51,7 +51,7 @@ export interface TransferDocument {
   favorites: TransferFavorite[]
 }
 
-/** Enough for any real setup, and a bound on what a damaged or hostile file can ask Launchpad to read. */
+/** Enough for any real setup, and a bound on what a damaged or hostile file can ask Scout to read. */
 const limits = { commands: 2000, themes: 200, extensions: 200, preferences: 50, favorites: 5000 }
 
 const text = (value: unknown, max: number): string | null => typeof value === 'string' && value.length <= max ? value : null
@@ -190,13 +190,13 @@ export type DocumentRead = { ok: true, document: TransferDocument } | { ok: fals
 export function readDocument(value: string): DocumentRead {
   let parsed: unknown
   try { parsed = JSON.parse(value) }
-  catch { return { ok: false, reason: 'That file is not a Launchpad settings file.' } }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ok: false, reason: 'That file is not a Launchpad settings file.' }
+  catch { return { ok: false, reason: 'That file is not a Scout settings file.' } }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ok: false, reason: 'That file is not a Scout settings file.' }
   const source = parsed as Record<string, unknown>
   if (typeof source.version !== 'number' || !Number.isInteger(source.version) || source.version < 1)
-    return { ok: false, reason: 'That file is not a Launchpad settings file.' }
+    return { ok: false, reason: 'That file is not a Scout settings file.' }
   if (source.version > documentVersion)
-    return { ok: false, reason: `That file was written by a newer version of Launchpad (format ${source.version}). Update Launchpad and try again.` }
+    return { ok: false, reason: `That file was written by a newer version of Scout (format ${source.version}). Update Scout and try again.` }
   const list = (field: string) => Array.isArray(source[field]) ? source[field] as unknown[] : []
   return {
     ok: true,
@@ -350,8 +350,8 @@ export function documentName(machine: string): string {
  * Where a copy is kept, when someone wants one kept.
  *
  * Choosing a folder is what turns an export into something that keeps up with the setup. A folder a syncing service
- * already watches then carries the file between Macs, with no account and nothing of Launchpad's in the middle: the
- * service is one the person already chose, and Launchpad only writes a file into a folder they named.
+ * already watches then carries the file between Macs, with no account and nothing of Scout's in the middle: the
+ * service is one the person already chose, and Scout only writes a file into a folder they named.
  */
 export interface TransferSettings { folder: string }
 

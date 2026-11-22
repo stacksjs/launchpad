@@ -1,22 +1,22 @@
-# Launchpad privacy policy
+# Scout privacy policy
 
 Effective November 2, 2026.
 
-Launchpad stores your quicklinks, snippets, favorites, clipboard history and launcher activity in a local SQLite database on this Mac. No Stacks account or hosted API is required. Launchpad does not upload this database to Stacks, run advertising or include an external analytics SDK.
+Scout stores your quicklinks, snippets, favorites, clipboard history and launcher activity in a local SQLite database on this Mac. No Stacks account or hosted API is required. Scout does not upload this database to Stacks, run advertising or include an external analytics SDK.
 
 ## Applications and shortcuts
 
-Launchpad reads standard Applications directories to find and open apps, and asks macOS for their real icons. Command + Space registers that specific shortcut with macOS. It does not monitor all keystrokes. Application names may be included in local command activity, but the installed-app inventory is not sent to Stacks.
+Scout reads standard Applications directories to find and open apps, and asks macOS for their real icons. Command + Space registers that specific shortcut with macOS. It does not monitor all keystrokes. Application names may be included in local command activity, but the installed-app inventory is not sent to Stacks.
 
 ## Clipboard History
 
-Background recording is off until you enable it in Settings. Enabling starts with new copies and does not import the existing clipboard. Launchpad saves plain text, skips protected or transient pasteboard types, and applies additional exclusions for known credential apps. These checks cannot recognize every secret: unmarked passwords or other sensitive text can be captured. Pause history before copying material you want to keep private.
+Background recording is off until you enable it in Settings. Enabling starts with new copies and does not import the existing clipboard. Scout saves plain text, skips protected or transient pasteboard types, and applies additional exclusions for known credential apps. These checks cannot recognize every secret: unmarked passwords or other sensitive text can be captured. Pause history before copying material you want to keep private.
 
 History keeps at most 200 entries and removes entries older than the selected 1, 7 or 30 day retention period while the app runs. Choose Clear history in Settings, or delete individual entries from the Clipboard category using the selected item's Delete control. Save current clipboard explicitly reads and stores the current text when you request it. Copying snippets, calculations or history items puts their text on the macOS clipboard, where other apps may read it subject to system permissions.
 
 ## Local activity and year review
 
-Local activity records process sessions, palette opens, time the app runs in the background, time the palette is open, successful app and link opens, action types, command categories, application names, timestamps, timezone offsets, app version and command latency. Pantry install receipts additionally retain package identifiers, package types, success or failure, request/start/finish times and job IDs. Recording preference intervals let Launchpad exclude jobs that cross a paused period and prevent cleared jobs from reappearing. Install output, error messages and connection tokens are excluded from usage records. Running and visible time are checkpointed in cumulative daily records, with long sleep or suspension gaps excluded. These records support counts, active days, streaks and a future year review. They exclude search queries, URLs, file paths, clipboard text and snippet contents. They stay on this Mac and are separate from clipboard history. Turn off Record local usage to stop new records, or choose Clear usage history to remove retained events, time totals, install receipts and recording intervals. Command ranking also maintains local favorites and execution counts.
+Local activity records process sessions, palette opens, time the app runs in the background, time the palette is open, successful app and link opens, action types, command categories, application names, timestamps, timezone offsets, app version and command latency. Pantry install receipts additionally retain package identifiers, package types, success or failure, request/start/finish times and job IDs. Recording preference intervals let Scout exclude jobs that cross a paused period and prevent cleared jobs from reappearing. Install output, error messages and connection tokens are excluded from usage records. Running and visible time are checkpointed in cumulative daily records, with long sleep or suspension gaps excluded. These records support counts, active days, streaks and a future year review. They exclude search queries, URLs, file paths, clipboard text and snippet contents. They stay on this Mac and are separate from clipboard history. Turn off Record local usage to stop new records, or choose Clear usage history to remove retained events, time totals, install receipts and recording intervals. Command ranking also maintains local favorites and execution counts.
 
 ## Files, windows, contacts and calendar
 
@@ -28,7 +28,7 @@ Pasting a snippet into another app is off until you enable it. It copies the sni
 
 ## Exchange rates and web searches
 
-Currency conversion is off until you enable exchange rates in Settings. Once on, Launchpad downloads the European Central Bank's published reference rates about once a day from api.frankfurter.dev. The request contains no search text and no identifier beyond what any web request reveals, such as your IP address, which that service receives. The rates are stored locally. Unit and temperature conversions never use the network.
+Currency conversion is off until you enable exchange rates in Settings. Once on, Scout downloads the European Central Bank's published reference rates about once a day from api.frankfurter.dev. The request contains no search text and no identifier beyond what any web request reveals, such as your IP address, which that service receives. The rates are stored locally. Unit and temperature conversions never use the network.
 
 The Search the web row opens your browser with your search text in the address of the engine you choose in Settings. That site and your browser have their own privacy practices. Nothing is sent until you choose the row.
 
@@ -38,13 +38,13 @@ An extension is a JSON file you paste into Settings. It can add quicklinks and s
 
 ## GitHub and external websites
 
-Using the GitHub category sends GitHub search text, repository scope and selected filters directly to GitHub's API. Connecting an account also sends its token for authentication. The token is stored in macOS Keychain, not the local database. Launchpad displays account and repository information returned by GitHub. Disconnect in Settings to remove the saved token. GitHub processes requests under its [privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement); its service may retain request and account information.
+Using the GitHub category sends GitHub search text, repository scope and selected filters directly to GitHub's API. Connecting an account also sends its token for authentication. The token is stored in macOS Keychain, not the local database. Scout displays account and repository information returned by GitHub. Disconnect in Settings to remove the saved token. GitHub processes requests under its [privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement); its service may retain request and account information.
 
 Opening a GitHub result or quicklink uses your default browser. Quicklink search arguments become part of the destination URL. That website and your browser have their own privacy practices. Local app, snippet and clipboard searches are not sent to GitHub.
 
 ## Software Update
 
-Direct-download copies check Launchpad's GitHub releases and download available updates automatically while the app runs. The first check runs after about one minute, then about every six hours. GitHub and its download hosts receive ordinary network request information, such as your IP address and the requested release asset. Launcher database records and search text are not included.
+Direct-download copies check Scout's GitHub releases and download available updates automatically while the app runs. The first check runs after about one minute, then about every six hours. GitHub and its download hosts receive ordinary network request information, such as your IP address and the requested release asset. Launcher database records and search text are not included.
 
 Turn off Automatic Updates in Software Update settings to check and download manually. Installation waits for Install and Restart. The preference stays in the local database. App Store copies use App Store updates.
 
@@ -52,15 +52,15 @@ Turn off Automatic Updates in Software Update settings to check and download man
 
 Settings has an export that writes your configuration to one JSON file: quicklinks, snippets, their aliases and shortcuts, saved themes, installed extension manifests, favorites and their aliases, and the appearance, history retention, GitHub repository scope, search, update and theme preferences. Clipboard history, usage records, Pantry receipts, cached package metadata and exchange rates are not in the file. Launch counts and last-used times are not in it either, so a favorite can travel without how often you opened it. Your GitHub and Pantry tokens are not in it: they are in macOS Keychain, and the other Mac asks for its own.
 
-Launchpad writes this file only where you point a save dialog, and reads one only where you point an open dialog. Choosing Keep a copy up to date asks for a folder and rewrites the file there when you change a setting and close Settings. Nothing is sent anywhere: Launchpad has no account, no server and no sync service of its own.
+Scout writes this file only where you point a save dialog, and reads one only where you point an open dialog. Choosing Keep a copy up to date asks for a folder and rewrites the file there when you change a setting and close Settings. Nothing is sent anywhere: Scout has no account, no server and no sync service of its own.
 
-If you put that folder in iCloud Drive, Dropbox or another syncing service, that service receives the file and handles it under its own privacy practices. That is your choice of service and not a connection Launchpad makes. Choose Stop to leave the file where it is and stop updating it; Launchpad does not delete it.
+If you put that folder in iCloud Drive, Dropbox or another syncing service, that service receives the file and handles it under its own privacy practices. That is your choice of service and not a connection Scout makes. Choose Stop to leave the file where it is and stop updating it; Scout does not delete it.
 
 Importing a file shows what it would add and what already differs on this Mac before anything is written, and never deletes a command, theme, extension, favorite or preference.
 
 ## Storage and deletion
 
-Launchpad has no cloud synchronization of its own for desktop activity: carrying settings between Macs is the file described above, written where you choose. Local data remains until its retention period expires or you delete it. Uninstalling an app may leave its container and Keychain items behind. Disconnect GitHub and clear clipboard and usage history before removing the app if you want to remove those records. Saved commands and preferences can also be removed with the app's Application Support data.
+Scout has no cloud synchronization of its own for desktop activity: carrying settings between Macs is the file described above, written where you choose. Local data remains until its retention period expires or you delete it. Uninstalling an app may leave its container and Keychain items behind. Disconnect GitHub and clear clipboard and usage history before removing the app if you want to remove those records. Saved commands and preferences can also be removed with the app's Application Support data.
 
 Contact Chris Breuer at chris@stacksjs.com for privacy questions. [Support and issue reporting](https://github.com/stacksjs/launchpad/issues) are available on GitHub. Do not include personal clipboard contents, tokens or other sensitive text in public issues.
 
@@ -68,12 +68,12 @@ Contact Chris Breuer at chris@stacksjs.com for privacy questions. [Support and i
 
 Package metadata is cached in the local model API. Catalog refreshes and original package logos are fetched from Pantry's GitHub repository, which receives normal network request information such as your IP address and the requested asset path. Package search text stays on your Mac.
 
-Connecting Pantry creates a credential stored in macOS Keychain. The separately installed Pantry desktop service holds its hash and handles installations under your user account. Launchpad sends only the selected package identifier and a retry ID to the service on loopback. Pantry contacts its package registry and upstream sources to perform installations. Installation status and a bounded output log remain local. Disconnect in Settings to revoke Launchpad's connection.
+Connecting Pantry creates a credential stored in macOS Keychain. The separately installed Pantry desktop service holds its hash and handles installations under your user account. Scout sends only the selected package identifier and a retry ID to the service on loopback. Pantry contacts its package registry and upstream sources to perform installations. Installation status and a bounded output log remain local. Disconnect in Settings to revoke Scout's connection.
 
-## Launchpad update emails
+## Scout update emails
 
-The optional subscription form on the Launchpad website sends the email address
-you enter to Launchpad’s own Stacks subscriber service. It subscribes you only to the
-Launchpad updates list, stored separately from the Stacks website subscriber database.
+The optional subscription form on the Scout website sends the email address
+you enter to Scout’s own Stacks subscriber service. It subscribes you only to the
+Scout updates list, stored separately from the Stacks website subscriber database.
 Subscription emails include an unsubscribe link for that list. The desktop app
 never adds your email or local activity to a mailing list.

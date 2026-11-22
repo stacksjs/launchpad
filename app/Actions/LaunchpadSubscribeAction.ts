@@ -4,8 +4,8 @@ import { rateLimit } from '@stacksjs/router'
 import { subscribeToLaunchpad } from '../Services/launchpad-subscriptions'
 
 export default new Action({
-  name: 'Subscribe to Launchpad updates',
-  description: 'Join the native Launchpad subscriber list without altering other subscriptions.',
+  name: 'Subscribe to Scout updates',
+  description: 'Join the native Scout subscriber list without altering other subscriptions.',
   method: 'POST',
   validations: { email: { rule: schema.string().email().max(255) } },
   async handle(request) {
@@ -14,6 +14,6 @@ export default new Action({
     if (typeof email !== 'string') return Response.json({ success: false, message: 'A valid email is required' }, { status: 422 })
     await subscribeToLaunchpad(email)
     // Neither subscriber identity nor unsubscribe tokens belong in the public response.
-    return { success: true, message: 'You’re subscribed to Launchpad updates.' }
+    return { success: true, message: 'You’re subscribed to Scout updates.' }
   },
 })

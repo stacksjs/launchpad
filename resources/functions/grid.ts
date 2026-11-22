@@ -70,7 +70,8 @@ export function gridTarget(
 export function gridWindow(count: number, scrollTop: number, height: number, columns: number) {
   const width = Math.max(1, columns)
   const rows = Math.ceil(count / width)
-  const first = Math.max(0, Math.min(rows, Math.floor(Math.max(0, scrollTop) / gridTileSize) - 2))
-  const last = Math.min(rows, Math.ceil((Math.max(0, scrollTop) + height) / gridTileSize) + 2)
+  const offset = Math.max(0, Math.min(scrollTop, rows * gridTileSize - height))
+  const first = Math.max(0, Math.floor(offset / gridTileSize) - 2)
+  const last = Math.min(rows, Math.ceil((offset + height) / gridTileSize) + 2)
   return { start: first * width, end: Math.min(count, last * width), top: first * gridTileSize, bottom: Math.max(0, rows - last) * gridTileSize }
 }

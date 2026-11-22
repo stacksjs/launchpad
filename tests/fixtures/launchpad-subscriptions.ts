@@ -50,7 +50,7 @@ async function verify() {
     assert.equal((await db.selectFrom('subscribers').selectAll().execute()).length, 0)
     const response = await submit('http@example.com')
     assert.equal(response.status, 200, await response.clone().text())
-    assert.deepEqual(await response.json(), { success: true, message: 'You’re subscribed to Launchpad updates.' })
+    assert.deepEqual(await response.json(), { success: true, message: 'You’re subscribed to Scout updates.' })
     const repeatResponse = await submit('HTTP@example.com')
     assert.equal(repeatResponse.status, 200)
     assert.equal((await db.selectFrom('subscribers').selectAll().where('email', '=', 'http@example.com').execute()).length, 1)
@@ -77,7 +77,7 @@ async function verify() {
     assert.equal((await db.selectFrom('subscribers').selectAll().execute()).length, 2)
     verified = true
     // eslint-disable-next-line no-console
-    console.log('Native Launchpad subscription and scoped unsubscribe verified')
+    console.log('Native Scout subscription and scoped unsubscribe verified')
   }
   finally {
     server.kill()

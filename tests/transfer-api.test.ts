@@ -137,11 +137,11 @@ test('importing the same file twice changes nothing the second time', async () =
   expect(await Command.where('kind', 'quicklink').get()).toHaveLength(1)
 })
 
-test('a file written by a newer Launchpad is refused', async () => {
+test('a file written by a newer Scout is refused', async () => {
   const response = await post('/api/transfer/preview', { path: '/newer.json' })
   expect(response!.status).toBe(400)
   written['/newer.json'] = JSON.stringify({ version: 99, commands: [] })
-  expect(await failure(await post('/api/transfer/preview', { path: '/newer.json' }))).toContain('newer version of Launchpad')
+  expect(await failure(await post('/api/transfer/preview', { path: '/newer.json' }))).toContain('newer version of Scout')
 })
 
 test('a path that is not an absolute file path is refused before anything is read', async () => {
@@ -160,9 +160,9 @@ test('an unknown transfer path and a wrong method are refused rather than ignore
 
 test('a kept folder names the file itself, so both Macs agree on the name', async () => {
   await seed()
-  const result = await data(await post('/api/transfer/export', { folder: '/Users/me/Dropbox/Launchpad/' }))
-  expect(result.path).toBe('/Users/me/Dropbox/Launchpad/launchpad-test-mac.json')
-  expect(Object.keys(written)).toEqual(['/Users/me/Dropbox/Launchpad/launchpad-test-mac.json'])
+  const result = await data(await post('/api/transfer/export', { folder: '/Users/me/Dropbox/Scout/' }))
+  expect(result.path).toBe('/Users/me/Dropbox/Scout/launchpad-test-mac.json')
+  expect(Object.keys(written)).toEqual(['/Users/me/Dropbox/Scout/launchpad-test-mac.json'])
 })
 
 test('a folder that is not an absolute path is refused like any other', async () => {

@@ -2,7 +2,7 @@ import { mkdirSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
-const bundle = resolve(process.argv[2] || 'dist/Launchpad.app/Contents/Resources/index.html')
+const bundle = resolve(process.argv[2] || 'dist/Scout.app/Contents/Resources/index.html')
 if (!existsSync(bundle)) throw new Error('Build the native app with ./buddy build before running browser acceptance checks.')
 const evidence = resolve('dist/ui-evidence')
 mkdirSync(evidence, { recursive: true })

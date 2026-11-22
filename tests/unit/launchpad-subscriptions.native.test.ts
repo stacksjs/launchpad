@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-test('real native Subscriber models preserve other list memberships when Launchpad is unsubscribed', async () => {
+test('real native Subscriber models preserve other list memberships when Scout is unsubscribed', async () => {
   const root = mkdtempSync(join(tmpdir(), 'launchpad-subscribers-'))
   const preload = join(root, 'preload.ts')
   const config = join(root, 'bunfig.toml')
@@ -18,7 +18,7 @@ test('real native Subscriber models preserve other list memberships when Launchp
   try {
     const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
     expect(code, `${stdout}\n${stderr}`).toBe(0)
-    expect(stdout).toContain('Native Launchpad subscription and scoped unsubscribe verified')
+    expect(stdout).toContain('Native Scout subscription and scoped unsubscribe verified')
   }
   finally {
     clearTimeout(watchdog)

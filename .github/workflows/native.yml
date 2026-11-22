@@ -85,7 +85,7 @@ jobs:
       PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
       DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
   deploy-website:
-    name: Deploy Launchpad website and API
+    name: Deploy Scout website and API
     needs: [website, subscriptions, browser]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -124,7 +124,7 @@ jobs:
             printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
             chmod 600 ~/.ssh/known_hosts
           fi
-      - name: Attach and deploy Launchpad with native Stacks
+      - name: Attach and deploy Scout with native Stacks
         run: bun run deploy:website
         env:
           APP_ENV: production
@@ -136,4 +136,4 @@ jobs:
         run: |
           curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://launchpad.stacksjs.com/api/health -o /tmp/launchpad-health.json
           curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://launchpad.stacksjs.com/ -o /tmp/launchpad-site.html
-          bun -e 'const health=await Bun.file("/tmp/launchpad-health.json").json();const html=await Bun.file("/tmp/launchpad-site.html").text();if(health.service!=="launchpad-api"||health.ok!==true||!html.includes("subscriber-email"))throw new Error("Launchpad website deployment is incomplete")'
+          bun -e 'const health=await Bun.file("/tmp/launchpad-health.json").json();const html=await Bun.file("/tmp/launchpad-site.html").text();if(health.service!=="launchpad-api"||health.ok!==true||!html.includes("subscriber-email"))throw new Error("Scout website deployment is incomplete")'

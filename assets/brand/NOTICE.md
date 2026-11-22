@@ -1,9 +1,8 @@
-# Launchpad mark
+# Scout mark
 
-The blue key and its proportions are Launchpad artwork. The Command glyph comes
-from Framework7 Icons, exposed by the framework's existing Iconify collection.
-Framework7 Icons is copyright Vladimir Kharlampidi and is available under the
-MIT license: [Framework7 Icons license](https://github.com/framework7io/framework7-icons/blob/master/LICENSE).
+The blue compass is original Scout artwork. The app uses Framework7 Icons through
+Iconify. Framework7 Icons is copyright Vladimir Kharlampidi and is available
+under the [MIT license](https://github.com/framework7io/framework7-icons/blob/master/LICENSE).
 
 Geist is bundled in `assets/fonts` under its SIL Open Font License. The font
 files come from vercel/geist-font revision

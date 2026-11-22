@@ -23,7 +23,7 @@ export async function restorePantry(): Promise<DesktopInstalledPackage[]> {
 }
 export function pantryConnected(): boolean { return Boolean(credential) }
 export async function connectPantry(code: string): Promise<DesktopInstalledPackage[]> {
-  const token = await client().pair(code.trim(), 'Launchpad')
+  const token = await client().pair(code.trim(), 'Scout')
   await keychain.set(service, 'token', token)
   credential = token
   return await client().installed()

@@ -8,7 +8,7 @@ export const contactId = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,100}$/
 
 export const maxContacts = 25
 
-/** Looks people up by name or company inside Contacts. Matches stay in memory and are never stored by Launchpad. */
+/** Looks people up by name or company inside Contacts. Matches stay in memory and are never stored by Scout. */
 export function contactSearchScript(query: string): string {
   const q = appleScriptString(query.trim().slice(0, 80))
   return `set output to ""

@@ -31,7 +31,7 @@ export function createSources(ports: SourcePorts, options: { now?: () => number,
     async windows(): Promise<Result[]> {
       if (await ports.accessibility() !== 'granted') {
         await ports.requestAccessibility?.().catch(() => {})
-        throw new SourceError('Allow Launchpad under System Settings > Privacy & Security > Accessibility to list and switch windows.', 'accessibility')
+        throw new SourceError('Allow Scout under System Settings > Privacy & Security > Accessibility to list and switch windows.', 'accessibility')
       }
       const outcome = await ports.appleScript(windowListScript)
       if (!outcome.ok) throw failure('System Events', outcome)

@@ -85,12 +85,12 @@ test('matching ignores case and surrounding space but not the kind of command', 
 test('a document from a newer format is refused rather than read', () => {
   const read = readDocument(JSON.stringify({ ...build({ commands: [docs] }), version: documentVersion + 1 }))
   expect(read.ok).toBe(false)
-  expect(read.ok === false && read.reason).toContain('newer version of Launchpad')
+  expect(read.ok === false && read.reason).toContain('newer version of Scout')
 })
 
 test('a file that is not a settings document is refused with the same answer', () => {
   for (const value of ['', '{', 'null', '[]', '"text"', '{"version":"1"}', '{"version":0}', JSON.stringify({ commands: [] })])
-    expect(readDocument(value)).toEqual({ ok: false, reason: 'That file is not a Launchpad settings file.' })
+    expect(readDocument(value)).toEqual({ ok: false, reason: 'That file is not a Scout settings file.' })
 })
 
 test('damaged rows are dropped and the rest of the document still reads', () => {
@@ -121,7 +121,7 @@ test('the file is named after the Mac, so one folder can hold several', () => {
 })
 
 test('a kept folder is read back, and anything unusable means no folder', () => {
-  expect(readTransferSettings('{"folder":"/Users/me/Dropbox/Launchpad"}')).toEqual({ folder: '/Users/me/Dropbox/Launchpad' })
+  expect(readTransferSettings('{"folder":"/Users/me/Dropbox/Scout"}')).toEqual({ folder: '/Users/me/Dropbox/Scout' })
   for (const value of [undefined, '', '{', '[]', '{"folder":""}', '{"folder":"Dropbox"}', '{"folder":42}', `{"folder":"/${'x'.repeat(1100)}"}`])
     expect(readTransferSettings(value)).toEqual({ folder: '' })
 })

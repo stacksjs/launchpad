@@ -48,7 +48,7 @@ test('a system plan runs through exactly one port and explains a script that nev
   // A bare `{ ok: false }` is what the bridge answers when it never dispatched the event, so nothing was refused and
   // there is no switch to turn on. A genuine refusal arrives with -1743, which the next test covers.
   const refused = await runSystemPlan(systemCommand('empty-trash')!, ports).catch(reason => reason)
-  expect(refused.message).toBe(`Launchpad could not run "Empty Trash". The script never reached Finder, so no permission is missing.`)
+  expect(refused.message).toBe(`Scout could not run "Empty Trash". The script never reached Finder, so no permission is missing.`)
   expect(refused.permission).toBeUndefined()
 })
 
@@ -61,10 +61,10 @@ test('a system command that fails for another reason does not blame Automation',
   })
   const run = (id: string, error: { code?: number, message?: string }) => runSystemPlan(systemCommand(id)!, refuse(error)).catch(reason => reason)
   const cancelled = await run('empty-trash', { code: -128 })
-  expect(cancelled.message).toBe(`Launchpad could not run "Empty Trash". The request was cancelled.`)
+  expect(cancelled.message).toBe(`Scout could not run "Empty Trash". The request was cancelled.`)
   expect(cancelled.permission).toBeUndefined()
   // Finder's own warning before it empties the Trash holds the event open until it times out.
   expect((await run('empty-trash', { code: -1712 })).message).toContain('Finder is waiting for an answer')
   expect((await run('restart', { code: -1743 })).message).toContain('control System Events')
-  expect((await run('eject-disks', { code: -1728, message: 'No disks.' })).message).toBe(`Launchpad could not run "Eject All Disks". Finder could not do that: No disks.`)
+  expect((await run('eject-disks', { code: -1728, message: 'No disks.' })).message).toBe(`Scout could not run "Eject All Disks". Finder could not do that: No disks.`)
 })

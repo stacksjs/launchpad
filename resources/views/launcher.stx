@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Launchpad</title>
+  <title>Scout</title>
 </head>
 <body>
 <script client>
@@ -126,13 +126,13 @@ const updateBusy = derived(() => ['checking', 'downloading', 'installing'].inclu
 const updateMessage = derived(() => {
   const update = updateState()
   if (update.phase === 'checking') return 'Checking for updates...'
-  if (update.phase === 'available') return 'Launchpad ' + update.version + ' is available.'
+  if (update.phase === 'available') return 'Scout ' + update.version + ' is available.'
   if (update.phase === 'current') return 'You are up to date.'
-  if (update.phase === 'downloading') return 'Your download continues while you use Launchpad.'
-  if (update.phase === 'ready') return 'Launchpad ' + update.version + ' is ready to install.'
+  if (update.phase === 'downloading') return 'Your download continues while you use Scout.'
+  if (update.phase === 'ready') return 'Scout ' + update.version + ' is ready to install.'
   if (update.phase === 'installing') return 'Verifying and installing update...'
-  if (update.phase === 'installed') return 'Restarting Launchpad...'
-  return update.error || 'Check for the latest version of Launchpad.'
+  if (update.phase === 'installed') return 'Restarting Scout...'
+  return update.error || 'Check for the latest version of Scout.'
 })
 const updatePercent = derived(() => typeof updateState().percent === 'number' && Number.isFinite(updateState().percent) ? Math.round(Math.max(0, Math.min(100, updateState().percent))) : null)
 const updateHeading = derived(() => {
@@ -140,27 +140,27 @@ const updateHeading = derived(() => {
   if (update.phase === 'checking') return 'Checking for updates'
   if (update.phase === 'available') return 'An update is available'
   if (update.phase === 'current') return 'You’re up to date'
-  if (update.phase === 'downloading') return 'Downloading Launchpad ' + (update.version || '')
+  if (update.phase === 'downloading') return 'Downloading Scout ' + (update.version || '')
   if (update.phase === 'ready') return 'Ready when you are'
   if (update.phase === 'installing') return 'Finishing your update'
-  if (update.phase === 'installed') return 'Restarting Launchpad'
+  if (update.phase === 'installed') return 'Restarting Scout'
   if (update.phase === 'error') return 'Update couldn’t complete'
   if (update.phase === 'unavailable') return 'Updates unavailable'
-  return 'Keep Launchpad up to date'
+  return 'Keep Scout up to date'
 })
 const settings = state(false)
 const settingsSection = state('general')
 const settingsQuery = state('')
 const settingsSections = [
   { id: 'general', title: 'General', icon: 'M9.5 3h5l.6 2.2 2 .9 2-.6 2.5 4.3-1.5 1.6v2.3l1.5 1.6-2.5 4.3-2-.6-2 .9-.6 2.1h-5l-.6-2.1-2-.9-2 .6L2 15.3l1.5-1.6v-2.3L2 9.8l2.5-4.3 2 .6 2-.9L9.5 3Z M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z', color: '#7d8491', description: 'Startup, keyboard shortcut and background behavior.', keywords: 'login startup shortcut menu bar' },
-  { id: 'shortcuts', title: 'Shortcuts', icon: 'M3 7h18v10H3Z M7 11h.01 M11 11h.01 M15 11h.01 M8 14h8', color: '#4f7d9e', description: 'Keys that reach Launchpad from anywhere.', keywords: 'hotkey global keyboard command shortcut' },
-  { id: 'appearance', title: 'Appearance', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 3v18 M15 5v14 M18 7v10', color: '#625f70', description: 'Choose how Launchpad looks on your Mac.', keywords: 'theme dark light system' },
-  { id: 'updates', title: 'Software Update', icon: 'M20 7v5h-5 M20 12a8 8 0 1 0-2.3 5.7 M20 12l-3-3', color: '#7d8491', description: 'Keep Launchpad up to date with verified releases.', keywords: 'version download install automatic' },
+  { id: 'shortcuts', title: 'Shortcuts', icon: 'M3 7h18v10H3Z M7 11h.01 M11 11h.01 M15 11h.01 M8 14h8', color: '#4f7d9e', description: 'Keys that reach Scout from anywhere.', keywords: 'hotkey global keyboard command shortcut' },
+  { id: 'appearance', title: 'Appearance', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 3v18 M15 5v14 M18 7v10', color: '#625f70', description: 'Choose how Scout looks on your Mac.', keywords: 'theme dark light system' },
+  { id: 'updates', title: 'Software Update', icon: 'M20 7v5h-5 M20 12a8 8 0 1 0-2.3 5.7 M20 12l-3-3', color: '#7d8491', description: 'Keep Scout up to date with verified releases.', keywords: 'version download install automatic' },
   { id: 'search', title: 'Search', icon: 'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z M14.5 14.5 21 21', color: '#2585ed', description: 'Choose what to search and how to use your results.', keywords: 'files web currency paste permissions windows contacts calendar' },
   { id: 'clipboard', title: 'Clipboard History', icon: 'M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3 M9 2h6v4H9Z M8 11h8 M8 15h8 M8 19h5', color: '#e39928', description: 'Manage the text history stored on this Mac.', keywords: 'copy retention clear privacy' },
   { id: 'github', title: 'GitHub', icon: 'M6 3v12a4 4 0 0 0 4 4h4 M18 6v4a4 4 0 0 1-4 4H6 M9 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M21 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M20 19a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z', color: '#6556c8', description: 'Connect your account to search your repositories.', keywords: 'account token private issues pull requests' },
   { id: 'pantry', title: 'Pantry', icon: 'M3 7l9-5 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10 M7.5 4.5l9 5', color: '#dd7553', description: 'Connect Pantry to install and manage your tools.', keywords: 'packages cli apps libraries fonts' },
-  { id: 'extensions', title: 'Extensions', icon: 'M9 3H4v6a3 3 0 1 1 0 6v5h5a3 3 0 1 1 6 0h5v-5a3 3 0 1 1 0-6V3h-5a3 3 0 1 1-6 0Z', color: '#8b66cf', description: 'Add quicklinks and snippets to Launchpad.', keywords: 'commands manifest json' },
+  { id: 'extensions', title: 'Extensions', icon: 'M9 3H4v6a3 3 0 1 1 0 6v5h5a3 3 0 1 1 6 0h5v-5a3 3 0 1 1 0-6V3h-5a3 3 0 1 1-6 0Z', color: '#8b66cf', description: 'Add quicklinks and snippets to Scout.', keywords: 'commands manifest json' },
   { id: 'sync', title: 'Sync', icon: 'M12 3v9 M8.5 8.5 12 12l3.5-3.5 M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3', color: '#2f8f8a', description: 'Carry your setup to another Mac as one file.', keywords: 'export import backup transfer file folder another mac dropbox icloud migrate' },
   { id: 'usage', title: 'Usage', icon: 'M4 20V10h4v10H4Z M10 20V4h4v16h-4Z M16 20V8h4v12h-4Z', color: '#43a96a', description: 'Review your activity, saved only on this Mac.', keywords: 'privacy activity history statistics recording' },
 ]
@@ -179,7 +179,7 @@ async function changeAutomaticUpdates(enabled) {
 }
 function chooseSettings(value) { settingsSection.set(value); clearError(); if (value === 'general') void refreshLogin(); if (value === 'updates') void refreshUpdate() }
 const loginEnabled = state(false)
-// Shown once, on the run that first set Launchpad up, and answered either way before it goes.
+// Shown once, on the run that first set Scout up, and answered either way before it goes.
 const loginOffer = state(false)
 const loginBusy = state(false)
 const loginStatus = state('Checking macOS Login Items...')
@@ -304,11 +304,19 @@ const active = derived(() => results()[selected()])
 const actionLabel = derived(() => actionLabelFor(active()?.kind))
 const secondary = derived(() => secondaryActions(active()))
 
-function scrollResults(event) {
+function syncResultScroll() {
+  const element = list.current
+  if (!element) return
   batch(() => {
-    resultScrollTop.set(event.target.scrollTop)
-    resultViewportHeight.set(event.target.clientHeight)
+    resultScrollTop.set(Math.max(0, element.scrollTop))
+    resultViewportHeight.set(element.clientHeight)
   })
+}
+
+function setResultScroll(top) {
+  if (!list.current) return
+  list.current.scrollTop = top
+  syncResultScroll()
 }
 
 // The framework's enabled option skips callbacks but keeps its interval running.
@@ -506,7 +514,7 @@ function openSettings(checkUpdates = false) {
     void refreshLogin()
 
   }
-  if (settingsSection() === 'updates') { if (checkUpdates === true) void updateLaunchpad(); else void refreshUpdate() }
+  if (settingsSection() === 'updates') { if (checkUpdates === true) void updateScout(); else void refreshUpdate() }
   void nativeWindow.show().then(() => nativeWindow.focus()).then(() => nextTick(() => settingsTitle.current?.focus()))
 }
 let updateRequest = 0
@@ -524,7 +532,7 @@ async function refreshUpdate() {
   catch (reason) { if (attempt === updateRequest) updateState.set({ ...updateState(), phase: 'error', error: reason.message }) }
   finally { updateRefreshing = false }
 }
-async function updateLaunchpad(action = 'check') {
+async function updateScout(action = 'check') {
   if (updateBusy()) return
   updateRequest++
   updateState.set({ ...updateState(), phase: action === 'check' ? 'checking' : action === 'download' ? 'downloading' : 'installing', error: undefined })
@@ -555,7 +563,7 @@ async function refreshLogin(initialize = false) {
       ? await initializeLogin(nativeAutoLaunch, Boolean(preferences().loginInitialized), () => preference('loginInitialized', 'true'))
       : await nativeAutoLaunch.isEnabled()
     loginEnabled.set(enabled)
-    loginStatus.set(enabled ? 'Launchpad starts quietly in the menu bar when you sign in.' : 'Launch at login is off. If macOS needs approval, check System Settings > General > Login Items.')
+    loginStatus.set(enabled ? 'Scout starts quietly in the menu bar when you sign in.' : 'Launch at login is off. If macOS needs approval, check System Settings > General > Login Items.')
   }
   catch (reason) { loginStatus.set(reason.message) }
   finally { loginBusy.set(false) }
@@ -576,7 +584,7 @@ async function changeLogin(enabled) {
   try {
     loginEnabled.set(await setLoginEnabled(nativeAutoLaunch, enabled))
     await preference('loginInitialized', 'true')
-    loginStatus.set(loginEnabled() ? 'Launchpad starts quietly in the menu bar when you sign in.' : enabled ? 'Approve Launchpad in System Settings > General > Login Items.' : 'Launch at login is off.')
+    loginStatus.set(loginEnabled() ? 'Scout starts quietly in the menu bar when you sign in.' : enabled ? 'Approve Scout in System Settings > General > Login Items.' : 'Launch at login is off.')
   }
   catch (reason) { loginStatus.set(reason.message) }
   finally { loginBusy.set(false) }
@@ -617,7 +625,7 @@ function flushUsage(): Promise<void> {
       }
       usageIssue.set('')
     }
-    catch { usageIssue.set('Usage is waiting for the local API and will retry while Launchpad is running.') }
+    catch { usageIssue.set('Usage is waiting for the local API and will retry while Scout is running.') }
   })().finally(() => { usageTask = null })
   return usageTask
 }
@@ -653,8 +661,8 @@ function replaceItems(next) {
   const before = selected()
   const index = clipboardSelection(active(), before, clipboardResults(clipboardWithSources(next), query(), historySource()), before > 0 || resultScrollTop() > 0)
   const top = Math.max(0, resultScrollTop() + (index - before) * resultRowHeight)
-  batch(() => { items.set(next); selected.set(index); resultScrollTop.set(top) })
-  void nextTick(() => { if (list.current) list.current.scrollTop = top })
+  batch(() => { items.set(next); selected.set(index) })
+  void nextTick(() => { if (category() === 'clipboard' && selected() === index) setResultScroll(top) })
 }
 async function reloadHistory(duringClear = false) {
   const token = historyQueue.token()
@@ -921,7 +929,7 @@ async function saveScope() {
 pollWhile(pollClipboard, 800, () => preferencesReady() && historyEnabled())
 
 // Live sources: files from Spotlight's index, windows, contacts and events from the apps that own them.
-// Only the newest request is applied. Nothing from these sources is stored by Launchpad.
+// Only the newest request is applied. Nothing from these sources is stored by Scout.
 // Plain flags, not signals: reading a signal here would make the effects below depend on their own results.
 let windowsShown = false
 let eventsShown = false
@@ -936,7 +944,7 @@ const loadFiles = createLatest(async (text, signal) => {
   start: () => sourceLoading.set(true),
   result: (body) => {
     fileItems.set(fileResults(body.data))
-    sourceNote.set(!body.enabled ? 'File search is off. Turn it on in Settings > Search.' : !body.available ? 'File search is not available in this build of Launchpad.' : '')
+    sourceNote.set(!body.enabled ? 'File search is off. Turn it on in Settings > Search.' : !body.available ? 'File search is not available in this build of Scout.' : '')
   },
   error: (reason) => { fileItems.set([]); sourceFailure(reason) },
   done: () => sourceLoading.set(false),
@@ -1037,7 +1045,7 @@ async function saveSearch(patch) {
 /**
  * Writing the settings file, and reading one back.
  *
- * Every path comes from a dialog the person answered: Launchpad proposes a file name and never a location. An import
+ * Every path comes from a dialog the person answered: Scout proposes a file name and never a location. An import
  * is two steps on purpose — what the file would do, then doing it — because a merge that silently picked a side would
  * be the one thing someone could not undo.
  */
@@ -1077,7 +1085,7 @@ async function stopKeepingCopy() {
     await preference('sync', JSON.stringify({ folder: '' }))
     syncFolder.set('')
     // The file is left alone: it is in a folder the person chose, and deleting it was never asked for.
-    syncStatus.set('Launchpad will stop updating that file. The file itself is still there.')
+    syncStatus.set('Scout will stop updating that file. The file itself is still there.')
   }
   catch (reason) { syncStatus.set(reason.message) }
 }
@@ -1477,21 +1485,24 @@ function key(event) {
   if (event.metaKey && event.key === 'Backspace') { event.preventDefault(); query.set(''); selected.set(0); void nextTick(() => search.current?.focus()); return }
   const move = gridMode()
     ? gridTarget(event, selected(), results().length, gridColumnCount())
-    : selectionTarget(event, selected(), results().length)
+    : selectionTarget(event, selected(), results().length, Math.max(1, Math.floor(resultViewportHeight() / resultRowHeight)))
   if (move !== null) {
     event.preventDefault()
-    const index = move
-    // A grid scrolls by the row a tile sits on; a list scrolls by the row itself, kept two rows off the top edge.
-    const top = gridMode()
-      ? Math.max(0, gridScrollTop(index, gridColumnCount(), gridTileSize) - gridTileSize)
-      : Math.max(0, resultOffset(index, resultSections()) - 2 * resultRowHeight)
-    batch(() => { selected.set(index); resultScrollTop.set(top) })
-    void nextTick(() => { if (selected() === index) list.current?.scrollTo({ top }) })
+    selected.set(move)
+    const element = list.current
+    if (element && results().length) {
+      const top = gridMode() ? gridScrollTop(move, gridColumnCount()) : resultOffset(move, resultSections())
+      const bottom = top + (gridMode() ? gridTileSize : resultRowHeight)
+      if (event.key === 'Home') setResultScroll(0)
+      else if (event.key === 'End') setResultScroll(element.scrollHeight)
+      else if (top < element.scrollTop) setResultScroll(top)
+      else if (bottom > element.scrollTop + element.clientHeight) setResultScroll(bottom - element.clientHeight)
+    }
   }
   if (event.key === 'Enter') { event.preventDefault(); void run() }
 }
 
-function resetResultPosition() { selected.set(0); resultScrollTop.set(0); if (list.current) list.current.scrollTop = 0 }
+function resetResultPosition() { selected.set(0); resultScrollTop.set(0); setResultScroll(0) }
 // History refreshes preserve the selected key. A new query or mode still starts at the first match.
 effect(() => { query(); category(); historySource(); resetResultPosition() })
 let historyActionKey = ''
@@ -1499,7 +1510,7 @@ effect(() => { const key = active()?.key || ''; if (key !== historyActionKey) { 
 effect(() => { items(); if (category() !== 'clipboard') resetResultPosition() })
 useEventListener('keydown', key, { capture: true })
 onMount(() => {
-  const resize = new ResizeObserver(entries => resultViewportHeight.set(entries[0]?.contentRect.height || 450))
+  const resize = new ResizeObserver(syncResultScroll)
   if (list.current) resize.observe(list.current)
   const stopBlur = windowEvents.onBlur(() => { void dismissLauncher() })
   const stopFocus = windowEvents.onFocus(() => { paletteVisibility(true); void refreshUpdate(); void refreshApplications().catch(fail); if (settings() && settingsSection() === 'general') void refreshLogin(); if (!settings() && !editor() && !packageDetail()) void nextTick(() => search.current?.focus()) })
@@ -1508,7 +1519,7 @@ onMount(() => {
   onDestroy(() => { resize.disconnect(); paletteVisibility(false); void flushUsage(); stopBlur(); stopFocus(); stopClose(); stopMinimize() })
 })
 onMount(async () => {
-  try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Launchpad', { settings: openSettings }) }) } catch (reason) { fail(reason) }
+  try { await loadPreferences(); await menu.set({ menus: standardMenus.leading('Scout', { settings: openSettings }) }) } catch (reason) { fail(reason) }
   homePath.set(await homeDirectory())
   try { cleanupTray = await configureTray(activate, openSettings, checkForUpdates, () => { settingsSection.set('general'); openSettings(true) }, fail) } catch (reason) { fail(reason) }
   const firstSetup = preferencesReady() && !preferences().loginInitialized
@@ -1568,7 +1579,7 @@ globalThis.addEventListener?.('resize', onWindowResize)
 onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectionService(); globalThis.removeEventListener?.('resize', onWindowResize) })
 </script>
 
-<main class="flex flex-col w-full" aria-label="Launchpad">
+<main class="flex flex-col w-full" aria-label="Scout">
   <div class="palette-content" x-show="!settings() && !editor() && !packageDetail()">
   <header class="palette-header" @mousedown="nativeWindow.startDrag()">
     <span class="i-f7-search search-icon" aria-hidden="true"></span>
@@ -1578,7 +1589,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
       <button type="button" class="tab" @click="openSettings()" title="Settings (Command ,)" aria-label="Settings"><span class="i-f7-gear-alt" aria-hidden="true"></span></button>
     </nav>
-    <button type="button" class="escape" @mousedown.stop="" @click="dismissLauncher()" aria-label="Hide Launchpad">esc</button>
+    <button type="button" class="escape" @mousedown.stop="" @click="dismissLauncher()" aria-label="Hide Scout">esc</button>
   </header>
   <div :if="detailPage()" class="detail" role="dialog" aria-modal="true" aria-label="Result detail">
     <div class="detail-backdrop" @click="hideDetail()"></div>
@@ -1620,14 +1631,14 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <span class="help">{{ plural(pantryEntries().length, 'package') }}</span><button type="button" class="ml-auto text-action" @click="refreshCatalog()" :disabled="packageBusy()">Refresh catalog</button>
   </div>
   <section class="flex flex-1 flex-col min-h-0" aria-label="Search results">
-    <div :if="!showSuggested()" class="flex items-center justify-between px-6 section-label" :class="{ 'history-label': category() === 'clipboard' }">
-      <span>{{ category() === 'clipboard' ? 'Newest first · ' + plural(allResults().length, query().trim() ? 'match' : 'entry', query().trim() ? 'matches' : 'entries') : category() === 'github' ? 'GitHub' : category() === 'pantry' ? pantryView() === 'installed' ? 'Installed packages' : 'Pantry catalog' : query() ? 'Results' : 'Your launchpad' }}</span>
+    <div :if="!showSuggested()" class="flex items-center justify-between px-5 section-label" :class="{ 'history-label': category() === 'clipboard' }">
+      <span>{{ category() === 'clipboard' ? 'Newest first · ' + plural(allResults().length, query().trim() ? 'match' : 'entry', query().trim() ? 'matches' : 'entries') : category() === 'github' ? 'GitHub' : category() === 'pantry' ? pantryView() === 'installed' ? 'Installed packages' : 'Pantry catalog' : query() ? 'Results' : category() === 'application' ? 'Applications' : 'Commands' }}</span>
       <select :if="category() === 'clipboard'" x-model="historySource" class="history-source" aria-label="Filter by source app"><option value="all">All apps</option><option :for="source in historySourceOptions()" :key="source.id" :value="source.id">{{ source.title + ' (' + source.count + ')' }}</option></select>
       <button :if="category() === 'clipboard'" type="button" class="text-action" aria-label="Save current clipboard" @click="saveClipboard()" :disabled="historySaving() || historyClearing() || historyPreferenceBusy()">{{ historySaving() ? 'Saving…' : 'Save clipboard' }}</button>
       <span :if="category() !== 'clipboard'" role="status" aria-live="polite">{{ results().length }}{{ allResults().length > results().length ? ' of ' + allResults().length : '' }} available</span>
     </div>
     <div class="result-region" :class="{ 'history-region': category() === 'clipboard' }">
-    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="scrollResults($event)">
+    <div ref="results" id="result-list" class="px-3 results" role="listbox" aria-label="Matching commands" @scroll="syncResultScroll()">
       <p :if="loading() || (category() === 'github' && githubLoading()) || (sourceLoading() && results().length === 0)" class="empty" role="status">{{ category() === 'github' ? 'Searching GitHub...' : loading() ? 'Finding your applications...' : 'Looking...' }}</p>
       <div :if="!loading() && !githubLoading() && !sourceLoading() && results().length === 0" class="empty">
         <p>{{ category() === 'clipboard' ? query().trim() ? 'No matching clipboard text.' : historySource() !== 'all' ? 'No copies from this app.' : 'Keep useful text close.' : 'Nothing here yet.' }}</p>
@@ -1690,7 +1701,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
   <p :if="category() === 'pantry'" class="px-5 github-status" role="status">{{ pantryStatus() }}</p>
 
   <footer class="flex gap-3 items-center px-5">
-    <span class="wordmark">Launchpad</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
+    <span class="wordmark">Scout</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
     <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'clipboard' ? '↑↓ Review · ⌘↵ Copy here' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
@@ -1703,7 +1714,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
   </footer>
   </div>
 
-  <div :if="settings()" class="editor settings" role="dialog" aria-modal="true" aria-label="Launchpad Settings">
+  <div :if="settings()" class="editor settings" role="dialog" aria-modal="true" aria-label="Scout Settings">
     <div class="dialog-header" @mousedown="nativeWindow.startDrag()"><h1 ref="settingsTitle" tabindex="-1">Settings</h1><button type="button" class="escape" @mousedown.stop="" @click="closeSettings()" aria-label="Close settings">esc</button></div>
     <div class="settings-layout">
     <aside class="settings-sidebar">
@@ -1712,14 +1723,14 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <button :for="(section, index) in visibleSettings()" :key="section.id" type="button" :class="settingsSection() === section.id ? 'settings-item active' : 'settings-item'" :aria-pressed="settingsSection() === section.id" @click="chooseSettings(section.id)"><span class="settings-icon" :style="'background:' + section.color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="section.icon" /></svg></span>{{ section.title }}</button>
       </nav>
       <p :if="!visibleSettings().length" class="help settings-no-results">No settings found.</p>
-      <div class="settings-sidebar-about"><strong>Launchpad</strong><span>Version {{ updateState().currentVersion }}</span></div>
+      <div class="settings-sidebar-about"><strong>Scout</strong><span>Version {{ updateState().currentVersion }}</span></div>
     </aside>
     <div class="dialog-body settings-detail" :class="{ 'settings-detail-updates': settingsSection() === 'updates' }">
       <div class="settings-heading" :class="{ 'settings-heading-compact': settingsSection() === 'updates' }"><span class="settings-hero-icon" :style="'background:' + currentSettings().color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="currentSettings().icon" /></svg></span><h2>{{ currentSettings().title }}</h2><p class="help">{{ currentSettings().description }}</p></div>
       <section :if="settingsSection() === 'general'">
         <div :if="loginOffer()" class="login-offer settings-group">
-          <h2>Start Launchpad with your Mac?</h2>
-          <p class="help">Launchpad lives in the menu bar and opens with Command Space. It can only answer that shortcut while it is running, so unless it starts when you sign in you would have to open it by hand first — which is the thing it is here to save you.</p>
+          <h2>Start Scout with your Mac?</h2>
+          <p class="help">Scout lives in the menu bar and opens with Command Space. It can only answer that shortcut while it is running, so unless it starts when you sign in you would have to open it by hand first — which is the thing it is here to save you.</p>
           <p class="help">It starts hidden. Nothing appears until you ask for it. You can change this at any time below.</p>
           <div class="button-row">
             <button type="button" class="save-button" :disabled="loginBusy()" @click="acceptLoginOffer()">Start at login</button>
@@ -1731,7 +1742,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           <p class="help" role="status">{{ loginStatus() }}</p>
           <button type="button" class="text-action" :disabled="loginBusy()" @click="refreshLogin()">Refresh login status</button>
         </div>
-        <div class="settings-group"><div class="setting-row"><span>Open Launchpad</span><kbd>⌘ Space</kbd></div><p class="help">Click the menu bar icon or use the shortcut to search. Escape and clicking outside hide the palette while Launchpad keeps running.</p></div>
+        <div class="settings-group"><div class="setting-row"><span>Open Scout</span><kbd>⌘ Space</kbd></div><p class="help">Click the menu bar icon or use the shortcut to search. Escape and clicking outside hide the palette while Scout keeps running.</p></div>
         <button type="button" class="settings-group settings-link" @click="chooseSettings('updates')"><span>Software Update</span><span aria-hidden="true">›</span></button>
       </section>
       <section :if="settingsSection() === 'updates'">
@@ -1748,27 +1759,27 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           </div>
           <div :if="!updateBusy() && !['unavailable', 'installed'].includes(updateState().phase)" class="update-actions">
             <span :if="updateState().phase === 'ready'" class="help">Restart to apply your update.</span>
-            <button :if="updateState().phase !== 'ready'" type="button" :class="updateState().phase === 'available' ? 'save-button update-primary' : 'secondary-button'" :disabled="updateBusy()" @click="updateLaunchpad(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : updateState().phase === 'downloading' ? 'Downloading…' : updateState().phase === 'checking' ? 'Checking…' : updateState().phase === 'installing' ? 'Installing…' : updateState().phase === 'error' ? 'Try again' : 'Check for Updates...' }}</button>
-            <button :if="updateState().phase === 'ready'" type="button" class="save-button update-primary" @click="updateLaunchpad('install')">Install and Restart</button>
+            <button :if="updateState().phase !== 'ready'" type="button" :class="updateState().phase === 'available' ? 'save-button update-primary' : 'secondary-button'" :disabled="updateBusy()" @click="updateScout(updateState().phase === 'available' ? 'download' : 'check')">{{ updateState().phase === 'available' ? 'Download update' : updateState().phase === 'downloading' ? 'Downloading…' : updateState().phase === 'checking' ? 'Checking…' : updateState().phase === 'installing' ? 'Installing…' : updateState().phase === 'error' ? 'Try again' : 'Check for Updates...' }}</button>
+            <button :if="updateState().phase === 'ready'" type="button" class="save-button update-primary" @click="updateScout('install')">Install and Restart</button>
           </div>
         </div>
         <div :if="updateState().phase !== 'unavailable'" class="settings-group"><label class="toggle-row"><span>Automatic Updates</span><input type="checkbox" role="switch" :disabled="!preferencesReady()" :checked="automaticUpdatesEnabled()" @change="changeAutomaticUpdates($event.target.checked)"></label><p class="help">Check every six hours and download verified updates in the background. You choose when to install and restart.</p></div>
       </section>
       <section :if="settingsSection() === 'shortcuts'" class="settings-group">
     <h2>Shortcuts</h2>
-    <p class="help">Keys that reach Launchpad wherever you are. A command's shortcut runs it without opening the palette. Add one when you create or edit a command.</p>
-    <div class="setting-row"><div><strong>Open Launchpad</strong><p class="help">Opens the palette and focuses search.</p></div><kbd>{{ formatShortcut(launcherShortcut) }}</kbd></div>
+    <p class="help">Keys that reach Scout wherever you are. A command's shortcut runs it without opening the palette. Add one when you create or edit a command.</p>
+    <div class="setting-row"><div><strong>Open Scout</strong><p class="help">Opens the palette and focuses search.</p></div><kbd>{{ formatShortcut(launcherShortcut) }}</kbd></div>
     <div :for="(item, index) in shortcutCommands()" :key="item.key" class="setting-row">
       <div><strong>{{ item.title }}</strong><p class="help">{{ item.kind === 'snippet' ? 'Snippet · Copy text' : 'Quicklink' }}</p></div>
       <div class="flex gap-3 items-center"><kbd>{{ formatShortcut(item.shortcut) }}</kbd><button type="button" class="text-action" @click="removeShortcut(item)">Remove</button></div>
     </div>
     <p :if="!shortcutCommands().length" class="help">No command has a shortcut yet.</p>
     <div :if="shortcutRefused().length" class="error" role="alert">
-      <div :for="(item, index) in shortcutRefused()" :key="item.key">macOS did not give Launchpad {{ formatShortcut(item.shortcut) }} for "{{ item.title }}". Another app is already using it, so choose a different shortcut.</div>
+      <div :for="(item, index) in shortcutRefused()" :key="item.key">macOS did not give Scout {{ formatShortcut(item.shortcut) }} for "{{ item.title }}". Another app is already using it, so choose a different shortcut.</div>
     </div>
       </section>
       <section :if="settingsSection() === 'appearance'" class="settings-group">
-    <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Launchpad.</p>
+    <h2>Make yourself at home.</h2><p class="help">Follow your Mac, or choose an appearance for Scout.</p>
     <div class="theme-options" role="group" aria-label="Appearance">
       <button type="button" :class="themePreference() === 'system' ? 'theme-option active' : 'theme-option'" @click="appearance('system')" :aria-pressed="themePreference() === 'system'"><span class="system-preview theme-preview"></span>System</button>
       <button type="button" :class="themePreference() === 'light' ? 'theme-option active' : 'theme-option'" @click="appearance('light')" :aria-pressed="themePreference() === 'light'"><span class="light-preview theme-preview"></span>Light</button>
@@ -1777,7 +1788,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <h2>Theme</h2><p class="help">Colours and type for the palette. A theme keeps a light and a dark set, and the appearance above decides which one you see.</p>
     <div :if="!themeEditor()" class="setting-actions">
       <select aria-label="Theme" :value="currentThemeId()" @change="chooseTheme($event.target.value)">
-        <option value="">Launchpad</option>
+        <option value="">Scout</option>
         <option :for="(row, index) in savedThemes()" :key="row.id" :value="String(row.id)">{{ row.name }}</option>
       </select>
       <div class="flex gap-3 items-center">
@@ -1835,7 +1846,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <form :if="!githubViewer()" @submit.prevent="connectAccount()">
       <label for="github-token">Personal access token</label>
       <input id="github-token" type="password" x-model="tokenInput" autocomplete="off" spellcheck="false" placeholder="Stored in macOS Keychain">
-      <p class="help">Use read-only access to selected repositories. Notifications require a classic token with notifications permission. Launchpad never saves the token in its database.</p>
+      <p class="help">Use read-only access to selected repositories. Notifications require a classic token with notifications permission. Scout never saves the token in its database.</p>
       <div class="flex gap-3 items-center"><button type="submit" class="save-button" :disabled="saving()">Connect GitHub</button><button type="button" class="text-action" @click="openLink('https://github.com/settings/tokens', 'github')">Manage tokens</button></div>
     </form>
     <button :if="githubViewer()" type="button" class="secondary-button" @click="disconnectAccount()">Disconnect GitHub</button>
@@ -1856,7 +1867,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <h2>Find more, faster.</h2>
         <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().files" @change="saveSearch({ files: $event.target.checked })"> Search file names on this Mac</label>
         <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().passwords" @change="saveSearch({ passwords: $event.target.checked })"> List saved 1Password logins by title</label>
-        <p class="help">Titles and identifiers only. Launchpad never reads a secret and never holds a vault credential; choosing a result hands it back to 1Password. Needs the 1Password command line tool.</p>
+        <p class="help">Titles and identifiers only. Scout never reads a secret and never holds a vault credential; choosing a result hands it back to 1Password. Needs the 1Password command line tool.</p>
         <p class="help">Uses Spotlight's index. Library, hidden items, dependencies and app internals are skipped. File names stay on this Mac and are not stored.</p>
         <label for="web-engine">When you search, offer a web search with</label>
         <select id="web-engine" :value="searchSettings().web" @change="saveSearch({ web: $event.target.value })"><option value="duckduckgo">DuckDuckGo</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option><option value="kagi">Kagi</option><option value="off">Off</option></select>
@@ -1865,7 +1876,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <label class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().paste" @change="saveSearch({ paste: $event.target.checked })"> Paste snippets into the app you were using</label>
         <p class="help">Snippets are always copied. This also types Command V into the previous app, which needs the Accessibility permission. Snippets can use {date}, {time}, {datetime}, {weekday}, {year}, {uuid} and {clipboard}.</p>
         <h2 class="mt-5">Bookmarks</h2>
-        <p class="help">Search the bookmarks you have already saved. Launchpad reads each chosen browser's bookmark file and never writes to it. Every profile of that browser is included. Off until you choose one.</p>
+        <p class="help">Search the bookmarks you have already saved. Scout reads each chosen browser's bookmark file and never writes to it. Every profile of that browser is included. Off until you choose one.</p>
         <div class="bookmark-browsers">
           <label :for="(browser, index) in bookmarkBrowsers" :key="browser.id" class="toggle-row"><input type="checkbox" role="switch" :checked="searchSettings().bookmarks.includes(browser.id)" @change="toggleBookmarkBrowser(browser.id, $event.target.checked)"> {{ browser.name }}</label>
         </div>
@@ -1884,7 +1895,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
       </section>
       <section :if="settingsSection() === 'sync'" class="settings-group">
         <h2>One setup, every Mac.</h2>
-        <p class="help">Your commands, themes, extensions, favourites and settings written to a single file, and read back on another Mac. Nothing leaves this Mac on its own: the file goes where you put it, and Launchpad has no account and no server to sync through.</p>
+        <p class="help">Your commands, themes, extensions, favourites and settings written to a single file, and read back on another Mac. Nothing leaves this Mac on its own: the file goes where you put it, and Scout has no account and no server to sync through.</p>
         <p class="help">Clipboard history and usage records are never in the file. Neither are your GitHub and Pantry tokens, which stay in this Mac's keychain — the other Mac asks for its own.</p>
         <div class="button-row">
           <button type="button" class="save-button" @click="exportSettings()" :disabled="syncBusy()">Export to a file...</button>
@@ -1892,7 +1903,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         </div>
         <div :if="importPlan()" class="settings-group">
           <h2>Before importing</h2>
-          <p class="help">From Launchpad {{ importPlan().from || 'an earlier version' }}{{ importedOn(importPlan().exportedAt) }}. {{ importPlan().summary }}</p>
+          <p class="help">From Scout {{ importPlan().from || 'an earlier version' }}{{ importedOn(importPlan().exportedAt) }}. {{ importPlan().summary }}</p>
           <div :if="importPlan().add.length" class="setting-row"><div><strong>{{ plural(importPlan().add.length, 'new item') }}</strong><p class="help">{{ importLabels(importPlan().add) }}</p></div></div>
           <div :if="importPlan().conflicts.length" class="conflicts">
             <strong>{{ plural(importPlan().conflicts.length, 'item') }} already different here</strong>
@@ -1915,7 +1926,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
           </div>
         </div>
         <h2 class="mt-5">Keep a copy up to date</h2>
-        <p class="help">Choose a folder and Launchpad rewrites the file there whenever you change something and close Settings. Put that folder in iCloud Drive, Dropbox or anything else that syncs, and your other Mac has the file waiting to import. The service is yours, not Launchpad's.</p>
+        <p class="help">Choose a folder and Scout rewrites the file there whenever you change something and close Settings. Put that folder in iCloud Drive, Dropbox or anything else that syncs, and your other Mac has the file waiting to import. The service is yours, not Scout's.</p>
         <div :if="!syncFolder()" class="setting-actions"><button type="button" class="text-action" @click="chooseSyncFolder()" :disabled="syncBusy()">Choose a folder...</button></div>
         <div :if="syncFolder()" class="setting-row"><div><strong>{{ syncFolder() }}</strong><p class="help">Named after this Mac, so each machine keeps its own file in the same folder.</p></div><button type="button" class="text-action" @click="stopKeepingCopy()">Stop</button></div>
         <p :if="syncStatus()" class="help" role="status">{{ syncStatus() }}</p>
@@ -1926,7 +1937,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
     <div :if="usageSummary()" class="usage-stats"><div><strong>{{ usageSummary().sessions }}</strong><span>app sessions</span></div><div><strong>{{ usageSummary().paletteOpens }}</strong><span>palette opens</span></div><div><strong>{{ formatUsageTime(usageSummary().runningMs) }}</strong><span>app running</span></div><div><strong>{{ formatUsageTime(usageSummary().visibleMs) }}</strong><span>palette open</span></div><div><strong>{{ usageSummary().applicationsOpened }}</strong><span>apps opened</span></div><div><strong>{{ usageSummary().linksOpened }}</strong><span>links opened</span></div><div><strong>{{ usageSummary().commands }}</strong><span>commands</span></div><div><strong>{{ usageSummary().activeDays }}</strong><span>active days</span></div><div><strong>{{ usageSummary().longestStreak }}</strong><span>day streak</span></div></div>
     <div :if="usageSummary()?.pantry">
       <h2>Pantry installs</h2>
-      <p class="help">Confirmed jobs requested through Launchpad. Retries count once. Failed installs are separate.</p>
+      <p class="help">Confirmed jobs requested through Scout. Retries count once. Failed installs are separate.</p>
       <div class="usage-stats"><div><strong>{{ usageSummary().pantry.installed }}</strong><span>successful installs</span></div><div><strong>{{ usageSummary().pantry.byKind.app }}</strong><span>apps installed</span></div><div><strong>{{ usageSummary().pantry.byKind.cli }}</strong><span>CLI tools installed</span></div><div><strong>{{ usageSummary().pantry.byKind.library }}</strong><span>libraries installed</span></div><div><strong>{{ usageSummary().pantry.byKind.font }}</strong><span>fonts installed</span></div><div><strong>{{ usageSummary().pantry.failed }}</strong><span>failed installs</span></div></div>
       <p class="help">Successful install time: {{ formatUsageTime(usageSummary().pantry.installMs) }} across {{ usageSummary().pantry.timedInstalls }} timed installs.</p>
     </div>
@@ -1988,7 +1999,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <input id="command-shortcut" type="text" readonly spellcheck="false" :value="shortcut() ? formatShortcut(shortcut()) : ''" :placeholder="recordingShortcut() ? 'Press the keys' : 'Click here, then press the keys'" @focus="recordingShortcut.set(true)" @blur="recordingShortcut.set(false)" @keydown="captureShortcut($event)">
         <button :if="shortcut()" type="button" class="text-action" @click="shortcut.set('')">Clear</button>
       </div>
-      <p class="help">Runs this command from anywhere, even when Launchpad is closed. Needs Command, Control or Option. Press Escape while recording to clear it.</p>
+      <p class="help">Runs this command from anywhere, even when Scout is closed. Needs Command, Control or Option. Press Escape while recording to clear it.</p>
       </div>
       <p :if="error()" class="error" role="alert">{{ error() }}</p>
       </div>
@@ -2027,9 +2038,9 @@ nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .tab:hover { color: var(--ink); background: var(--selected); }
 .new { color: var(--muted); display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; }
 .new svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.section-label { height: 30px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.section-label { height: 26px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
 .section-label > span:last-child { color: var(--muted); font-size: 10px; }
-.results { flex: 1; overflow-y: auto; overflow-anchor: none; padding-bottom: 8px; }
+.results { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; overflow-anchor: none; padding-bottom: 6px; }
 .result { display: flex; align-items: center; gap: 13px; width: 100%; height: 52px; padding: 7px 12px; border: 1px solid transparent; text-align: left; border-radius: 7px; margin: 0; }
 .result.selected { background: var(--selected); border-color: var(--selected-border); }
 .item-icon { width: 33px; height: 33px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--icon-surface); color: var(--accent); flex-shrink: 0; }

@@ -9,5 +9,5 @@ test('the native menu offers working support, community, subscription and app ac
   for (const key of Object.keys(supportLinks)) expect(actions).toContain(`launchpad.${key}`)
   for (const action of ['open', 'about', 'updates', 'settings', 'console', 'diagnostics']) expect(actions).toContain(`launchpad.${action}`)
   expect(actions).toContain('quit')
-  expect(launcherDiagnostics({ version: '1.1.11', bundleId: 'com.stacksjs.launchpad', sandboxed: true })).toBe('Launchpad diagnostics\nVersion: 1.1.11\nBundle: com.stacksjs.launchpad\nSandboxed: yes')
+  expect(launcherDiagnostics({ version: '1.1.11', bundleId: 'com.stacksjs.launchpad', sandboxed: true })).toBe('Scout diagnostics\nVersion: 1.1.11\nBundle: com.stacksjs.launchpad\nSandboxed: yes')
 })

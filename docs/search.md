@@ -1,6 +1,6 @@
 # Application search
 
-Launchpad prepares the installed application index before searching. Each app
+Scout prepares the installed application index before searching. Each app
 keeps its real display name, launch path and ranking record. Aliases add search
 names to that same result; they do not create duplicate launch commands.
 
@@ -91,7 +91,7 @@ Command G opens GitHub.
 
 **Saved logins.** With *List saved 1Password logins by title* on in Settings, items from your vault
 appear by title alongside everything else, and Return hands the identifier back to 1Password to open.
-Launchpad asks the 1Password command line tool for titles and identifiers only: it never reads a
+Scout asks the 1Password command line tool for titles and identifiers only: it never reads a
 secret, never holds a vault credential, and never stores what it was told. The listing is read once
 and narrowed here, so typing never reaches the tool. Needs the `op` command line tool installed.
 
@@ -111,10 +111,10 @@ still copies and the text stays selectable. Escape or a click outside closes it,
 window re-fits the text.
 
 **Bookmarks.** Chrome, Brave, Edge, Vivaldi, Chromium and Arc keep their bookmarks as a JSON file
-per profile, and Launchpad reads the ones you choose in Settings, across every profile that browser
+per profile, and Scout reads the ones you choose in Settings, across every profile that browser
 has. They rank alongside apps and commands rather than sitting in a tab, and both the folder and the
 site are searchable. Only `http` and `https` entries are offered, because a bookmark opens through
-the shell. Reading is the whole of it: Launchpad never writes to a browser's bookmarks, and nothing
+the shell. Reading is the whole of it: Scout never writes to a browser's bookmarks, and nothing
 is read until a browser is chosen. Return opens in your default browser, not the one the bookmark
 came from. Safari keeps a binary property list instead and is not read.
 
@@ -126,18 +126,18 @@ shortcut fires first and would stop the matching key working in the window. One 
 owns is only discovered when macOS declines to register it, and Settings > Shortcuts reports that alongside
 every shortcut in use.
 
-**Granting Automation.** The Automation pane has no way to add an app. Launchpad appears
+**Granting Automation.** The Automation pane has no way to add an app. Scout appears
 there only after macOS has asked, and each app it controls (Finder, System Events, Contacts,
-Calendar) is its own switch under the Launchpad row. So the first grant is the prompt itself:
+Calendar) is its own switch under the Scout row. So the first grant is the prompt itself:
 choose OK. If you chose Don't Allow, open System Settings > Privacy & Security > Automation and
-switch that app on under Launchpad. If Launchpad is not listed at all, nothing has asked yet;
+switch that app on under Scout. If Scout is not listed at all, nothing has asked yet;
 `tccutil reset AppleEvents com.stacksjs.launchpad` clears the record so the next attempt asks
 again. Emptying the Trash also depends on the Finder warning in Finder > Settings > Advanced:
-leave it on and answer the Finder dialog, or turn it off and let Launchpad's own confirmation
+leave it on and answer the Finder dialog, or turn it off and let Scout's own confirmation
 stand alone.
 
 **Builds.** Direct downloads are hardened and carry the Apple events entitlement, which macOS
 requires before it will even ask for the Automation permission. A sandboxed Mac App Store
 build does not have that entitlement, and the sandbox can also stop Spotlight file search, so
-files, windows, contacts, calendar and system commands may be unavailable there. Launchpad says
+files, windows, contacts, calendar and system commands may be unavailable there. Scout says
 so in the tab instead of failing silently.

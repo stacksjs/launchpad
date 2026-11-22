@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { installMockBridge } from '@stacksjs/desktop/test-utils'
 import { launcherPage } from './launcher-page.mjs'
 
-const source = readFileSync(process.argv[2] || 'dist/Launchpad.app/Contents/Resources/index.html', 'utf8')
+const source = readFileSync(process.argv[2] || 'dist/Scout.app/Contents/Resources/index.html', 'utf8')
 const html = launcherPage(source)
 const { chromium } = await import(process.env.LAUNCHPAD_PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ headless: true, ...(process.env.LAUNCHPAD_BROWSER_EXECUTABLE ? { executablePath: process.env.LAUNCHPAD_BROWSER_EXECUTABLE } : {}) })
@@ -71,7 +71,7 @@ try {
   assert.equal(await page.getByText('You are up to date.', { exact: true }).count(), 0)
   offline = false
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
-  await page.getByText('Launchpad 1.0.11 is available.', { exact: true }).waitFor()
+  await page.getByText('Scout 1.0.11 is available.', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'Download update', exact: true }).click()
   await page.getByText('37%', { exact: true }).waitFor()
   const progress = page.getByRole('progressbar', { name: 'Update download progress' })
@@ -90,7 +90,7 @@ try {
   state = { ...state, phase: 'ready', percent: 100 }
   await page.evaluate(value => window.__launcher.updateState.set(value), state)
   await page.getByRole('button', { name: 'Install and Restart', exact: true }).click()
-  await page.getByText('Restarting Launchpad...', { exact: true }).waitFor()
+  await page.getByText('Restarting Scout...', { exact: true }).waitFor()
   assert.deepEqual(actions, ['check', 'check', 'download', 'install'])
   await page.getByRole('button', { name: 'General', exact: true }).click()
   await page.getByRole('button', { name: 'Software Update', exact: true }).last().waitFor()
@@ -111,7 +111,7 @@ try {
   assert.equal(await page.getByText('AppPreference already exists', { exact: true }).count(), 0)
   preferenceOutcomes.push('fail')
   await automaticUpdates.click()
-  await page.getByRole('dialog', { name: 'Launchpad Settings' }).getByText('Could not save update settings.', { exact: true }).waitFor()
+  await page.getByRole('dialog', { name: 'Scout Settings' }).getByText('Could not save update settings.', { exact: true }).waitFor()
   assert.equal(await automaticUpdates.isChecked(), true, 'A failed save restores the stored value.')
   preferenceOutcomes.push('success', 'fail')
   await page.evaluate(() => Promise.all([window.__launcher.changeAutomaticUpdates(false), window.__launcher.changeAutomaticUpdates(true)]))
