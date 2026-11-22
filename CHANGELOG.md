@@ -1,5 +1,25 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.16...v1.1.17)
+
+## ✨ Features
+
+- refresh Scout in blue and launch its new website ([c5b3909](https://github.com/stacksjs/launchpad/commit/c5b3909)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **release**: qualify and submit Scout Store builds in Actions ([e6bb23a](https://github.com/stacksjs/launchpad/commit/e6bb23a)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **release**: validate Scout with the macOS 15 Bun runtime ([ee116f6](https://github.com/stacksjs/launchpad/commit/ee116f6)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **release**: pin the Store workflow to Pantry release source ([8a46f7c](https://github.com/stacksjs/launchpad/commit/8a46f7c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.17 ([07b82c0](https://github.com/stacksjs/launchpad/commit/07b82c0)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.15...v1.1.16)
 
 ## ✨ Features
