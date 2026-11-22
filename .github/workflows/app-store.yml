@@ -1,0 +1,73 @@
+name: Mac App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: App Store marketing version
+        type: string
+        required: true
+      build-number:
+        description: App Store Connect build number
+        type: string
+        required: true
+      mode:
+        description: Validate the package or submit it to App Review
+        type: choice
+        options: [validate, submit]
+        default: validate
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mac-app-store
+  cancel-in-progress: false
+
+jobs:
+  store:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set the Store marketing version in the runner checkout
+        env:
+          STORE_VERSION: ${{ inputs.version }}
+          STORE_BUILD_NUMBER: ${{ inputs['build-number'] }}
+        run: |
+          [[ "$STORE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$STORE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          npm pkg set version="$STORE_VERSION"
+      - uses: pantry-pm/pantry/packages/action@v0.11.214
+        with:
+          version: '0.11.214'
+          install: 'false'
+      - name: Install Bun 1.4.4 with upstream ICU 78.2
+        env:
+          ICU_BUN_URL: https://github.com/stacksjs/bun/releases/download/bun-v1.4.4-icu-78.2.1/bun-darwin-arm64-icu-78.2.tar.gz
+          ICU_BUN_ARCHIVE_SHA256: 5112636f9fc506c8df63b9e4e19e19987f2438b7c365545a3e48d475bd74f1ba
+          ICU_BUN_SHA256: 192891decb0a01f79bffc888260c37febe7aad619108d88455f7b2e8cf669bae
+        run: |
+          runtime=$(mktemp -d "$RUNNER_TEMP/icu-bun.XXXXXX")
+          curl --fail --show-error --silent --location --retry 3 --proto '=https' --output "$runtime/bun.tar.gz" "$ICU_BUN_URL"
+          printf '%s  %s\n' "$ICU_BUN_ARCHIVE_SHA256" "$runtime/bun.tar.gz" | shasum -a 256 -c
+          tar -xzf "$runtime/bun.tar.gz" -C "$runtime" bun
+          printf '%s  %s\n' "$ICU_BUN_SHA256" "$runtime/bun" | shasum -a 256 -c
+          "$runtime/bun" -e 'if (Bun.version !== "1.4.4" || process.versions.icu !== "78.2" || process.arch !== "arm64") process.exit(1)'
+          printf '%s\n' "$runtime" >> "$GITHUB_PATH"
+      - name: ${{ inputs.mode == 'submit' && 'Publish and submit the Store build' || 'Validate the signed Store package' }}
+        env:
+          STORE_MODE: ${{ inputs.mode }}
+          STORE_BUILD_NUMBER: ${{ inputs['build-number'] }}
+          DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+        run: |
+          args=(--build-number "$STORE_BUILD_NUMBER")
+          if [[ "$STORE_MODE" == submit ]]; then args+=(--submit); fi
+          bunx --bun ts-pantry@0.11.215 app-store:release "${args[@]}"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: scout-app-store-${{ inputs.version }}-${{ inputs['build-number'] }}
+          path: dist/app-store/
+          if-no-files-found: error
+          retention-days: 14

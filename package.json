@@ -37,6 +37,7 @@
     "generate:brand": "bun scripts/generate-brand.ts",
     "package": "bun run generate:brand && ./buddy package",
     "release:patch": "./buddy release --bump patch",
+    "release:app-store": "gh workflow run app-store.yml --ref main",
     "release:minor": "./buddy release --bump minor",
     "release:major": "./buddy release --bump major",
     "lint": "./buddy lint",

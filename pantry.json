@@ -20,7 +20,10 @@
           "com.apple.security.network.client": true
         }
       },
-      "appStore": false
+      "appStore": false,
+      "appStoreResources": {
+        "ICU-LICENSE.txt": "licenses/ICU.txt"
+      }
     },
     "checks": {
       "before": [
