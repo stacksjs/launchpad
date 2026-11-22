@@ -23,7 +23,7 @@ Press Command + Space to open Launchpad from another app. Find an application, r
 
 Your commands, clipboard history and usage records stay in the local macOS container. No Stacks account, advertising or cloud synchronization. GitHub searches go directly to GitHub, and an optional account token stays in macOS Keychain. Pantry catalog updates and original logos load from GitHub without sending package searches. Installation uses an independently installed Pantry CLI service under your user account, connected through loopback and a token kept in Keychain. Quicklinks open in your browser. Clipboard recording starts only when enabled; unmarked sensitive text can still be captured.
 
-Free and open source. Built with Stacks, stx, ts-css and Craft. Requires an Apple Silicon Mac with macOS 13 or later.
+Free and open source. Built with Stacks, stx, ts-css and Craft. Requires an Apple Silicon Mac with macOS 15 or later.
 
 If another app owns Command + Space, release that shortcut before using Launchpad.`,
   keywords: 'launcher,keyboard,search,shortcuts,quicklinks,snippets,clipboard,calculator,productivity,offline',

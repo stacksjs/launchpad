@@ -27,7 +27,7 @@
 
 ## Get started
 
-**Requires macOS 13 or later on an Apple Silicon Mac.** Bun is needed for development, not for running the installed app.
+**Requires macOS 15 or later on an Apple Silicon Mac.** Bun is needed for development, not for running the installed app.
 
 With [Pantry](https://pantry.dev) 0.11.142 or later:
 
@@ -142,7 +142,7 @@ Read the [privacy policy](PRIVACY.md) and [local usage contract](docs/local-usag
 
 ## Development
 
-Use an Apple Silicon Mac with macOS 13 or later and Bun 1.3 or later. Buddy provisions the immutable Craft runtime and toolchain declared in `pantry.json`.
+Use an Apple Silicon Mac with macOS 15 or later and Bun 1.3 or later. Buddy provisions the immutable Craft runtime and toolchain declared in `pantry.json`.
 
 ```sh
 git clone https://github.com/stacksjs/launchpad.git

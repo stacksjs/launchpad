@@ -81,7 +81,7 @@ async function subscribeUpdates() {
     <section class="bg-white border-slate-200 border-y" aria-label="Made for your Mac">
       <div class="grid gap-7 grid-cols-1 md:gap-10 md:grid-cols-3 mx-auto px-5 py-8 md:px-10 max-w-[1280px]">
         <div class="flex gap-4 items-center"><div class="flex gap-1 shrink-0" role="img" aria-label="Command + Space"><kbd>⌘</kbd><kbd>space</kbd></div><p class="m-0 leading-relaxed text-slate-600 text-sm">Press once. Start typing.<br><strong class="font-medium text-slate-900">Your search is already focused.</strong></p></div>
-        <div class="flex gap-4 items-center"><i class="shrink-0 h-7 w-7 text-slate-600 i-f7-logo-apple" aria-hidden="true"></i><p class="m-0 leading-relaxed text-slate-600 text-sm">Free for Apple Silicon Macs.<br><strong class="font-medium text-slate-900">macOS 13 or later.</strong></p></div>
+        <div class="flex gap-4 items-center"><i class="shrink-0 h-7 w-7 text-slate-600 i-f7-logo-apple" aria-hidden="true"></i><p class="m-0 leading-relaxed text-slate-600 text-sm">Free for Apple Silicon Macs.<br><strong class="font-medium text-slate-900">macOS 15 or later.</strong></p></div>
         <div class="flex gap-4 items-center"><i class="shrink-0 h-7 w-7 text-slate-600 i-f7-chevron-left-slash-chevron-right" aria-hidden="true"></i><p class="m-0 leading-relaxed text-slate-600 text-sm">Built in the open with Stacks.<br><strong class="font-medium text-slate-900">Make it yours.</strong></p></div>
       </div>
     </section>
