@@ -5,7 +5,7 @@ export default {
   css: { config: 'config/css.ts' },
   build: {
     outputDir: 'dist/site',
-    domain: 'https://launchpad.stacksjs.com',
+    domain: 'https://scout.stacksjs.com',
     sitemap: true,
     robots: true,
   },

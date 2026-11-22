@@ -5,11 +5,12 @@ import { tsCloud } from '../config/cloud'
 test('Scout owns both public routes and attaches to the shared host', () => {
   expect(tsCloud.project.slug).toBe('launchpad')
   expect(tsCloud.cloud?.attachTo).toBe('stacks')
-  expect(tsCloud.sites?.website?.domain).toBe('launchpad.stacksjs.com')
+  expect(tsCloud.sites?.website?.domain).toBe('scout.stacksjs.com')
   expect(tsCloud.sites?.website?.path).toBe('/')
-  expect(tsCloud.sites?.api?.domain).toBe('launchpad.stacksjs.com')
+  expect(tsCloud.sites?.api?.domain).toBe('scout.stacksjs.com')
   expect(tsCloud.sites?.api?.path).toBe('/api')
   expect(tsCloud.sites?.api?.root).toBe('.')
+  expect(tsCloud.sites?.legacy).toEqual({ domain: 'launchpad.stacksjs.com', redirect: { to: 'https://scout.stacksjs.com', status: 308 } })
 })
 
 test('Scout deploys from its own main workflow with a dedicated web key', () => {
@@ -17,6 +18,7 @@ test('Scout deploys from its own main workflow with a dedicated web key', () => 
   const job = workflow.jobs['deploy-website']
   expect(job.needs).toEqual(['website', 'subscriptions', 'browser'])
   expect(job.environment.name).toBe('website-production')
+  expect(job.environment.url).toBe('https://scout.stacksjs.com')
   expect(job.if).toContain("github.ref == 'refs/heads/main'")
   const deploy = job.steps.find((step: any) => step.name === 'Attach and deploy Scout with native Stacks')
   expect(deploy.run).toBe('bun run deploy:website')

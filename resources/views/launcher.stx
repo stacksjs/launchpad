@@ -1583,8 +1583,8 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
 <main class="flex flex-col w-full" aria-label="Scout">
   <div class="palette-content" x-show="!settings() && !editor() && !packageDetail()">
   <header class="palette-header" @mousedown="nativeWindow.startDrag()">
-    <span class="i-f7-search search-icon" aria-hidden="true"></span>
-    <input ref="search" x-model="query" type="search" :placeholder="category() === 'clipboard' ? 'Search clipboard text or source app…' : 'Search anything, do something.'" autocomplete="off" spellcheck="false" role="combobox" :aria-label="category() === 'clipboard' ? 'Search clipboard history' : 'Search applications and commands'" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="active() ? 'result-' + selected() : null" @mousedown.stop="">
+    <span class="search-symbol" aria-hidden="true"><span class="i-f7-search search-icon"></span></span>
+    <input ref="search" x-model="query" type="search" :placeholder="category() === 'clipboard' ? 'Search clipboard text or source app…' : 'Search apps, files, and commands…'" autocomplete="off" spellcheck="false" role="combobox" :aria-label="category() === 'clipboard' ? 'Search clipboard history' : 'Search applications and commands'" aria-autocomplete="list" aria-controls="result-list" :aria-expanded="results().length > 0" :aria-activedescendant="active() ? 'result-' + selected() : null" @mousedown.stop="">
     <nav class="palette-actions" aria-label="Palette actions" @mousedown.stop="">
       <button :if="currentMode()" type="button" class="mode-badge" @click="chooseCategory('all')" :title="currentMode().title" :aria-label="'Leave ' + currentMode().title + ' (Escape)'"><span class="mode-title">{{ currentMode().title }}</span><span aria-hidden="true">&times;</span></button>
       <button type="button" class="new" @click="newCommand()" title="New command (Command N)" aria-label="New command"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
@@ -2013,8 +2013,8 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
 .result-slot { flex-shrink: 0; }
 .result-section { height: 28px; display: flex; align-items: center; padding: 0 10px; color: var(--muted); font-size: 11px; font-weight: 500; }
 :root { --font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; --font-size: 13px; }
-:root { color-scheme: light; --surface: #fefcf9; --ink: #25231f; --muted: #625b52; --line: #e5ded4; --accent: #9f3715; --selected: #f8e8de; --icon-surface: #f1e9df; --footer: #f4efe7; --key: #e9e1d5; --field: #fffdfa; --border: #8e8375; --outline: #c5b9ab; --selected-border: #d5a890; --error-bg: #fde9e9; --error-ink: #922634; }
-:root.dark { color-scheme: dark; --surface: #242320; --ink: #faf3e9; --muted: #c0b5a8; --line: #403b35; --accent: #ffa477; --selected: #402e24; --icon-surface: #342d26; --footer: #1e1d1a; --key: #39332b; --field: #2b2823; --border: #8a7b6d; --outline: #5e5349; --selected-border: #91614a; --error-bg: #432b2e; --error-ink: #ffccd1; }
+:root { color-scheme: light; --surface: #fbfdff; --ink: #142238; --muted: #4d6078; --line: #dce6f2; --accent: #215ccf; --selected: #e4eeff; --icon-surface: #ecf3fb; --footer: #f1f6fc; --key: #e2ebf7; --field: #ffffff; --border: #6d819d; --outline: #b9cce3; --selected-border: #9ab9e9; --error-bg: #fde9e9; --error-ink: #922634; }
+:root.dark { color-scheme: dark; --surface: #151f2e; --ink: #eff5ff; --muted: #a9bad1; --line: #2d3e54; --accent: #8bb6ff; --selected: #243b60; --icon-surface: #243349; --footer: #111a28; --key: #26374e; --field: #192638; --border: #6c809e; --outline: #3c526e; --selected-border: #567bb4; --error-bg: #432b2e; --error-ink: #ffccd1; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color: var(--ink); font: var(--font-size)/1.4 var(--font-family); -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -2029,11 +2029,14 @@ main { height: 100dvh; position: relative; overflow: hidden; background: var(--s
 .palette-actions .new:hover { background: var(--selected); color: var(--ink); }
 .palette-actions .mode-badge { display: inline-flex; align-items: center; gap: 5px; max-width: 150px; white-space: nowrap; margin-right: 4px; }
 .palette-actions .mode-title { overflow: hidden; text-overflow: ellipsis; }
-.search-icon { width: 22px; height: 22px; color: var(--muted); flex-shrink: 0; }
-header input { flex: 1; width: 0; min-width: 0; font-size: calc(var(--font-size) * 1.615); letter-spacing: -.5px; background: transparent; border: none; padding: 8px 0; outline: none; }
+.search-symbol { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border: 1px solid transparent; border-radius: 10px; background: var(--selected); color: var(--accent); }
+.search-icon { width: 19px; height: 19px; }
+.palette-header:has(input:focus-visible) .search-symbol { border-color: var(--accent); }
+header input { flex: 1; width: 0; min-width: 0; font-size: calc(var(--font-size) * 1.615); letter-spacing: -.5px; background: transparent; border: none; padding: 8px 0; outline: none; caret-color: var(--accent); }
 header input::placeholder { color: var(--muted); }
 input::-webkit-search-cancel-button { display: none; }
-.escape { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
+.escape { border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; background: var(--footer); font-size: 11px; color: var(--muted); }
+.escape:hover { border-color: var(--selected-border); color: var(--ink); }
 nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .tab { padding: 5px 11px; border-radius: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
 .tab:hover { color: var(--ink); background: var(--selected); }
@@ -2042,20 +2045,22 @@ nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .section-label { height: 26px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
 .section-label > span:last-child { color: var(--muted); font-size: 10px; }
 .results { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; overflow-anchor: none; padding-bottom: 6px; }
-.result { display: flex; align-items: center; gap: 13px; width: 100%; height: 52px; padding: 7px 12px; border: 1px solid transparent; text-align: left; border-radius: 7px; margin: 0; }
+.result { display: flex; align-items: center; gap: 12px; width: 100%; height: 52px; padding: 7px 12px; border: 1px solid transparent; text-align: left; border-radius: 9px; margin: 0; }
 .result.selected { background: var(--selected); border-color: var(--selected-border); }
+.result.selected .result-title { font-weight: 600; }
 .item-icon { width: 33px; height: 33px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--icon-surface); color: var(--accent); flex-shrink: 0; }
 .item-icon > span { width: 19px; height: 19px; }
 .result-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
 .result-title { font-size: var(--font-size); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .result-subtitle { color: var(--muted); font-size: calc(var(--font-size) - 2px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .star { color: var(--accent); font-size: 11px; }
-.return-key { color: var(--muted); font-size: 17px; }
+.return-key { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 6px; background: var(--surface); color: var(--accent); font-size: 15px; }
 footer { height: 44px; flex-shrink: 0; border-top: 1px solid var(--line); background: var(--footer); }
 .wordmark { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; font-weight: 650; letter-spacing: -.3px; }
 .footer-status { color: var(--muted); font-size: 10px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .footer-action { color: var(--muted); font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
-.footer-action.primary { color: var(--ink); }
+.footer-action.primary { min-height: 28px; padding: 3px 6px 3px 9px; border-radius: 7px; background: var(--accent); color: var(--surface); font-weight: 600; }
+.footer-action.primary kbd { color: inherit; background: color-mix(in srgb, currentColor 18%, transparent); }
 kbd { font: 10px -apple-system, system-ui; color: var(--muted); padding: 2px 4px; border-radius: 4px; background: var(--key); }
 .empty { margin: 35px auto; max-width: 340px; text-align: center; font-size: 16px; color: var(--ink); }
 .empty-detail { color: var(--muted); font-size: 12px; line-height: 1.6; }

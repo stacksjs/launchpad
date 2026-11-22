@@ -4,7 +4,7 @@ export const supportLinks: Record<string, string> = {
   feedback: 'https://github.com/stacksjs/launchpad/issues/new',
   manual: 'https://github.com/stacksjs/launchpad#readme',
   troubleshooting: 'https://github.com/stacksjs/launchpad/blob/main/docs/troubleshooting.md',
-  subscribe: 'https://launchpad.stacksjs.com/#updates',
+  subscribe: 'https://scout.stacksjs.com/#updates',
   community: 'https://stacksjs.com/discord',
   follow: 'https://bsky.app/profile/stacksjs.com',
   releases: 'https://github.com/stacksjs/launchpad/releases',

@@ -3,7 +3,7 @@ import { launcherDiagnostics, launcherTrayMenu, supportLinks } from '../resource
 
 test('the native menu offers working support, community, subscription and app actions', () => {
   expect(supportLinks.follow).toBe('https://bsky.app/profile/stacksjs.com')
-  expect(supportLinks.subscribe).toBe('https://launchpad.stacksjs.com/#updates')
+  expect(supportLinks.subscribe).toBe('https://scout.stacksjs.com/#updates')
   const actions = launcherTrayMenu.flatMap(item => item.action ? [item.action] : [])
   expect(new Set(actions).size).toBe(actions.length)
   for (const key of Object.keys(supportLinks)) expect(actions).toContain(`launchpad.${key}`)

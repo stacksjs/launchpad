@@ -92,7 +92,7 @@ jobs:
     timeout-minutes: 30
     environment:
       name: website-production
-      url: https://launchpad.stacksjs.com
+      url: https://scout.stacksjs.com
     permissions:
       contents: read
       deployments: write
@@ -134,6 +134,8 @@ jobs:
           DOTENV_PRIVATE_KEY_WEB: ${{ secrets.DOTENV_PRIVATE_KEY_WEB }}
       - name: Verify the owned website and service
         run: |
-          curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://launchpad.stacksjs.com/api/health -o /tmp/launchpad-health.json
-          curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://launchpad.stacksjs.com/ -o /tmp/launchpad-site.html
-          bun -e 'const health=await Bun.file("/tmp/launchpad-health.json").json();const html=await Bun.file("/tmp/launchpad-site.html").text();if(health.service!=="launchpad-api"||health.ok!==true||!html.includes("subscriber-email"))throw new Error("Scout website deployment is incomplete")'
+          curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://scout.stacksjs.com/api/health -o /tmp/scout-health.json
+          curl --fail --retry 6 --retry-delay 10 --retry-all-errors https://scout.stacksjs.com/ -o /tmp/scout-site.html
+          bun -e 'const health=await Bun.file("/tmp/scout-health.json").json();const html=await Bun.file("/tmp/scout-site.html").text();if(health.service!=="launchpad-api"||health.ok!==true||!html.includes("subscriber-email")||!html.includes("https://scout.stacksjs.com/"))throw new Error("Scout website deployment is incomplete")'
+          redirect=$(curl --silent --show-error --output /dev/null --write-out '%{http_code} %{redirect_url}' 'https://launchpad.stacksjs.com/api/health?check=1')
+          test "$redirect" = '308 https://scout.stacksjs.com/api/health?check=1'
