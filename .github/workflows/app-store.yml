@@ -71,3 +71,11 @@ jobs:
           path: dist/app-store/
           if-no-files-found: error
           retention-days: 14
+      - uses: actions/upload-artifact@v6
+        with:
+          name: scout-app-store-listing-${{ inputs.version }}-${{ inputs['build-number'] }}
+          path: |
+            app-store.config.ts
+            assets/screenshots/
+          if-no-files-found: error
+          retention-days: 14
