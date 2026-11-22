@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const glyph = svg.match(/<g id="mark"[^>]*>[\s\S]*?<\/g>/)?.[0]
   if (!glyph) throw new Error('Scout artwork is missing its mark group.')
   const monochrome = glyph.replaceAll(/(fill|stroke)="(?!none")[^"]+"/g, '$1="#000"')
-  const traySvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="146 119 784 784">${monochrome}</svg>`
+  const traySvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="162 162 700 700">${monochrome}</svg>`
   const tray = rasterize(parseSVG(traySvg), { width: 44, height: 44 })
   const trayImage = createImageData(tray.width, tray.height)
   trayImage.data.set(tray.data)

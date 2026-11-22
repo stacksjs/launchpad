@@ -1,5 +1,5 @@
-Scout uses a frost-colored search lens around a mint result dot. The handle
-bends into a mint navigation arrow. The vector source is assets/brand/scout.svg.
+Scout uses two focus corners around a pointer and an orange waypoint. The
+artwork uses warm paper on charcoal. The vector source is assets/brand/scout.svg.
 
 bun run generate:brand renders the app and website PNGs and packages the
 macOS icon sizes with Apple iconutil. The same source produces the monochrome

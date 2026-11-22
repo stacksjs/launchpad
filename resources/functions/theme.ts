@@ -26,14 +26,14 @@ export const defaultFontStack = '-apple-system, BlinkMacSystemFont, system-ui, s
 export const builtInTheme: Theme = {
   name: 'Scout',
   light: {
-    'surface': '#ffffff', 'ink': '#202735', 'muted': '#566173', 'line': '#d9e0e9', 'accent': '#245eb7',
-    'selected': '#e7edf6', 'icon-surface': '#e8eef7', 'footer': '#f3f5f8', 'key': '#e0e6ee', 'field': '#ffffff',
-    'border': '#8391a5', 'outline': '#b8c3d3', 'selected-border': '#b6c9e4', 'error-bg': '#fde9e9', 'error-ink': '#922634',
+    'surface': '#fefcf9', 'ink': '#25231f', 'muted': '#625b52', 'line': '#e5ded4', 'accent': '#9f3715',
+    'selected': '#f8e8de', 'icon-surface': '#f1e9df', 'footer': '#f4efe7', 'key': '#e9e1d5', 'field': '#fffdfa',
+    'border': '#8e8375', 'outline': '#c5b9ab', 'selected-border': '#d5a890', 'error-bg': '#fde9e9', 'error-ink': '#922634',
   },
   dark: {
-    'surface': '#202226', 'ink': '#f2f3f5', 'muted': '#b2b8c4', 'line': '#35383f', 'accent': '#a9cbff',
-    'selected': '#343943', 'icon-surface': '#2d323c', 'footer': '#1c1e22', 'key': '#32363e', 'field': '#272a31',
-    'border': '#657185', 'outline': '#525a68', 'selected-border': '#53627a', 'error-bg': '#432b2e', 'error-ink': '#ffccd1',
+    'surface': '#242320', 'ink': '#faf3e9', 'muted': '#c0b5a8', 'line': '#403b35', 'accent': '#ffa477',
+    'selected': '#402e24', 'icon-surface': '#342d26', 'footer': '#1e1d1a', 'key': '#39332b', 'field': '#2b2823',
+    'border': '#8a7b6d', 'outline': '#5e5349', 'selected-border': '#91614a', 'error-bg': '#432b2e', 'error-ink': '#ffccd1',
   },
   font: defaultFont,
 }

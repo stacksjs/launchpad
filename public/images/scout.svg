@@ -1,28 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="plate" x1="92" y1="0" x2="825" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#224b78"/>
-      <stop offset=".52" stop-color="#132a48"/>
-      <stop offset="1" stop-color="#091827"/>
-    </linearGradient>
-    <linearGradient id="edge" x1="0" y1="0" x2="544" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#83b4de" stop-opacity=".72"/>
-      <stop offset=".44" stop-color="#5885ad" stop-opacity=".32"/>
-      <stop offset="1" stop-color="#142b47"/>
-    </linearGradient>
-    <linearGradient id="frost" x1="282" y1="209" x2="554" y2="597" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fbfdff"/>
-      <stop offset="1" stop-color="#c3e5ff"/>
-    </linearGradient>
-    <linearGradient id="mint" x1="408" y1="357" x2="804" y2="826" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#acffde"/>
-      <stop offset="1" stop-color="#56cfc9"/>
-    </linearGradient>
-  </defs>
-  <path d="M356 3H668C913 3 1021 111 1021 356V668C1021 913 913 1021 668 1021H356C111 1021 3 913 3 668V356C3 111 111 3 356 3Z" fill="url(#plate)" stroke="url(#edge)" stroke-width="6"/>
+  <path d="M356 0H668C915 0 1024 109 1024 356V668C1024 915 915 1024 668 1024H356C109 1024 0 915 0 668V356C0 109 109 0 356 0Z" fill="#20211e"/>
   <g id="mark">
-    <path d="M579 532l123 123q29 29 70 29h2l-22-22a29 29 0 0 1 41-41l80 80a33 33 0 0 1 0 46l-80 80a29 29 0 0 1-41-41l22-22h-2q-74 0-126-52L523 588Z" fill="url(#mint)"/>
-    <circle cx="408" cy="405" r="184" fill="none" stroke="url(#frost)" stroke-width="76"/>
-    <circle cx="408" cy="405" r="50" fill="#a7fbe0"/>
+    <path d="M376 208h76v76h-76a92 92 0 0 0-92 92v76h-76v-76a168 168 0 0 1 168-168Zm440 364v76a168 168 0 0 1-168 168h-76v-76h76a92 92 0 0 0 92-92v-76Z" fill="#faf4e8"/>
+    <path d="m329 506 275-118c16-7 29 6 22 22L508 685c-6 15-27 16-35 2l-53-88a20 20 0 0 0-10-8l-82-50c-14-8-14-29 1-35Z" fill="#faf4e8"/>
+    <circle cx="713" cy="311" r="56" fill="#ff7040"/>
   </g>
 </svg>

@@ -1,8 +1,8 @@
 # Scout mark
 
-The Scout mark is original artwork. A search lens frames a result dot, and the
-handle bends into a directional arrow. The color artwork pairs frost and mint
-on an ink-blue plate. The menu bar uses the same shapes as a macOS template image.
+The Scout mark is original artwork. Two focus corners frame a navigation
+pointer and a bright waypoint. The color artwork pairs warm paper and orange
+on a charcoal tile. The menu bar uses the same shapes as a macOS template image.
 
 The app uses Framework7 Icons through
 Iconify. Framework7 Icons is copyright Vladimir Kharlampidi and is available
