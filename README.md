@@ -206,7 +206,7 @@ Run a Store qualification using the authenticated GitHub CLI. The marketing vers
 bun run release:app-store -f version=1.0.1 -f build-number=175 -f mode=validate
 ```
 
-The `Mac App Store` workflow checks the pinned Bun archive and executable, then uses Pantry to build, sign, and validate the package. It saves the signed package and Apple's receipt with the workflow run. Set `mode=submit` when ready to upload the package, apply its listing assets, and submit for review. The submit command checks for an active Mac review or pending release before uploading.
+The `Mac App Store` workflow checks the pinned Bun archive and executable, then uses the pinned Pantry release source to build, sign, and validate the package. It saves the signed package and Apple's receipt with the workflow run. Set `mode=submit` when ready to upload the package, apply its listing assets, and submit for review. The submit command checks for an active Mac review or pending release before uploading.
 
 For App Store packaging, put the Bun build with upstream ICU first in `PATH` before running Buddy. The native build uses that Bun executable to compile `Contents/MacOS/stx-backend`. Verify the final signed bundle with `otool -L` and `nm -um` before upload. Both the Craft executable and the helper must pass without an import from Apple's `libicucore`. Keep the ICU license with the release. [Stacks desktop packaging guide](https://github.com/stacksjs/stacks/blob/main/docs/packages/desktop.md).
 

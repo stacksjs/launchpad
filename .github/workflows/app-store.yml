@@ -56,6 +56,16 @@ jobs:
           printf '%s  %s\n' "$ICU_BUN_SHA256" "$runtime/bun" | shasum -a 256 -c
           "$runtime/bun" -e 'if (Bun.version !== "1.4.4" || process.versions.icu !== "78.2" || process.arch !== "arm64") process.exit(1)'
           printf '%s\n' "$runtime" >> "$GITHUB_PATH"
+      - name: Check out the Pantry 0.11.215 SDK
+        uses: actions/checkout@v6
+        with:
+          repository: pantry-pm/pantry
+          ref: e3d43b94d86ce043ff02db8c2d8e0ffa5b17b915
+          path: .pantry/store-sdk
+          persist-credentials: false
+      - name: Install the pinned Pantry SDK dependencies
+        working-directory: .pantry/store-sdk
+        run: bun install --frozen-lockfile --filter ts-pantry
       - name: ${{ inputs.mode == 'submit' && 'Publish and submit the Store build' || 'Validate the signed Store package' }}
         env:
           STORE_MODE: ${{ inputs.mode }}
@@ -64,7 +74,7 @@ jobs:
         run: |
           args=(--build-number "$STORE_BUILD_NUMBER")
           if [[ "$STORE_MODE" == submit ]]; then args+=(--submit); fi
-          bunx --bun ts-pantry@0.11.215 app-store:release "${args[@]}"
+          bun .pantry/store-sdk/packages/ts-pantry/bin/cli.ts app-store:release "${args[@]}"
       - uses: actions/upload-artifact@v6
         with:
           name: scout-app-store-${{ inputs.version }}-${{ inputs['build-number'] }}
