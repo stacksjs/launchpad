@@ -1,7 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="225" fill="#1d4ed8"/>
-  <circle cx="512" cy="512" r="289" fill="none" stroke="#8cb2ff" stroke-width="32"/>
-  <path d="M690 334 598 598 334 690 426 426Z" fill="#fff"/>
-  <path d="M598 598 334 690 426 426Z" fill="#a9c7ff"/>
-  <circle cx="512" cy="512" r="23" fill="#1d4ed8"/>
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19428f"/>
+      <stop offset="1" stop-color="#172655"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="225" fill="url(#plate)"/>
+  <g id="mark">
+    <path d="M292 740h265c98 0 164-56 164-137s-61-136-155-136H453c-82 0-130-34-130-93s47-97 125-97h221" fill="none" stroke="#fff" stroke-width="76"/>
+    <circle cx="292" cy="740" r="38" fill="#fff"/>
+    <path d="M589 170a37 37 0 0 1 52 0l81 81a37 37 0 0 1 0 52l-81 81a37 37 0 0 1-52-52l55-55-55-55a37 37 0 0 1 0-52Z" fill="#8cebe0"/>
+  </g>
 </svg>

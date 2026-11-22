@@ -22,7 +22,7 @@ async function subscribeUpdates() {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Scout is a free native Mac launcher. Open apps, find clipboard text, search GitHub and install tools with Pantry, all from your keyboard.">
   <meta name="theme-color" content="#f5f7fa">
-  <meta property="og:title" content="Scout | A shorter path to what you do">
+  <meta property="og:title" content="Scout | Keyboard launcher for Mac">
   <meta property="og:description" content="Your apps, links and tools. One keyboard shortcut. A free native launcher for Apple Silicon Macs.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://launchpad.stacksjs.com/">
@@ -30,16 +30,16 @@ async function subscribeUpdates() {
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Scout. Less looking. More doing. A native Mac launcher with one keyboard shortcut.">
+  <meta property="og:image:alt" content="Scout app search with the Scout logo and Command + Space shortcut.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Scout | A shorter path to what you do">
+  <meta name="twitter:title" content="Scout | Keyboard launcher for Mac">
   <meta name="twitter:description" content="Your apps, links and tools. One keyboard shortcut.">
   <meta name="twitter:image" content="https://launchpad.stacksjs.com/social/og.jpg">
-  <meta name="twitter:image:alt" content="Scout. Less looking. More doing. A native Mac launcher with one keyboard shortcut.">
+  <meta name="twitter:image:alt" content="Scout app search with the Scout logo and Command + Space shortcut.">
   <link rel="canonical" href="https://launchpad.stacksjs.com/">
   <link rel="icon" href="/images/scout.png" type="image/png">
   <link rel="icon" href="/images/scout.svg" type="image/svg+xml" sizes="any">
-  <title>Scout | A shorter path to what you do</title>
+  <title>Scout | Keyboard launcher for Mac</title>
 </head>
 <body class="m-0 antialiased text-slate-900 bg-[#f5f7fa]">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -59,9 +59,9 @@ async function subscribeUpdates() {
   <main id="main">
     <section class="grid gap-10 grid-cols-1 items-center lg:gap-14 lg:grid-cols-[0.9fr_1.3fr] mx-auto pb-16 pt-12 px-5 md:pb-20 md:pt-20 md:px-10 max-w-[1280px]" aria-labelledby="hero-title">
       <div>
-        <p class="mb-5 font-semibold text-blue-700 text-xs tracking-[0.16em] uppercase">Your Mac, within reach</p>
-        <h1 id="hero-title" class="m-0 max-w-[12ch] font-semibold leading-[1.04] text-5xl tracking-[-0.055em] md:text-6xl">Less looking.<br>More doing.</h1>
-        <p class="mb-7 mt-6 max-w-[32ch] leading-relaxed text-lg text-slate-600">Open apps, find what you copied, and get back to work. All from one shortcut.</p>
+        <p class="mb-5 font-semibold text-blue-700 text-xs tracking-[0.16em] uppercase">Keyboard launcher for Mac</p>
+        <h1 id="hero-title" class="m-0 max-w-[14ch] font-semibold leading-[1.04] text-5xl tracking-[-0.055em] md:text-6xl">Apps, files, and commands.</h1>
+        <p class="mb-7 mt-6 max-w-[34ch] leading-relaxed text-lg text-slate-600">Press Command + Space to open an app, find a file, or pull up something you copied.</p>
         <a href="https://github.com/stacksjs/launchpad/releases/latest" class="button">Download for Mac <span aria-hidden="true">↓</span></a>
       </div>
       <figure class="m-0 min-w-0">
@@ -150,7 +150,10 @@ async function subscribeUpdates() {
   </main>
 
   <footer class="flex flex-col gap-5 justify-between sm:flex-row mx-auto px-5 py-8 md:px-10 max-w-[1280px] text-slate-600 text-sm">
-    <span>Scout. Built with <a href="https://stacksjs.com" class="font-medium text-slate-900">Stacks</a>.</span>
+    <div class="inline-flex gap-2 items-center">
+      <a href="/" class="inline-flex gap-2 items-center font-semibold text-slate-900"><img src="/images/scout.svg" width="24" height="24" alt="" loading="lazy">Scout</a>
+      <span>Built with <a href="https://stacksjs.com" class="font-medium text-slate-900">Stacks</a>.</span>
+    </div>
     <nav class="flex flex-wrap gap-6" aria-label="Footer navigation"><a href="#updates">Subscribe for updates</a><a href="https://bsky.app/profile/stacksjs.com">Follow Stacks</a><a href="https://pantry.dev">Pantry</a><a href="https://github.com/stacksjs/launchpad/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/stacksjs/launchpad/issues">Issues</a><a href="https://github.com/stacksjs/launchpad/issues/new">Report an issue</a></nav>
   </footer>
 </body>

@@ -1,6 +1,7 @@
 # Scout mark
 
-The blue compass is original Scout artwork. The app uses Framework7 Icons through
+The Scout trail mark is original artwork. Its S-shaped path ends in a forward
+arrow. The app uses Framework7 Icons through
 Iconify. Framework7 Icons is copyright Vladimir Kharlampidi and is available
 under the [MIT license](https://github.com/framework7io/framework7-icons/blob/master/LICENSE).
 

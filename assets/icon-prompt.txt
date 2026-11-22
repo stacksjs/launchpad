@@ -1,6 +1,7 @@
-Scout uses a white compass needle on a blue plate. Its vector source is
+Scout uses a white S-shaped path with a mint arrow on a blue plate. Its vector source is
 assets/brand/scout.svg.
 
 bun run generate:brand renders the app and website PNGs and packages the
-macOS icon sizes with Apple iconutil. The menu bar uses a native compass
-symbol. Buddy generates the social card from config/images.ts.
+macOS icon sizes with Apple iconutil. The same source produces the monochrome
+tray icon and the mark shown inside the app. Buddy generates the social card
+from config/images.ts.

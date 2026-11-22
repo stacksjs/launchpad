@@ -43,6 +43,7 @@ try {
     s.records.set({ [apps[1900].key]: { launches: 2, lastUsed: Date.now() }, [apps[1800].key]: { favorite: true, launches: 1 } })
   }, apps)
   await page.getByRole('heading', { name: 'Suggested', exact: true }).waitFor()
+  assert.ok(await page.locator('.wordmark img').evaluate(image => image.complete && image.naturalWidth > 0), 'The native palette shows the Scout mark.')
   assert.equal(await page.locator('#result-0 .result-title').textContent(), 'Fixture app 1800')
   assert.equal(await page.locator('#result-1 .result-title').textContent(), 'Fixture app 1900')
   assert.equal(await page.evaluate(() => new Set(window.__launcher.results().map(item => item.key)).size), 2000)

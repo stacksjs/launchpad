@@ -19,6 +19,6 @@ export default {
     mutedColor: '#475569',
     device: { scale: 0.65, radius: 0.025, borderColor: '#cbd5e1', shadow: { blur: 24, offsetY: 12, color: '#0f172a24' } },
     text: { titleSize: 70, subtitleSize: 24 },
-    pages: [{ path: '/', title: 'Less looking.\nMore doing.', eyebrow: 'YOUR MAC, WITHIN REACH', subtitle: 'Your apps, links and tools.\nOne keyboard shortcut.' }],
+    pages: [{ path: '/', title: 'Apps, files,\nand commands.', eyebrow: 'KEYBOARD LAUNCHER FOR MAC', subtitle: 'Open Scout with Command + Space.' }],
   },
 } satisfies ImagesConfig

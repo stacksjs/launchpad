@@ -14,6 +14,7 @@ import { cacheResultQueries, createResultSearch, quicklinkUrl } from '../functio
 import { parseApplicationAliases } from '../functions/search-text'
 import { historyPreference as readHistoryPreference, parsePreference } from '../functions/preferences'
 import { createResultPresentation, createResultSlots, resultOffset, resultRowHeight, resultWindow, selectionTarget } from '../functions/result-list'
+import { scoutMark } from '../functions/scout-brand'
 import { suggestedResults } from '../functions/suggestions'
 import { iconPrefetchPaths, createIconPrefetcher, decodeApplicationIcon } from '../functions/application-icons'
 import { calculate } from '../functions/calculator'
@@ -1701,7 +1702,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
   <p :if="category() === 'pantry'" class="px-5 github-status" role="status">{{ pantryStatus() }}</p>
 
   <footer class="flex gap-3 items-center px-5">
-    <span class="wordmark">Scout</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
+    <span class="wordmark"><img :src="scoutMark" width="16" height="16" alt="">Scout</span><button :if="updateState().phase === 'ready'" type="button" class="text-action" @click="chooseSettings('updates'); openSettings()">Update ready</button>
     <span class="footer-status">{{ saving() ? 'Saving...' : category() === 'clipboard' ? '↑↓ Review · ⌘↵ Copy here' : category() === 'github' ? githubViewer() ? '@' + githubViewer().login : 'Public search' : status() }}</span>
     <button :if="active()?.kind === 'application'" type="button" class="footer-action" @click="editCommand()" aria-label="Edit application search aliases">Aliases <kbd>⌘ E</kbd></button>
     <button :if="active()?.id && ['quicklink', 'snippet'].includes(active()?.kind)" type="button" class="footer-action" @click="editCommand()">Edit <kbd>⌘ E</kbd></button>
@@ -1723,7 +1724,7 @@ onDestroy(() => { cleanup(); cleanupTray(); stopCommandShortcuts(); stopSelectio
         <button :for="(section, index) in visibleSettings()" :key="section.id" type="button" :class="settingsSection() === section.id ? 'settings-item active' : 'settings-item'" :aria-pressed="settingsSection() === section.id" @click="chooseSettings(section.id)"><span class="settings-icon" :style="'background:' + section.color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="section.icon" /></svg></span>{{ section.title }}</button>
       </nav>
       <p :if="!visibleSettings().length" class="help settings-no-results">No settings found.</p>
-      <div class="settings-sidebar-about"><strong>Scout</strong><span>Version {{ updateState().currentVersion }}</span></div>
+      <div class="settings-sidebar-about"><img :src="scoutMark" width="24" height="24" alt=""><div class="flex flex-col"><strong>Scout</strong><span>Version {{ updateState().currentVersion }}</span></div></div>
     </aside>
     <div class="dialog-body settings-detail" :class="{ 'settings-detail-updates': settingsSection() === 'updates' }">
       <div class="settings-heading" :class="{ 'settings-heading-compact': settingsSection() === 'updates' }"><span class="settings-hero-icon" :style="'background:' + currentSettings().color" aria-hidden="true"><svg viewBox="0 0 24 24"><path :d="currentSettings().icon" /></svg></span><h2>{{ currentSettings().title }}</h2><p class="help">{{ currentSettings().description }}</p></div>
@@ -2051,7 +2052,7 @@ nav { height: 40px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .star { color: var(--accent); font-size: 11px; }
 .return-key { color: var(--muted); font-size: 17px; }
 footer { height: 44px; flex-shrink: 0; border-top: 1px solid var(--line); background: var(--footer); }
-.wordmark { font-size: 12px; font-weight: 650; letter-spacing: -.3px; }
+.wordmark { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; font-weight: 650; letter-spacing: -.3px; }
 .footer-status { color: var(--muted); font-size: 10px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .footer-action { color: var(--muted); font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
 .footer-action.primary { color: var(--ink); }
@@ -2105,7 +2106,7 @@ header input:focus-visible { outline: none; }
 .settings-icon, .settings-hero-icon { display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: inset 0 0 0 1px #ffffff24; }
 .settings-icon svg, .settings-hero-icon svg { width: 70%; height: 70%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .settings-icon { width: 23px; height: 23px; border-radius: 5px; font-size: 18px; flex-shrink: 0; }
-.settings-sidebar-about { margin-top: auto; padding: 16px 8px 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.settings-sidebar-about { margin-top: auto; padding: 16px 8px 0; display: flex; align-items: center; gap: 8px; font-size: 11px; }
 .settings-sidebar-about span { font-size: 10px; color: var(--muted); }
 .settings-no-results { padding: 0 8px; }
 .settings-detail { padding: 20px 22px; background: var(--surface); }

@@ -18,6 +18,7 @@ import { expandSnippet } from './snippets'
 import { commandIdFromShortcut, shortcutId, shortcutPlan } from './shortcuts'
 import type { ShortcutHolder } from './shortcuts'
 import { runSystemPlan } from './system-commands'
+import { scoutTrayIcon } from './scout-brand'
 import { windowFocusScript } from './windows'
 
 export { nativeWindow, nativeAutoLaunch, clipboard, shell, windowEvents, menu, standardMenus }
@@ -41,7 +42,7 @@ export async function configureTray(show: () => void, settings: () => void, upda
   })
   try {
     await nativeWindow.center()
-    await nativeTray.setIcon('location.north.fill')
+    await nativeTray.setIcon(scoutTrayIcon)
     await nativeTray.setTitle('')
     await nativeTray.setTooltip('Scout · Command + Space')
     await nativeTray.setMenu(launcherTrayMenu)
