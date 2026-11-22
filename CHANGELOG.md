@@ -1,5 +1,32 @@
 # Changelog
 
+[Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.15...v1.1.16)
+
+## ✨ Features
+
+- modernize Scout’s identity and color palette ([63d9cb0](https://github.com/stacksjs/launchpad/commit/63d9cb0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- give Scout a search and navigation mark ([9e879c9](https://github.com/stacksjs/launchpad/commit/9e879c9)) _(by Chris Breuer <chris@stacksjs.com>)_
+- redesign the Scout mark ([f7b1b8c](https://github.com/stacksjs/launchpad/commit/f7b1b8c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- unify Scout branding across app and web ([583deda](https://github.com/stacksjs/launchpad/commit/583deda)) _(by Chris Breuer <chris@stacksjs.com>)_
+- rebrand the launcher as Scout and fix results scrolling ([c03836e](https://github.com/stacksjs/launchpad/commit/c03836e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **release**: align CI with the native Pantry toolchain ([75f9a9b](https://github.com/stacksjs/launchpad/commit/75f9a9b)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **release**: publish Scout downloads through tagged CI ([2d0bb68](https://github.com/stacksjs/launchpad/commit/2d0bb68)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **store**: align Launchpad compatibility and sandbox grants ([c246806](https://github.com/stacksjs/launchpad/commit/c246806)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **store**: document the patched Bun runtime and local entitlement ([34c1a62](https://github.com/stacksjs/launchpad/commit/34c1a62)) _(by Chris Breuer <chris@stacksjs.com>)_
+- start Launchpad when the Store container is inaccessible ([26aecee](https://github.com/stacksjs/launchpad/commit/26aecee)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v1.1.16 ([2ae385e](https://github.com/stacksjs/launchpad/commit/2ae385e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **deps**: stacks 0.75.630 ([d342885](https://github.com/stacksjs/launchpad/commit/d342885)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/stacksjs/launchpad/compare/v1.1.14...v1.1.15)
 
 ## 🐛 Bug Fixes
