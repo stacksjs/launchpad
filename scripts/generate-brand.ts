@@ -12,8 +12,8 @@ async function main(): Promise<void> {
   await copyFile(source, join(root, 'public/images/scout.svg'))
   const glyph = svg.match(/<g id="mark"[^>]*>[\s\S]*?<\/g>/)?.[0]
   if (!glyph) throw new Error('Scout artwork is missing its mark group.')
-  const monochrome = glyph.replaceAll(/(fill|stroke)="#[0-9a-f]+"/gi, '$1="#000"')
-  const traySvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="170 135 695 695">${monochrome}</svg>`
+  const monochrome = glyph.replaceAll(/fill="(?!none")[^"]+"/g, 'fill="#000"')
+  const traySvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="172 172 680 680">${monochrome}</svg>`
   const tray = rasterize(parseSVG(traySvg), { width: 44, height: 44 })
   const trayImage = createImageData(tray.width, tray.height)
   trayImage.data.set(tray.data)

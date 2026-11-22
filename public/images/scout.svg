@@ -1,14 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="plate" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#19428f"/>
-      <stop offset="1" stop-color="#172655"/>
+    <linearGradient id="plate" x1="92" y1="0" x2="825" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#224b78"/>
+      <stop offset=".52" stop-color="#132a48"/>
+      <stop offset="1" stop-color="#091827"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="544" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#83b4de" stop-opacity=".72"/>
+      <stop offset=".44" stop-color="#5885ad" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#142b47"/>
+    </linearGradient>
+    <linearGradient id="frost" x1="500" y1="228" x2="500" y2="568" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fbfdff"/>
+      <stop offset="1" stop-color="#c3e5ff"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="638" y1="456" x2="570" y2="796" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#acffde"/>
+      <stop offset="1" stop-color="#56cfc9"/>
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" rx="225" fill="url(#plate)"/>
+  <path d="M356 3H668C913 3 1021 111 1021 356V668C1021 913 913 1021 668 1021H356C111 1021 3 913 3 668V356C3 111 111 3 356 3Z" fill="url(#plate)" stroke="url(#edge)" stroke-width="6"/>
   <g id="mark">
-    <path d="M292 740h265c98 0 164-56 164-137s-61-136-155-136H453c-82 0-130-34-130-93s47-97 125-97h221" fill="none" stroke="#fff" stroke-width="76"/>
-    <circle cx="292" cy="740" r="38" fill="#fff"/>
-    <path d="M589 170a37 37 0 0 1 52 0l81 81a37 37 0 0 1 0 52l-81 81a37 37 0 0 1-52-52l55-55-55-55a37 37 0 0 1 0-52Z" fill="#8cebe0"/>
+    <path d="M778 228H405C293 228 208 302 208 398S293 568 405 568H409Q423 568 433 558L512 479Q526 456 500 456H405C358 456 330 431 330 398S358 340 405 340H669Q682 340 692 330L789 252Q807 228 778 228Z" fill="url(#frost)"/>
+    <path d="M246 796H619C731 796 816 722 816 626S731 456 619 456H615Q601 456 591 466L512 545Q498 568 524 568H619C666 568 694 593 694 626S666 684 619 684H355Q342 684 332 694L235 772Q217 796 246 796Z" fill="url(#mint)"/>
   </g>
 </svg>
