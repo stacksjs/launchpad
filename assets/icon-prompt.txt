@@ -1,6 +1,5 @@
-Scout uses a two-piece S with a diagonal cut through the center. The upper
-shape is frost, the lower shape is mint, and the plate is ink blue. The vector
-source is assets/brand/scout.svg.
+Scout uses a frost-colored search lens around a mint result dot. The handle
+bends into a mint navigation arrow. The vector source is assets/brand/scout.svg.
 
 bun run generate:brand renders the app and website PNGs and packages the
 macOS icon sizes with Apple iconutil. The same source produces the monochrome
