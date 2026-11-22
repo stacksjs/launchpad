@@ -45,9 +45,9 @@ jobs:
           install: 'false'
       - name: Install Bun 1.4.4 with upstream ICU 78.2
         env:
-          ICU_BUN_URL: https://github.com/stacksjs/bun/releases/download/bun-v1.4.4-icu-78.2.1/bun-darwin-arm64-icu-78.2.tar.gz
-          ICU_BUN_ARCHIVE_SHA256: 5112636f9fc506c8df63b9e4e19e19987f2438b7c365545a3e48d475bd74f1ba
-          ICU_BUN_SHA256: 192891decb0a01f79bffc888260c37febe7aad619108d88455f7b2e8cf669bae
+          ICU_BUN_URL: https://github.com/stacksjs/bun/releases/download/bun-v1.4.4-icu-78.2.2/bun-darwin-arm64-icu-78.2.tar.gz
+          ICU_BUN_ARCHIVE_SHA256: c58085b6841edbd50350913d696ea1c972e7c97d30ec5e252ed6c589b848d156
+          ICU_BUN_SHA256: 1d06273a1bc42cda4cb52b6d60f5f8eb50df641cfe67ca0d43cf9742f59630f0
         run: |
           runtime=$(mktemp -d "$RUNNER_TEMP/icu-bun.XXXXXX")
           curl --fail --show-error --silent --location --retry 3 --proto '=https' --output "$runtime/bun.tar.gz" "$ICU_BUN_URL"
@@ -56,16 +56,6 @@ jobs:
           printf '%s  %s\n' "$ICU_BUN_SHA256" "$runtime/bun" | shasum -a 256 -c
           "$runtime/bun" -e 'if (Bun.version !== "1.4.4" || process.versions.icu !== "78.2" || process.arch !== "arm64") process.exit(1)'
           printf '%s\n' "$runtime" >> "$GITHUB_PATH"
-      - name: Check out the Pantry 0.11.215 SDK
-        uses: actions/checkout@v6
-        with:
-          repository: pantry-pm/pantry
-          ref: e3d43b94d86ce043ff02db8c2d8e0ffa5b17b915
-          path: .pantry/store-sdk
-          persist-credentials: false
-      - name: Install the pinned Pantry SDK dependencies
-        working-directory: .pantry/store-sdk
-        run: bun install --frozen-lockfile --filter ts-pantry
       - name: ${{ inputs.mode == 'submit' && 'Publish and submit the Store build' || 'Validate the signed Store package' }}
         env:
           STORE_MODE: ${{ inputs.mode }}
@@ -74,7 +64,7 @@ jobs:
         run: |
           args=(--build-number "$STORE_BUILD_NUMBER")
           if [[ "$STORE_MODE" == submit ]]; then args+=(--submit); fi
-          bun .pantry/store-sdk/packages/ts-pantry/bin/cli.ts app-store:release "${args[@]}"
+          bun x --bun ts-pantry@0.11.215 app-store:release "${args[@]}"
       - uses: actions/upload-artifact@v6
         with:
           name: scout-app-store-${{ inputs.version }}-${{ inputs['build-number'] }}
