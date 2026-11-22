@@ -20,7 +20,7 @@
           "com.apple.security.network.client": true
         }
       },
-      "appStore": true
+      "appStore": false
     },
     "checks": {
       "before": [
