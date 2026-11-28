@@ -39,7 +39,7 @@ jobs:
           [[ "$STORE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           [[ "$STORE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
           npm pkg set version="$STORE_VERSION"
-      - uses: pantry-pm/pantry/packages/action@v0.11.214
+      - uses: pantry-pm/pantry/packages/action@v0.11.231
         with:
           version: '0.11.214'
           install: 'false'
